@@ -1,5 +1,7 @@
 # P01-CO Community Service — nhóm C
 
+> **Quyết định P00:** MongoDB cho UGC; collections/index/schema validation/transaction/domain invariant theo thiết kế mới. Task P01-CO-01 đã đổi từ baseline Flyway/FK/DEFERRABLE sang MongoDB. Không đánh dấu hoàn thành bằng cách chạy DDL PostgreSQL. Xem [P00-DECISIONS.md](../../P00-DECISIONS.md).
+
 Trạng thái: **NOT_STARTED**. Dependency: P00, không chờ Identity/Catalog. Scope F06/F07, collections/contributions/moderation. Reviewer: D.
 
 [Database Community](../../database/community.md) · [DDL](../../database/sql/community.sql) · [Contract](../../04-api-events.md) · [Gate](README.md). Owner: `backend/services/community-service/**`.
@@ -17,7 +19,7 @@ Review/rating/favorite và contribution state machine là code thật với DB C
 
 ## M1 Database và local runtime
 
-- [ ] P01-CO-01: Flyway 12 domain + 4 technical, unique user/place, order deferrable, media FK và visibility projection; seed U1/U2/place IDs theo fixture.
+- [ ] P01-CO-01: MongoDB versioned migration cho collections/index/schema validation và technical collections; unique user/place, parent-version transaction cho reorder, media ownership/reference và visibility projection; seed U1/U2/place IDs theo fixture. Không dùng Flyway/FK/DEFERRABLE SQL; theo `plan/database/community-mongodb.md`.
 - [ ] P01-CO-02: Local app/security/log/health/image/CI cùng HTTP stub và consumer harness, không cần DB hay runtime Catalog/Identity.
 
 ## M2 Nghiệp vụ

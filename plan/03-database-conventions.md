@@ -1,5 +1,7 @@
 # Quy ước database và chuẩn hóa
 
+> **Cập nhật P00:** các quy tắc SQL/PostgreSQL dưới đây là baseline cho relational storage, không áp dụng máy móc cho MongoDB Community. Database đa công nghệ và lựa chọn chưa chốt xem [P00-DECISIONS.md](P00-DECISIONS.md). Community cần collections/index/schema validation và transaction trên replica set; outbox/inbox/audit vẫn thuộc từng service nhưng không bắt buộc biểu diễn bằng bảng SQL.
+
 ## Mục tiêu thiết kế
 
 Chuẩn hóa dữ liệu giao dịch tới 3NF khi phù hợp: role và preference nhiều giá trị dùng bảng nối; category/tag/amenity dùng taxonomy; thông tin nguồn import tách khỏi place; schedule tách khỏi offering; media gắn bằng bảng quan hệ cụ thể. JSONB chỉ dành cho raw payload, snapshot, metadata provider, event, model config và bản diff; không dùng JSON thay quan hệ cần FK/unique/query thường xuyên.

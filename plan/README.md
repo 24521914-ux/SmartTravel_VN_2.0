@@ -1,10 +1,18 @@
 # Kế hoạch SmartTravel VN với 6 microservice
 
-Ngày lập: 08/10/2026. Trạng thái: thiết kế để triển khai, chưa áp dụng vào database hay thay đổi backend.
+Ngày lập: 08/10/2026. Trạng thái hiện hành: **P00 hoàn tất triển khai kỹ thuật, READY_FOR_REVIEW**; còn xác nhận bàn giao N1/N2 và freeze contract. P01–P04 chưa triển khai nghiệp vụ. Evidence tại [manifest P00](../backend/platform/P00_HANDOFF.md).
 
 Phạm vi được chốt gồm **Identity, Catalog, Community, Trip, Intelligence và Ingestion Service**. Ingestion là service thứ sáu do người dùng xác nhận. API Gateway, message broker, object storage và hệ thống observability là hạ tầng hỗ trợ, không tính thêm vào sáu service nghiệp vụ.
 
-Nguồn nghiệp vụ: `C:\Users\FPT SHOP\Downloads\Chức năng + Database.docx`, gồm 11 nhóm chức năng và 42 bảng. Nội dung tài liệu được dùng làm đầu vào yêu cầu; thiết kế bổ sung được ghi rõ trong bộ kế hoạch. Backend hiện tại chỉ có `DemoApplication`, cấu hình tên ứng dụng và khai báo dependency. Chưa thấy entity, API nghiệp vụ, migration hoặc dữ liệu monolith để thực hiện chuyển đổi vật lý.
+Nguồn nghiệp vụ: `C:\Users\FPT SHOP\Downloads\Chức năng + Database.docx`, gồm 11 nhóm chức năng và 42 bảng. Nội dung tài liệu được dùng làm đầu vào yêu cầu; thiết kế bổ sung được ghi rõ trong bộ kế hoạch. Backend demo gốc có `DemoApplication`, cấu hình tên ứng dụng và dependency. P00 đã bổ sung sáu skeleton riêng tại `backend/services/`, contract/fixture và platform migration probe; chưa có entity/API/migration nghiệp vụ hoặc dữ liệu monolith. Scope hiện hành là triển khai mới.
+
+## Quyết định P00 hiện hành
+
+Xem [database, phân công hai người, scope và baseline vận hành](P00-DECISIONS.md). Đã chốt frontend và triển khai mới; hoàn thiện recommendation Basic trước khi bắt đầu ML, release cuối có ML. P00 đã hoàn tất triển khai kỹ thuật và đang chờ review/bàn giao. Các mô tả cũ yêu cầu Basic/ML phát triển đồng thời được thay bằng thứ tự này.
+
+## Theo dõi tiến độ thực tế
+
+Xem [checklist task của các phase](../progress/PHASE_TASK_CHECKLIST.md) và [checklist những gì đã làm được](../progress/COMPLETED_WORK_CHECKLIST.md). Checklist trong kế hoạch là yêu cầu cần làm, không phải bằng chứng hoàn thành; trạng thái thực tế và evidence được cập nhật trong hai file này.
 
 ## Đọc theo thứ tự
 
