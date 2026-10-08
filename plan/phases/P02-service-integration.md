@@ -9,9 +9,11 @@ Người điều phối quản lý Gateway/infra/config. Owner hai đầu cùng 
 - [ ] P02-00: Đối chiếu image/source revision, contract checksum, migrations và báo cáo test của cả sáu gói; không có endpoint/consumer placeholder trong scope.
 - [ ] P02-01: Dựng môi trường integration có sáu DB/credential riêng, broker/exchange/queue/ACL/DLQ, object storage, secrets, DNS, tracing/log/metrics và health/readiness. Local fixtures không trộn vào dữ liệu production.
 
-## Thứ tự kết nối
+## Các gói kết nối
 
-| Bước | Owner | Kết nối thật | Bằng chứng hoàn thành |
+Sau khi hạ tầng integration và Gateway/auth nền tảng sẵn sàng, các owner bắt đầu những liên kết độc lập cùng lúc khi dependency contract cho phép. Bảng dưới đây đánh số để theo dõi task, không yêu cầu nối lần lượt; luồng có phụ thuộc dữ liệu thực tế cần ghi dependency và chạy sau upstream tương ứng.
+
+| Gói | Owner | Kết nối thật | Bằng chứng hoàn thành |
 |---|---|---|---|
 | P02-02 Auth và Gateway | A + điều phối + 5 owner | JWT issuer/JWKS, audiences/scopes/status, gateway route/CORS/error/trace | Token của Identity đi qua mỗi service; role sai/revoked bị chặn; route không collision |
 | P02-03 Catalog reads | B cùng A/C/D/F | Category validation Identity; place/destination validation/batch/snapshot cho Community/Trip/Intelligence | Đọc ID thật; hidden/404/timeout đúng contract; không DB chéo |
@@ -22,7 +24,7 @@ Người điều phối quản lý Gateway/infra/config. Owner hai đầu cùng 
 | P02-08 Notification và deletion | A cùng 5 owner | Domain notifications, delivery, status/deletion request/ack | Notification nhận đúng user; đủ ack mới complete; thiếu ack được theo dõi |
 | P02-09 Frontend/provider | Người frontend + các owner liên quan | UI gọi Gateway thật; email/map/nguồn ngoài dùng sandbox hoặc môi trường được phép | Màn chính chạy API thật, lỗi/pending có UI rõ; ghi provider nào còn sandbox |
 
-Các bước phụ thuộc nhau được nối theo bảng; thứ tự này chỉ áp dụng **sau khi toàn bộ service đã hoàn thành P01**. Không dùng thứ tự kết nối để bắt các cá nhân chờ nhau ở giai đoạn phát triển.
+Các liên kết trong bảng chỉ bắt đầu **sau khi toàn bộ service đã hoàn thành và qua kiểm thử độc lập tại P01**. Các gói kết nối có thể chạy song song; nếu một gói thật sự cần dữ liệu/endpoint của gói khác, owner ghi dependency cụ thể và vẫn tiếp tục các kiểm tra không bị chặn. Không quay lại trì hoãn việc phát triển nghiệp vụ đến giai đoạn kết nối.
 
 ## Công việc kỹ thuật bắt buộc
 

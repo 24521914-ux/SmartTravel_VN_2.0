@@ -1,4 +1,4 @@
-# P01-CO Community Service — cá nhân C
+# P01-CO Community Service — nhóm C
 
 Trạng thái: **NOT_STARTED**. Dependency: P00, không chờ Identity/Catalog. Scope F06/F07, collections/contributions/moderation. Reviewer: D.
 

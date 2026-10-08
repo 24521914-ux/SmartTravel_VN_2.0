@@ -1,6 +1,6 @@
 # P01 Nền tảng chạy và delivery
 
-Trạng thái: **Chưa triển khai**. Dependency: P00. Mục tiêu: sáu service có build, credential, migration và deploy độc lập.
+Trạng thái: **Chưa triển khai**. Checklist nền tảng dùng trong P00/P01/P02 theo [lộ trình hiện hành](README.md): template tối thiểu bàn giao tại P00; sáu owner hoàn thiện runtime/CI service mình song song trong P01; platform chuẩn bị môi trường kết nối P02. Mục tiêu: sáu service có build, credential, migration và deploy độc lập.
 
 ## Công việc
 
@@ -15,11 +15,11 @@ Trạng thái: **Chưa triển khai**. Dependency: P00. Mục tiêu: sáu servic
 
 ## Database API và event
 
-Tạo baseline schema cùng bốn bảng kỹ thuật/service. Domain migration ở P02–P08. Health/metrics internal không public tùy tiện. Thử event fixture qua outbox→broker→inbox→DLQ/replay; không trộn với dữ liệu thật. Framework hỗ trợ secret/key rotation và scope service-to-service.
+Tạo baseline schema cùng bốn bảng kỹ thuật/service. Domain migration thuộc sáu gói P01-ID/CA/CO/TR/IG/IN, thực hiện song song theo owner. Health/metrics internal không public tùy tiện. Thử event fixture qua outbox→broker→inbox→DLQ/replay trong harness local; kết nối event giữa các service thật tại P02. Framework hỗ trợ secret/key rotation và scope service-to-service.
 
 ## Kiểm chứng và điều kiện hoàn thành
 
-- [ ] Từ checkout sạch dựng được sáu app; DB permission negative test chứng minh không đọc chéo.
+- [ ] Từ checkout sạch dựng được từng app với DB riêng và stub của đối tác; DB permission negative test chứng minh không đọc chéo. Tổng hợp bằng chứng của cả sáu app tại gate P01; mỗi nhóm bắt đầu domain sau khi template P00 của mình sẵn sàng.
 - [ ] Crash sau commit/trước publish không mất event; duplicate delivery không lặp side effect; consumer transaction rollback không lưu inbox thành công giả.
 - [ ] Poison message vào DLQ có cảnh báo và replay được; secret không xuất hiện trong logs.
 - [ ] Có build/image/migration riêng mỗi service; deploy một service không bắt buộc restart sáu service.

@@ -1,6 +1,6 @@
 # P08 Dataset training model và Intelligence nâng cao
 
-Trạng thái: **Chưa triển khai**. Dependency: P06/P07 và dữ liệu đủ điều kiện. Mục tiêu: hoàn thiện vòng đời ML trong bảng nguồn. Thiếu dữ liệu thì ghi blocker và giữ Basic Recommendation hoạt động.
+Trạng thái: **Chưa triển khai**. Luồng chức năng thuộc P01-IN; có thể phát triển song song sau P00 trên dataset fixture hợp lệ và adapter/stub có policy. Không chờ P06/P07 chạy runtime thật để hoàn thiện pipeline. Dataset/model quality gate trên dữ liệu thật được kiểm tra ở P03 sau kết nối; nếu dữ liệu chưa đủ điều kiện thì giữ Basic Recommendation hoạt động và ghi QUALITY_PENDING. Mục tiêu: hoàn thiện vòng đời ML trong bảng nguồn. Các task dưới đây không phải phase nối tiếp.
 
 ## Công việc
 
@@ -19,6 +19,8 @@ dataset_versions/dataset_sources/training_jobs/model_versions/model_deployments.
 Frontend: admin dataset/job/model comparison/activation history; user dùng cùng giao diện recommendation, không cần giao diện training.
 
 ## Kiểm nhận
+
+Cơ chế dataset/train/validate/activate/rollback được kiểm trên fixture tại P01-IN. Holdout và chất lượng model trên dữ liệu thực được đo ở P03; báo cáo fixture không thay thế quality gate production.
 
 - [ ] Dataset từ cùng definition/checkpoint/code tái lập count/checksum theo quy trình; artifact mismatch bị chặn.
 - [ ] Nguồn chưa cho training/consent revoked không vào dataset mới; model bị policy revoke không được activate lại.

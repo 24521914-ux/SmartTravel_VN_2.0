@@ -5,7 +5,7 @@
 ## Phạm vi đã kiểm tra
 
 - Đọc các bảng trong DOCX nguồn; đối chiếu đủ **42/42 bảng**, không thiếu tên bảng nguồn trong mapping.
-- Có đủ **6 service** theo danh sách người dùng xác nhận và **11 phase P00–P10** với chức năng, task, dependency, contract, UI integration, tiêu chí nghiệm thu và rollback.
+- Có đủ **6 service** theo danh sách người dùng xác nhận. Lộ trình hiện hành gồm **P00–P04**, trong đó P01 có sáu gói phát triển/kiểm thử độc lập song song; checklist mã cũ P01–P10 giữ chức năng, task, contract, UI integration, tiêu chí nghiệm thu và rollback, được quy đổi trong [README phase](phases/README.md).
 - Kiểm parser PostgreSQL (`pglast`) cho **6 file SQL, 187 statement**: không lỗi cú pháp.
 - Kiểm **73 FK nội bộ**: bảng/cột đích tồn tại, số cột tương ứng và khóa đích là PK/UNIQUE; không có FK xuyên schema/service.
 - **97 bảng đặc tả**: Identity 18, Catalog 28, Community 16, Trip 11, Intelligence 14, Ingestion 10. Mỗi service gồm 4 bảng kỹ thuật; tổng nghiệp vụ/read model là 73. Đây là thiết kế đầy đủ có mở rộng chuẩn hóa, không phải 97 bảng đã có dữ liệu.

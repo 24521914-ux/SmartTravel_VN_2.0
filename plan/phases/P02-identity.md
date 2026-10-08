@@ -1,13 +1,13 @@
 # P02 Identity Service và tài khoản
 
-Trạng thái: **Chưa triển khai**. Dependency: P01. Chức năng: F01, notification và nền tảng consent/role.
+Trạng thái: **Chưa triển khai**. Checklist chi tiết thuộc [P01-ID](P01-services/identity.md), bắt đầu sau P00 cùng năm nhóm còn lại. Dùng Catalog stub và event/ack fixtures để hoàn thiện chức năng, kiểm thử độc lập trước gate P01; nối runtime thật tại P02. Chức năng: F01, notification và nền tảng consent/role. Mã P02-* bên dưới là mã checklist cũ.
 
 ## Công việc
 
 - [ ] P02-01: Migration [Identity](../database/identity.md), seed role/options; canonical email UNIQUE, password hashing, không lộ email tồn tại qua reset/login response.
 - [ ] P02-02: Register/verify/login/JWT bằng framework, JWKS rotation; API đăng ký không nhận ADMIN do client chỉ định.
 - [ ] P02-03: Session/refresh rotation/reuse detection; logout/reset password revoke family; rate limit; hash token lưu DB.
-- [ ] P02-04: Profile/password/preferences và bảng nhiều giá trị; update atomic cùng profile.version/consent_version. Category validation tích hợp Catalog khi P03 sẵn sàng.
+- [ ] P02-04: Profile/password/preferences và bảng nhiều giá trị; update atomic cùng profile.version/consent_version. Category validation client hoàn thiện/test bằng Catalog stub ở P01-ID, nối endpoint thật tại P02.
 - [ ] P02-05: Admin user status/roles, ownership/security/audit; BUSINESS role chỉ cấp entry UI, không cấp quyền mọi place.
 - [ ] P02-06: Notification inbox/read/email retry; dedup source event/recipient/type; payload theo template allowlist.
 - [ ] P02-07: Deletion request + 6 ack, disable login ngay; chỉ hoàn tất khi đủ phản hồi và artifact policy thực thi.
@@ -24,6 +24,6 @@ Frontend: màn auth, profile/preferences, session list, notification inbox, admi
 - [ ] Token expiry/key rotation/audience sai bị từ chối; USER không tự cấp ADMIN hoặc đọc user khác.
 - [ ] Notification duplicate không sinh hai inbox; lỗi email không rollback nghiệp vụ nguồn.
 - [ ] Consent mặc định false; event opt-out không bị bỏ khi broker lỗi; deletion đủ ack có truy vết.
-- [ ] F01 E2E pass; ghi rõ revocation JWT có thể trễ tối đa TTL, các tác vụ nhạy cảm kiểm status hiện hành.
+- [ ] F01 pass độc lập trên Identity/DB thật với đối tác stub tại P01; E2E toàn hệ thống kiểm lại P03. Ghi rõ revocation JWT có thể trễ tối đa TTL, các tác vụ nhạy cảm kiểm status hiện hành.
 
 Đầu ra: migration/API/schema event, ma trận role, tests, auth examples, key rotation/incident runbook và UI. Rollback binary tương thích schema, không khôi phục token đã revoke; giữ public key cũ tới khi token tương ứng hết hạn.

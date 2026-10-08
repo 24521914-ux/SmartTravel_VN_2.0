@@ -1,4 +1,4 @@
-# P01-IN Intelligence Service — cá nhân F
+# P01-IN Intelligence Service — nhóm F
 
 Trạng thái: **NOT_STARTED**. Dependency: P00, không chờ năm service còn lại. Scope F05/F08 và toàn bộ cơ chế dataset/training/model. Reviewer: A.
 

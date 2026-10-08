@@ -2,14 +2,14 @@
 
 ## Chuẩn API dùng cho sáu service
 
-Public API đi qua `/api/v1`; internal API dưới `/internal/v1` không expose ra internet. Danh sách endpoint và quyền tối thiểu ở từng tài liệu database và phase; P01/P02 trở đi tạo OpenAPI có request/response/error examples và compatibility check trước triển khai.
+Public API đi qua `/api/v1`; internal API dưới `/internal/v1` không expose ra internet. Danh sách endpoint và quyền tối thiểu ở từng tài liệu database và phase; P00 chốt OpenAPI v1 có request/response/error examples để sáu nhóm triển khai và kiểm compatibility độc lập trong P01 trước khi kết nối tại P02.
 
 - JSON, UUID dạng string, tiền là decimal string + currency để frontend không làm tròn sai; datetime ISO-8601 có offset.
 - List dùng `limit` mặc định 20, tối đa 100; cursor opaque chứa keyset và tie-breaker ID. Filter và sort nằm trong cursor signature để không tái dùng sai truy vấn. Geo search có radius tối đa cấu hình và bounding limits.
 - Error có `code`, `message`, `fieldErrors`, `traceId`; không chứa stack trace/SQL/token. 400 invalid input, 401 chưa xác thực, 403 thiếu quyền, 404 không tồn tại/không được thấy, 409 version hoặc idempotency conflict, 422 xung đột nghiệp vụ, 429 rate limit, 503 dependency không sẵn sàng.
 - Mutation aggregate cần `If-Match`/version; thiếu precondition trên endpoint bắt buộc → 428. Owner lấy từ principal JWT, không tin `user_id` client tự gửi. Admin endpoint có scope và audit riêng.
 - POST tạo tài nguyên, import, apply contribution, gửi notification dùng `Idempotency-Key`. PUT favorite có thể idempotent tự nhiên nhờ PK(user_id,place_id). Không retry vô điều kiện mọi POST từ client.
-- Timeout riêng: HTTP nội bộ mục tiêu 2 giây, không quá 2 retry có exponential backoff/jitter với thao tác idempotent; tổng deadline phải có budget. Import/train xử lý async với 202 + job ID. Đây là giá trị khởi điểm cần load test P09.
+- Timeout riêng: HTTP nội bộ mục tiêu 2 giây, không quá 2 retry có exponential backoff/jitter với thao tác idempotent; tổng deadline phải có budget. Import/train xử lý async với 202 + job ID. Đây là giá trị khởi điểm cần load test P03 (checklist cũ P09).
 
 ## Event envelope
 
@@ -86,7 +86,7 @@ Trip lưu snapshot khi thêm place. Update catalog không tự ghi đè ghi chú
 
 At-least-once; inbox dedup + domain update cùng transaction; publish outbox theo aggregate để giảm đảo thứ tự. Snapshot event có version có thể bỏ event cũ; delta cần thứ tự/gap detection hoặc gọi snapshot API. Nghiệp vụ không dựa vào tổng thứ tự toàn hệ thống.
 
-Retry có tối đa số lần, backoff, dead-letter queue, cảnh báo và công cụ replay có audit. Consumer không tự ACK khi parse lỗi/schema version chưa hỗ trợ. Sau deploy mới, contract tests và thử old/new consumer phải pass. P09 diễn tập mất broker, crash sau DB commit, duplicate, out-of-order, poison message và reconciliation.
+Retry có tối đa số lần, backoff, dead-letter queue, cảnh báo và công cụ replay có audit. Consumer không tự ACK khi parse lỗi/schema version chưa hỗ trợ. Sau deploy mới, contract tests và thử old/new consumer phải pass. P01 kiểm cơ chế bằng harness độc lập; P02 kiểm transport giữa các service thật; P03 (checklist cũ P09) diễn tập mất broker, crash sau DB commit, duplicate, out-of-order, poison message và reconciliation toàn hệ thống.
 
 ## Những contract phải tạo khi triển khai
 

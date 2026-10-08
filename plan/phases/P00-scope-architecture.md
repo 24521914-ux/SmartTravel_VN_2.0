@@ -1,4 +1,4 @@
-# P00 Chuẩn bị để sáu cá nhân phát triển độc lập
+# P00 Chuẩn bị để sáu nhóm phát triển độc lập
 
 Trạng thái: **Chưa triển khai**. Người điều phối và sáu owner cùng chốt đầu vào. Chưa kết nối các service nghiệp vụ thật.
 

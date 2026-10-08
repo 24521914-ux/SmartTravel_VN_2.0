@@ -1,6 +1,6 @@
 # P06 Ingestion Service và nguồn dữ liệu
 
-Trạng thái: **Chưa triển khai**. Dependency: P01/P02/P03, nguồn và quyền sử dụng đã xác nhận. Mục tiêu: import lặp lại an toàn, có provenance tới canonical Place.
+Trạng thái: **Chưa triển khai**. Luồng chức năng thuộc P01-IG; dependency để bắt đầu là P00, contract/fixture và nguồn dữ liệu thử nghiệm có quyền sử dụng. Phát triển, kiểm thử độc lập bằng Catalog stub song song với các nhóm khác; kết nối runtime thật tại P02 sau gate 6/6. Nguồn thật chưa được cấp phép là blocker riêng của việc bật connector, không ngăn triển khai/test adapter bằng fixture hợp lệ. Mục tiêu: import lặp lại an toàn, có provenance tới canonical Place. Mã task bên dưới không phải phase nối tiếp P03.
 
 ## Công việc
 
@@ -19,6 +19,8 @@ Trạng thái: **Chưa triển khai**. Dependency: P01/P02/P03, nguồn và quy�
 Frontend: admin nguồn/license, trạng thái job, counts/errors có redact, so sánh candidate và manual decision.
 
 ## Kiểm nhận
+
+P01-IG kiểm command/checkpoint/retry bằng Catalog ack stub; Catalog kiểm idempotent mutation riêng trong P01-CA. Các ca bên dưới cần đo place/protected fields trên Catalog thật được chạy lại tại P02 trước khi xác nhận liên kết; P03 kiểm toàn luồng nguồn–UI.
 
 - [ ] Cùng input chạy hai lần không tăng place; crash sau Catalog commit trước ack vẫn replay về cùng UUID.
 - [ ] Hash thay đổi cập nhật đúng version; importer không đè field admin/business đã xác nhận.

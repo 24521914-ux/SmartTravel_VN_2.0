@@ -51,7 +51,7 @@ Purge, update scope và kiểm tra ràng buộc liên hàng phải giữ parent 
 - Catalog dùng GiST location và GIN search vector. Search tiếng Việt giai đoạn đầu dùng nội dung chuẩn hóa dấu tại application, cấu hình text search `simple`; kiểm thử bộ tên có/không dấu, alias và tên cũ. Không khẳng định search ranking hoàn chỉnh chỉ từ index.
 - Interactions chưa partition trong baseline để giữ UNIQUE event_id toàn bảng. Khi partition theo thời gian, phải thiết kế lại dedup và PK có partition key; không đơn thuần thêm PARTITION BY. [PostgreSQL Partitioning](https://www.postgresql.org/docs/current/ddl-partitioning.html).
 - Migration riêng từng service, không `db:push` production. Expand → backfill → chuyển reader/writer → contract. Role runtime không có quyền DDL hay đọc database service khác.
-- Backup riêng từng DB + object storage; kiểm thử restore theo checkpoint/event watermark để rebuild projection nhất quán. Mục tiêu RPO/RTO được chốt P00, diễn tập P09/P10.
+- Backup riêng từng DB + object storage; kiểm thử restore theo checkpoint/event watermark để rebuild projection nhất quán. Mục tiêu RPO/RTO được chốt P00, diễn tập tại P03/P04 (checklist cũ P09/P10).
 
 ## Quyền riêng tư và retention đề xuất
 

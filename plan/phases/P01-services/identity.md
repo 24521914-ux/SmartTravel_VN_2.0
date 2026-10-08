@@ -1,4 +1,4 @@
-# P01-ID Identity Service — cá nhân A
+# P01-ID Identity Service — nhóm A
 
 Trạng thái: **NOT_STARTED**. Dependency: P00, không chờ service khác. Scope: F01, auth/session/role/preferences/consent/notification/deletion. Reviewer: B.
 

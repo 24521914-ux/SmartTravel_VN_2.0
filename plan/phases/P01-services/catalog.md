@@ -1,4 +1,4 @@
-# P01-CA Catalog Service — cá nhân B
+# P01-CA Catalog Service — nhóm B
 
 Trạng thái: **NOT_STARTED**. Dependency: P00; không chờ Identity/Community/Ingestion. Scope: F02/F03/F04, geo/place/search/offering/business và canonical data. Reviewer: C.
 

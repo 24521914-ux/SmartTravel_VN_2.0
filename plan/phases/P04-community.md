@@ -1,6 +1,6 @@
 # P04 Community Service và nội dung cộng đồng
 
-Trạng thái: **Chưa triển khai**. Dependency: P02/P03. Chức năng: F06/F07, collections, contributions và moderation.
+Trạng thái: **Chưa triển khai**. Luồng chức năng thuộc P01-CO; dependency để bắt đầu là P00 và contract/fixture đã chốt. Phát triển, kiểm thử độc lập bằng Catalog/Identity stub song song với các nhóm service khác; chỉ kết nối runtime thật tại P02 sau gate 6/6. Chức năng: F06/F07, collections, contributions và moderation. Mã task bên dưới được giữ để theo dõi chi tiết, không phải một phase nối tiếp P03.
 
 ## Công việc
 
@@ -24,6 +24,6 @@ Frontend: review/report/favorite/collection/contribution và trạng thái chờ
 - [ ] Concurrent rating/favorite không tạo duplicate; collection riêng tư không lộ cho user khác.
 - [ ] Catalog down giữ contribution APPLYING; version conflict yêu cầu rebase/duyệt lại, không báo thành công giả.
 - [ ] Media chưa APPROVED không public; report duplicate và cross-user access bị chặn.
-- [ ] F06/F07 và phần rating F04 E2E pass; rating reconciliation có evidence.
+- [ ] F06/F07 và tính rating pass độc lập tại P01-CO; nối projection vào Catalog tại P02, kiểm E2E F04/F06/F07 tại P03; rating reconciliation có evidence.
 
 Đầu ra: migrations/API/events/UI, test concurrency và replay, moderation/reconciliation runbook. Rollback projection bằng rebuild từ reviews; sửa contribution đã apply bằng phiên bản bù Catalog, không xóa audit.

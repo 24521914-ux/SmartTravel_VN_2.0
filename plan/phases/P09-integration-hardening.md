@@ -1,6 +1,6 @@
 # P09 Tích hợp sáu service và kiểm nhận chất lượng
 
-Trạng thái: **Chưa triển khai**. Dependency: P02–P07; thêm P08 nếu phát hành toàn bộ ML. Mục tiêu: chứng minh nghiệp vụ, resilience, security, hiệu năng và phục hồi trước release.
+Trạng thái: **Chưa triển khai**. Đây là checklist chi tiết cho gate kiểm thử hệ thống P03, sau khi P02 kết nối các service đã qua kiểm thử độc lập. Dependency: P02 và các luồng nghiệp vụ trong release scope; thêm gate chất lượng P08 nếu phát hành ML. Không dùng checklist này để trì hoãn kiểm thử chức năng riêng tại các nhóm P01. Mục tiêu: chứng minh nghiệp vụ, resilience, security, hiệu năng và phục hồi trước release.
 
 ## Công việc
 

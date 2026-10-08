@@ -45,7 +45,7 @@ flowchart TB
 ## Quyết định triển khai
 
 - Một monorepo, sáu application có build/image/migration/deploy độc lập. Gateway là application hạ tầng nếu cần, không chứa domain logic. Chỉ chia sẻ thư viện log/tracing/security và schema contract; không chia sẻ JPA entity/repository/domain model.
-- Khởi đầu dùng Spring Boot theo nền tảng repository. Intelligence có thể dùng worker Python ở P08 nếu thư viện ML yêu cầu; worker thuộc Intelligence, chỉ truy cập DB của Intelligence. Không bắt buộc đa ngôn ngữ từ đầu.
+- Khởi đầu dùng Spring Boot theo nền tảng repository. Intelligence có thể dùng worker Python trong luồng ML của P01-IN (checklist P08) nếu thư viện ML yêu cầu; worker thuộc Intelligence, chỉ truy cập DB của Intelligence. Không bắt buộc đa ngôn ngữ từ đầu.
 - PostgreSQL cho sáu database, có thể cùng một instance ở môi trường dev nhưng riêng credential/permission. Catalog dùng PostGIS. Object storage giữ binary; owner service giữ metadata. Redis là cache hoặc vector index tùy use case, không phải nguồn dữ liệu chuẩn.
 - Đề xuất một broker RabbitMQ cho sự kiện và job ở quy mô ban đầu; P00 đánh giá lại nếu cần log sự kiện replay dài hạn/throughput lớn. Consumer replay dài hạn dùng snapshot/backfill API từ owner, không giả định broker giữ toàn bộ lịch sử vĩnh viễn.
 - Docker Compose cho phát triển; Kubernetes chỉ thêm khi có nhu cầu vận hành cụ thể. Dùng cấu hình môi trường và DNS của nền tảng trước; không mặc định cần Eureka, Config Server hay service mesh.

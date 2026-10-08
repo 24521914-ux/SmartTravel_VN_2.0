@@ -1,4 +1,4 @@
-# P01-TR Trip Service — cá nhân D
+# P01-TR Trip Service — nhóm D
 
 Trạng thái: **NOT_STARTED**. Dependency: P00, không chờ Identity/Catalog/Intelligence. Scope F09/F10. Reviewer: E.
 

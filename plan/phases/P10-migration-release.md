@@ -1,6 +1,6 @@
 # P10 Migration cutover và phát hành
 
-Trạng thái: **Chưa triển khai**. Dependency: P09; nếu DB monolith thật tồn tại, hoàn tất M01–M04 trong [migration-cutover](../05-migration-cutover.md).
+Trạng thái: **Chưa triển khai**. Đây là checklist chi tiết cho gate phát hành P04, sau khi P03 kiểm thử hệ thống đạt yêu cầu. Nếu DB monolith thật tồn tại, hoàn tất M01–M04 trong [migration-cutover](../05-migration-cutover.md); nếu không, chọn nhánh triển khai mới. Mã task dưới đây không tạo thêm phase sau P04.
 
 ## Công việc
 

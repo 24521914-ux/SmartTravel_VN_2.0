@@ -1,4 +1,4 @@
-# P01-IG Ingestion Service — cá nhân E
+# P01-IG Ingestion Service — nhóm E
 
 Trạng thái: **NOT_STARTED**. Dependency: P00, không chờ Catalog/Identity/Intelligence. Scope source/job/raw/normalize/dedup/provenance. Reviewer: F.
 

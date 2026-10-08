@@ -1,6 +1,6 @@
 # P05 Trip Service và bản đồ
 
-Trạng thái: **Chưa triển khai**. Dependency: P02/P03; có thể phát triển cùng P04 sau ổn định contract. Chức năng: F09/F10.
+Trạng thái: **Chưa triển khai**. Luồng chức năng thuộc P01-TR; dependency để bắt đầu là P00 và contract/fixture đã chốt. Phát triển, kiểm thử độc lập bằng Catalog/Intelligence stub song song với các nhóm service khác; chỉ kết nối runtime thật tại P02 sau gate 6/6. Chức năng: F09/F10. Mã task bên dưới được giữ để theo dõi chi tiết, không phải một phase nối tiếp Community.
 
 ## Công việc
 
@@ -10,7 +10,7 @@ Trạng thái: **Chưa triển khai**. Dependency: P02/P03; có thể phát tri�
 - [ ] P05-04: Item add/remove/reorder/note/duration/locked; reorder atomic kiểm đầy đủ item IDs; cost cùng currency.
 - [ ] P05-05: Transfer cùng trip, map provider adapter/timeouts/cache/attribution; phân biệt route và khoảng cách địa lý.
 - [ ] P05-06: Visibility event đánh unavailable, không tự xóa lịch trình; item-added event phục vụ history.
-- [ ] P05-07: Add-from-recommendation ở P07, giữ request attribution và không tự sửa locked item.
+- [ ] P05-07: Add-from-recommendation hoàn thiện với recommendation fixture trong P01-TR song song cùng P01-IN; nối thật tại P02, giữ request attribution và không tự sửa locked item.
 
 ## Contract và dữ liệu
 
@@ -24,6 +24,6 @@ Frontend: trip list/editor/day tabs, drag/drop, note/locked/budget, map nhiều 
 - [ ] Hai reorder cùng version: một 409; transaction không mất item hoặc trùng sort_order.
 - [ ] Catalog lỗi vẫn đọc snapshot theo quyền; thêm place mới khi không validate được trả lỗi rõ.
 - [ ] Route timeout không tự bịa duration; fallback chim bay có nhãn; locked item không bị gợi ý ghi đè.
-- [ ] F09/F10 E2E pass; currency/đơn vị chi phí rõ; private trip không vào cache dùng chung. Không có tối ưu tuyến sâu.
+- [ ] F09/F10 pass độc lập tại P01-TR với Catalog/map stub; E2E thật kiểm tại P03. Currency/đơn vị chi phí rõ; private trip không vào cache dùng chung. Không có tối ưu tuyến sâu.
 
 Đầu ra: migrations/API/events, provider adapter, UI và ownership/concurrency/fallback tests. Rollback binary tương thích schema, refresh snapshot lỗi bằng thao tác có audit; không xóa itinerary để chữa source mismatch.

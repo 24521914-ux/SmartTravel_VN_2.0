@@ -53,19 +53,21 @@ Nguồn: tài liệu Word `Chức năng + Database.docx` do người dùng cung 
 
 | Mã | Chức năng nguồn | Owner / phối hợp | Phase và kết quả kiểm nhận |
 |---|---|---|---|
-| F01 | Quản lý tài khoản | Identity | P02: đăng ký/login/logout/profile/password/preferences/RBAC; cross-user access bị từ chối |
-| F02 | Quản lý địa điểm | Catalog + Community projection | P03/P04: list/detail/geo/media/hour/price/rating; admin create/edit/hide/archive/category |
-| F03 | Dịch vụ địa phương | Catalog | P03: restaurant/hotel/homestay theo category Place; tour/activity/experience/event theo Offering; có tiện ích |
-| F04 | Tìm kiếm và lọc | Catalog | P03/P04: name/alias/category/region/price/rating/type; pagination ổn định |
-| F05 | Basic Recommendation | Intelligence + Identity + Catalog | P07: preferences, criteria, budget, category, location → điểm và Top N có giải thích |
-| F06 | Review và Rating | Community → Catalog | P04: CRUD, moderation/report; avg/count chính xác sau sửa/xóa/ẩn/replay |
-| F07 | Favorite | Community | P04: add/remove/list của user; duplicate request không tạo duplicate |
-| F08 | Lịch sử tương tác | Intelligence nhận client/server events | P07: search/view/favorite/review/add-to-trip, consent/retention/dedup |
-| F09 | Trip Management | Trip | P05: CRUD/day/item/reorder/note; ownership và optimistic locking |
-| F10 | Bản đồ và khoảng cách | Catalog location + Trip routing | P05: marker/nhiều điểm/khoảng cách/route; phân biệt đường chim bay và tuyến giao thông; chưa tối ưu sâu |
-| F11 | Quản trị hệ thống | Mỗi owner, frontend admin tổng hợp | P02–P08: user/business/review/place/category/event/source/data/model đúng quyền |
+| F01 | Quản lý tài khoản | Identity | P01-ID: đăng ký/login/logout/profile/password/preferences/RBAC; cross-user access bị từ chối |
+| F02 | Quản lý địa điểm | Catalog + Community projection | P01-CA/CO: list/detail/geo/media/hour/price/rating; admin create/edit/hide/archive/category |
+| F03 | Dịch vụ địa phương | Catalog | P01-CA: restaurant/hotel/homestay theo category Place; tour/activity/experience/event theo Offering; có tiện ích |
+| F04 | Tìm kiếm và lọc | Catalog | P01-CA: name/alias/category/region/price/rating/type; pagination ổn định |
+| F05 | Basic Recommendation | Intelligence + Identity + Catalog | P01-IN: preferences, criteria, budget, category, location → điểm và Top N có giải thích |
+| F06 | Review và Rating | Community → Catalog | P01-CO/CA: CRUD, moderation/report; avg/count chính xác sau sửa/xóa/ẩn/replay |
+| F07 | Favorite | Community | P01-CO: add/remove/list của user; duplicate request không tạo duplicate |
+| F08 | Lịch sử tương tác | Intelligence nhận client/server events | P01-IN: search/view/favorite/review/add-to-trip, consent/retention/dedup |
+| F09 | Trip Management | Trip | P01-TR: CRUD/day/item/reorder/note; ownership và optimistic locking |
+| F10 | Bản đồ và khoảng cách | Catalog location + Trip routing | P01-TR/CA: marker/nhiều điểm/khoảng cách/route; phân biệt đường chim bay và tuyến giao thông; chưa tối ưu sâu |
+| F11 | Quản trị hệ thống | Mỗi owner, frontend admin tổng hợp | Sáu gói P01: user/business/review/place/category/event/source/data/model đúng quyền |
 
-Collections, contributions, business claim, ingestion và ML xuất hiện trong bảng nguồn dù bảng nhóm chức năng mô tả ngắn. Bộ kế hoạch vẫn giữ chúng; P08 chỉ nâng cấp model ML, không trì hoãn Basic Recommendation.
+Các gói P01 trong bảng được triển khai và kiểm thử độc lập song song với contract fixtures; P02 kiểm liên kết thật và P03 kiểm E2E F01–F11. Khi ghi evidence, nêu rõ phạm vi service hoặc toàn hệ thống.
+
+Collections, contributions, business claim, ingestion và ML xuất hiện trong bảng nguồn dù bảng nhóm chức năng mô tả ngắn. Bộ kế hoạch vẫn giữ chúng; checklist ML P08 thuộc luồng song song trong P01-IN, không trì hoãn Basic Recommendation. Chất lượng model thực được kiểm nhận tại P03.
 
 ## Thiết kế được bổ sung ngoài bảng nguồn
 
