@@ -34,6 +34,7 @@ jobs:
         run: |
           python -m pip install -r backend/platform/requirements-validation.txt
           python backend/platform/validate_contracts.py
+          python backend/platform/test_contract_checksums.py
           python backend/platform/test_contract_policy.py
           python backend/platform/test_contract_stubs.py
           python backend/platform/test_event_harness.py

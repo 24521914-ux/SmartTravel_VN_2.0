@@ -17,6 +17,10 @@ def validator(schema):
     Draft202012Validator.check_schema(schema)
     return Draft202012Validator(schema, format_checker=FORMAT)
 
+def artifact_checksum(data):
+    """Ignore Git's CRLF/LF conversion, but preserve all other artifact bytes."""
+    return hashlib.sha256(data.replace(b'\r\n', b'\n')).hexdigest()
+
 def run(refresh=False):
     registry = json.loads((ROOT/'registry.json').read_text(encoding='utf-8'))
     count = 0
@@ -75,7 +79,7 @@ def run(refresh=False):
     assert len({u['id'] for u in shared['users']}) == 4
     assert {u['consent'] for u in shared['users']} == {True, False}
     assert shared['model']['production_eligible'] is False
-    manifest = {str(p.relative_to(ROOT)).replace('\\','/'):hashlib.sha256(p.read_bytes()).hexdigest()
+    manifest = {str(p.relative_to(ROOT)).replace('\\','/'):artifact_checksum(p.read_bytes())
                 for p in sorted(ROOT.rglob('*')) if p.is_file() and p.name!='checksums.json'}
     if refresh:
         (ROOT/'checksums.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')

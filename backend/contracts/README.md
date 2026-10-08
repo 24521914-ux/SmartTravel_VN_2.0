@@ -10,13 +10,14 @@ Bộ wire contract đã hoàn thiện về mặt scaffold và được kiểm tr
 - `fixtures/{service}.http.json`: request/response/required headers cho mỗi operation; `fixtures/events/`: ví dụ mỗi message.
 - `fixtures/shared.json`: U1/U2/admin/business, consent on/off, public/hidden/archive place, active/inactive category, permitted/revoked source, trip/model synthetic.
 - `fixtures/load-profile.json`: target tải và quy mô synthetic dataset; generator reproducible tại `backend/platform/`.
-- `checksums.json`: SHA-256 artifact inventory; validator mặc định **kiểm** checksum, không tự cập nhật để che thay đổi.
+- `checksums.json`: SHA-256 artifact inventory sau khi chuẩn hóa CRLF → LF để Windows/Linux có cùng hash. Các byte khác (kể cả khoảng trắng) vẫn được kiểm tra; validator mặc định **kiểm** checksum, không tự cập nhật để che thay đổi.
 
 ## Chạy độc lập
 
 ```bash
 python -m pip install -r backend/platform/requirements-validation.txt
 python backend/platform/validate_contracts.py
+python backend/platform/test_contract_checksums.py
 python backend/platform/test_contract_policy.py
 python backend/platform/test_contract_stubs.py
 python backend/platform/test_event_harness.py
