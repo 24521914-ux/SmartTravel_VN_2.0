@@ -1,0 +1,83 @@
+name: P00 verification
+on:
+  pull_request:
+    paths: ['backend/platform/**', 'backend/services/**', 'backend/contracts/**', 'backend/.mvn/**', 'backend/mvnw*', 'frontend/**', '.github/workflows/p00-template.yml']
+  push:
+    branches: [main]
+    paths: ['backend/platform/**', 'backend/services/**', 'backend/contracts/**', 'frontend/**', '.github/workflows/p00-template.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Synthetic local CI passwords, not credentials for a real environment.
+    env:
+      CATALOG_DB_PASSWORD: ci-placeholder-not-a-secret
+      TEMPLATE_DB_PASSWORD: ci-placeholder-not-a-secret
+      IDENTITY_DB_PASSWORD: ci-placeholder-not-a-secret
+      TRIP_DB_PASSWORD: ci-placeholder-not-a-secret
+      INGESTION_DB_PASSWORD: ci-placeholder-not-a-secret
+      INTELLIGENCE_DB_PASSWORD: ci-placeholder-not-a-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate contract candidate, boundary policy, HTTP stubs and event harness
+        run: |
+          python -m pip install -r backend/platform/requirements-validation.txt
+          python backend/platform/validate_contracts.py
+          python backend/platform/test_contract_policy.py
+          python backend/platform/test_contract_stubs.py
+          python backend/platform/test_event_harness.py
+      - name: Build six independent service skeletons
+        run: bash backend/mvnw -B -f backend/services/pom.xml verify
+      - name: Start real local database dependencies
+        run: |
+          docker compose -f backend/platform/compose.p00.yaml config --quiet
+          docker compose -f backend/platform/compose.p00.yaml up -d --wait catalog-db template-db identity-db trip-db ingestion-db intelligence-db community-db
+          docker compose -f backend/platform/compose.p00.yaml run --rm community-init
+          for i in $(seq 1 30); do
+            if docker compose -f backend/platform/compose.p00.yaml exec -T community-db mongosh --quiet --eval 'if (!db.hello().isWritablePrimary) quit(1)'; then break; fi
+            sleep 2
+          done
+          docker compose -f backend/platform/compose.p00.yaml --profile cache up -d
+          python backend/platform/check_runtime.py
+      - name: Verify standalone platform template against PostgreSQL
+        env:
+          P00_DB_TEST: 'true'
+          DB_URL: jdbc:postgresql://localhost:55433/platform_template
+          DB_USER: template_local
+          DB_PASSWORD: ci-placeholder-not-a-secret
+          JWT_JWKS_URI: http://127.0.0.1:18082/jwks
+          JWT_ISSUER: local-test
+          JWT_AUDIENCE: trip
+        run: bash backend/mvnw -B -f backend/platform/p00-template/pom.xml verify
+      - name: Start each skeleton independently with its own database
+        run: python backend/platform/check_service_skeletons.py
+      - name: Build platform image
+        run: docker build -t smarttravel-p00-template:ci backend/platform/p00-template
+      - name: Stop local containers without deleting volumes
+        if: always()
+        run: docker compose -f backend/platform/compose.p00.yaml --profile cache down
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
