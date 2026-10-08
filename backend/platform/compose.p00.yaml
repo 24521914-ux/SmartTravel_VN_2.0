@@ -1,0 +1,109 @@
+# Local P00 dependencies only; not production infrastructure.
+name: smarttravel-p00
+x-postgres-health: &postgres-health
+  test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+  interval: 5s
+  timeout: 3s
+  retries: 30
+x-cache: &cache
+  image: redis:7.4-alpine
+  command: [redis-server, --save, "", --appendonly, "no"]
+  profiles: [cache]
+  # No host port: caches are isolated Docker services, never a shared DB index.
+services:
+  catalog-db:
+    image: postgis/postgis:16-3.5
+    environment:
+      POSTGRES_DB: catalog_db
+      POSTGRES_USER: catalog_local
+      POSTGRES_PASSWORD: ${CATALOG_DB_PASSWORD:?Set local CATALOG_DB_PASSWORD}
+    ports: ["127.0.0.1:55432:5432"]
+    volumes: [catalog-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U catalog_local -d catalog_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  template-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: platform_template
+      POSTGRES_USER: template_local
+      POSTGRES_PASSWORD: ${TEMPLATE_DB_PASSWORD:?Set local TEMPLATE_DB_PASSWORD}
+    ports: ["127.0.0.1:55433:5432"]
+    volumes: [template-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U template_local -d platform_template"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  identity-db:
+    image: postgres:16-alpine
+    healthcheck: *postgres-health
+    environment:
+      POSTGRES_DB: identity_db
+      POSTGRES_USER: identity_local
+      POSTGRES_PASSWORD: ${IDENTITY_DB_PASSWORD:?Set local IDENTITY_DB_PASSWORD}
+    ports: ["127.0.0.1:55434:5432"]
+    volumes: [identity-data:/var/lib/postgresql/data]
+  trip-db:
+    image: postgres:16-alpine
+    healthcheck: *postgres-health
+    environment:
+      POSTGRES_DB: trip_db
+      POSTGRES_USER: trip_local
+      POSTGRES_PASSWORD: ${TRIP_DB_PASSWORD:?Set local TRIP_DB_PASSWORD}
+    ports: ["127.0.0.1:55435:5432"]
+    volumes: [trip-data:/var/lib/postgresql/data]
+  ingestion-db:
+    image: postgres:16-alpine
+    healthcheck: *postgres-health
+    environment:
+      POSTGRES_DB: ingestion_db
+      POSTGRES_USER: ingestion_local
+      POSTGRES_PASSWORD: ${INGESTION_DB_PASSWORD:?Set local INGESTION_DB_PASSWORD}
+    ports: ["127.0.0.1:55436:5432"]
+    volumes: [ingestion-data:/var/lib/postgresql/data]
+  intelligence-db:
+    image: pgvector/pgvector:pg16
+    healthcheck: *postgres-health
+    environment:
+      POSTGRES_DB: intelligence_db
+      POSTGRES_USER: intelligence_local
+      POSTGRES_PASSWORD: ${INTELLIGENCE_DB_PASSWORD:?Set local INTELLIGENCE_DB_PASSWORD}
+    ports: ["127.0.0.1:55437:5432"]
+    volumes: [intelligence-data:/var/lib/postgresql/data]
+  community-db:
+    image: mongo:8.0
+    command: [mongod, --replSet, rs0, --bind_ip_all]
+    # Dev-only unauthenticated replica set, bound strictly to loopback.
+    ports: ["127.0.0.1:57017:27017"]
+    volumes: [community-data:/data/db]
+    healthcheck:
+      test: [CMD, mongosh, --quiet, --eval, "db.adminCommand({ping:1})"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  community-init:
+    image: mongo:8.0
+    depends_on:
+      community-db:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: [mongosh, --host, community-db:27017, --quiet, --eval]
+    command:
+      - "try { rs.status(); } catch (e) { if (e.code === 94) { rs.initiate({_id:'rs0',members:[{_id:0,host:'community-db:27017'}]}); } else { throw e; } }"
+  identity-cache: *cache
+  catalog-cache: *cache
+  community-cache: *cache
+  trip-cache: *cache
+  ingestion-cache: *cache
+  intelligence-cache: *cache
+volumes:
+  catalog-data:
+  template-data:
+  community-data:
+  identity-data:
+  trip-data:
+  ingestion-data:
+  intelligence-data:

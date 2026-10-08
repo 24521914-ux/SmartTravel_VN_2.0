@@ -1,0 +1,17 @@
+{
+  "event_id": "cd77ce8a-6a3c-5b45-a304-8c00129b576e",
+  "event_type": "identity.user.registered.v1",
+  "schema_version": 1,
+  "aggregate_type": "user",
+  "aggregate_id": "00000000-0000-4000-8000-000000000001",
+  "aggregate_version": 1,
+  "occurred_at": "2026-10-08T00:00:00Z",
+  "producer": "identity",
+  "correlation_id": "00000000-0000-4000-8000-000000000001",
+  "causation_id": "00000000-0000-4000-8000-000000000001",
+  "traceparent": "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
+  "payload": {
+    "user_id": "00000000-0000-4000-8000-000000000001",
+    "display_name": "synthetic"
+  }
+}

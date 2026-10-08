@@ -1,5 +1,7 @@
 # P01-IN Intelligence Service — nhóm F
 
+> **Thứ tự đã chốt tại P00:** owner N2, reviewer N1. Hoàn thiện/kiểm thử interaction/history/features/Basic trước; sau nghiệm thu Basic mới triển khai dataset/training/model/pgvector. Release cuối có ML; gate P01 cuối yêu cầu pipeline fixture đạt, quality production kiểm ở P03. Không thực hiện Basic và ML đồng thời theo hướng dẫn cũ. Storage: PostgreSQL + pgvector, Redis chỉ cache. Xem [P00-DECISIONS.md](../../P00-DECISIONS.md).
+
 Trạng thái: **NOT_STARTED**. Dependency: P00, không chờ năm service còn lại. Scope F05/F08 và toàn bộ cơ chế dataset/training/model. Reviewer: A.
 
 [Database Intelligence](../../database/intelligence.md) · [DDL](../../database/sql/intelligence.sql) · [Contract](../../04-api-events.md) · [Gate](README.md). Owner: `backend/services/intelligence-service/**`, gồm worker Python nếu cần; vẫn một service nghiệp vụ.

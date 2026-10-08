@@ -1,6 +1,8 @@
 # Lộ trình phát triển song song rồi kết nối
 
-Trạng thái: **Chưa triển khai**. Điều chỉnh ngày 08/10/2026. P00–P04 là các cổng điều phối chung. Sau P00, sáu nhóm P01-ID/CA/CO/TR/IG/IN phát triển chức năng của mình song song; từng nhóm tự kiểm thử với database và dependency stub trước khi bàn giao. Không nhóm nào phải chờ service khác hoàn thành mới bắt đầu nghiệp vụ.
+> **Quyết định P00 hiện hành:** hai người N1/N2 phụ trách sáu gói độc lập theo capacity, có frontend và triển khai mới. Recommendation Basic phải hoàn thiện/kiểm thử trước khi bắt đầu ML; sau đó hoàn thiện ML pipeline trong P01 trước gate cuối, kiểm chất lượng dữ liệu thật ở P03. Các đoạn cũ nói phát triển Basic/ML đồng thời không còn áp dụng. Xem [P00-DECISIONS.md](../P00-DECISIONS.md) và [phân công](../06-work-assignment.md).
+
+Trạng thái: **P00 hoàn tất triển khai kỹ thuật, READY_FOR_REVIEW; P01–P04 chưa triển khai**. Gate P00 chờ N1/N2 nhận gói/phê duyệt và điều phối freeze revision, xem [manifest](../../backend/platform/P00_HANDOFF.md). Điều chỉnh ngày 08/10/2026. P00–P04 là các cổng điều phối chung. Sau P00, sáu nhóm P01-ID/CA/CO/TR/IG/IN phát triển chức năng của mình song song; từng nhóm tự kiểm thử với database và dependency stub trước khi bàn giao. Không nhóm nào phải chờ service khác hoàn thành mới bắt đầu nghiệp vụ.
 
 | Phase | Công việc | Người làm | Điều kiện và đầu ra |
 |---|---|---|---|
@@ -57,7 +59,7 @@ A–F là chỗ điền tên owner hoặc nhóm. Mỗi nhóm có thể gồm nhi
 
 ## Hướng dẫn hoàn thành từng phase
 
-Đọc hướng dẫn phase để phân công và xác nhận đầu ra, sau đó dùng checklist chi tiết trong file được liên kết để thực hiện. Tất cả trạng thái hiện vẫn là **chưa triển khai**; checkbox trong tài liệu là yêu cầu cần làm.
+Đọc hướng dẫn phase để phân công và xác nhận đầu ra, sau đó dùng checklist chi tiết trong file được liên kết để thực hiện. P00 đã có implementation/evidence local, trạng thái hiện hành xem [checklist tiến độ](../../progress/PHASE_TASK_CHECKLIST.md). Các phase P01–P04 vẫn chưa triển khai; checkbox yêu cầu không tự chứng minh hoàn thành.
 
 <a id="p00-guide"></a>
 ### P00 — Chuẩn bị để mọi nhóm có thể bắt đầu

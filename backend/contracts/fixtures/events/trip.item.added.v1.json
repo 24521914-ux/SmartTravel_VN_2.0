@@ -1,0 +1,20 @@
+{
+  "event_id": "370328e7-5454-58ed-a6cd-0a65c4d7dfd9",
+  "event_type": "trip.item.added.v1",
+  "schema_version": 1,
+  "aggregate_type": "trip",
+  "aggregate_id": "40000000-0000-4000-8000-000000000001",
+  "aggregate_version": 1,
+  "occurred_at": "2026-10-08T00:00:00Z",
+  "producer": "trip",
+  "correlation_id": "00000000-0000-4000-8000-000000000001",
+  "causation_id": "00000000-0000-4000-8000-000000000001",
+  "traceparent": "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
+  "payload": {
+    "item_id": "00000000-0000-4000-8000-000000000001",
+    "trip_id": "40000000-0000-4000-8000-000000000001",
+    "user_id": "00000000-0000-4000-8000-000000000001",
+    "place_id": "10000000-0000-4000-8000-000000000001",
+    "recommendation_request_id": null
+  }
+}

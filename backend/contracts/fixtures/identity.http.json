@@ -1,0 +1,504 @@
+{
+  "register": {
+    "path": "/api/v1/auth/register",
+    "method": "POST",
+    "status": 202,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "email": "fixture@example.invalid",
+      "password": "synthetic-not-a-credential",
+      "display_name": "synthetic"
+    },
+    "response": {
+      "request_id": "00000000-0000-4000-8000-000000000001",
+      "status": "ACCEPTED",
+      "version": 1
+    }
+  },
+  "login": {
+    "path": "/api/v1/auth/login",
+    "method": "POST",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "email": "fixture@example.invalid",
+      "password": "synthetic-not-a-credential"
+    },
+    "response": {
+      "access_token": "synthetic-not-a-credential",
+      "refresh_token": "synthetic-not-a-credential",
+      "token_type": "Bearer",
+      "expires_in": 1
+    }
+  },
+  "refresh": {
+    "path": "/api/v1/auth/refresh",
+    "method": "POST",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "refresh_token": "synthetic-not-a-credential"
+    },
+    "response": {
+      "access_token": "synthetic-not-a-credential",
+      "refresh_token": "synthetic-not-a-credential",
+      "token_type": "Bearer",
+      "expires_in": 1
+    }
+  },
+  "logout": {
+    "path": "/api/v1/auth/logout",
+    "method": "POST",
+    "status": 204,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "refresh_token": "synthetic-not-a-credential"
+    }
+  },
+  "verify_email": {
+    "path": "/api/v1/auth/verify-email",
+    "method": "POST",
+    "status": 202,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "token": "synthetic-not-a-credential"
+    },
+    "response": {
+      "request_id": "00000000-0000-4000-8000-000000000001",
+      "status": "ACCEPTED",
+      "version": 1
+    }
+  },
+  "forgot_password": {
+    "path": "/api/v1/auth/forgot-password",
+    "method": "POST",
+    "status": 202,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "email": "fixture@example.invalid"
+    },
+    "response": {
+      "request_id": "00000000-0000-4000-8000-000000000001",
+      "status": "ACCEPTED",
+      "version": 1
+    }
+  },
+  "reset_password": {
+    "path": "/api/v1/auth/reset-password",
+    "method": "POST",
+    "status": 202,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "token": "synthetic-not-a-credential",
+      "password": "synthetic-not-a-credential"
+    },
+    "response": {
+      "request_id": "00000000-0000-4000-8000-000000000001",
+      "status": "ACCEPTED",
+      "version": 1
+    }
+  },
+  "profile": {
+    "path": "/api/v1/me",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "user_id": "00000000-0000-4000-8000-000000000001",
+      "display_name": "synthetic",
+      "status": "ACTIVE",
+      "roles": [
+        "USER"
+      ],
+      "version": 1
+    }
+  },
+  "updateProfile": {
+    "path": "/api/v1/me",
+    "method": "PATCH",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "display_name": "synthetic"
+    },
+    "response": {
+      "user_id": "00000000-0000-4000-8000-000000000001",
+      "display_name": "synthetic",
+      "status": "ACTIVE",
+      "roles": [
+        "USER"
+      ],
+      "version": 1
+    }
+  },
+  "changePassword": {
+    "path": "/api/v1/me/password",
+    "method": "PUT",
+    "status": 204,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "current_password": "syntheticxxx",
+      "new_password": "syntheticxxx"
+    }
+  },
+  "getPreferences": {
+    "path": "/api/v1/me/preferences",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "category_ids": [
+        "20000000-0000-4000-8000-000000000001"
+      ],
+      "travel_style_ids": [],
+      "food_preference_ids": [],
+      "budget_level": "LOW",
+      "budget_min": null,
+      "budget_max": null,
+      "currency": "VND",
+      "personalization_enabled": false,
+      "consent_version": 1,
+      "version": 1
+    }
+  },
+  "putPreferences": {
+    "path": "/api/v1/me/preferences",
+    "method": "PUT",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "category_ids": [
+        "20000000-0000-4000-8000-000000000001"
+      ],
+      "travel_style_ids": [],
+      "food_preference_ids": [],
+      "budget_level": "LOW",
+      "budget_min": null,
+      "budget_max": null,
+      "currency": "VND",
+      "personalization_enabled": false,
+      "consent_version": 1
+    },
+    "response": {
+      "category_ids": [
+        "20000000-0000-4000-8000-000000000001"
+      ],
+      "travel_style_ids": [],
+      "food_preference_ids": [],
+      "budget_level": "LOW",
+      "budget_min": null,
+      "budget_max": null,
+      "currency": "VND",
+      "personalization_enabled": false,
+      "consent_version": 1,
+      "version": 1
+    }
+  },
+  "preferenceOptions": {
+    "path": "/api/v1/preference-options",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "option_id": "00000000-0000-4000-8000-000000000001",
+          "kind": "TRAVEL_STYLE",
+          "name": "synthetic",
+          "active": true,
+          "version": 1
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "listSessions": {
+    "path": "/api/v1/me/sessions",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "session_id": "00000000-0000-4000-8000-000000000001",
+          "created_at": "2026-10-08T00:00:00Z",
+          "expires_at": "2026-10-08T00:00:00Z"
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "revokeSession": {
+    "path": "/api/v1/me/sessions/00000000-0000-4000-8000-000000000001",
+    "method": "DELETE",
+    "status": 204,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    }
+  },
+  "listNotifications": {
+    "path": "/api/v1/me/notifications",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "notification_id": "00000000-0000-4000-8000-000000000001",
+          "user_id": "00000000-0000-4000-8000-000000000001",
+          "title": "synthetic",
+          "read": false,
+          "version": 1
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "readNotification": {
+    "path": "/api/v1/me/notifications/00000000-0000-4000-8000-000000000001/read",
+    "method": "PATCH",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "notification_id": "00000000-0000-4000-8000-000000000001",
+      "user_id": "00000000-0000-4000-8000-000000000001",
+      "title": "synthetic",
+      "read": false,
+      "version": 1
+    }
+  },
+  "requestDeletion": {
+    "path": "/api/v1/me/deletion-requests",
+    "method": "POST",
+    "status": 202,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "policy_version": 1
+    },
+    "response": {
+      "request_id": "00000000-0000-4000-8000-000000000001",
+      "status": "ACCEPTED",
+      "version": 1
+    }
+  },
+  "adminUsers": {
+    "path": "/api/v1/admin/users",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "user_id": "00000000-0000-4000-8000-000000000001",
+          "display_name": "synthetic",
+          "status": "ACTIVE",
+          "roles": [
+            "USER"
+          ],
+          "version": 1
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "adminUserStatus": {
+    "path": "/api/v1/admin/users/00000000-0000-4000-8000-000000000001/status",
+    "method": "PATCH",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "status": "ACTIVE"
+    },
+    "response": {
+      "user_id": "00000000-0000-4000-8000-000000000001",
+      "display_name": "synthetic",
+      "status": "ACTIVE",
+      "roles": [
+        "USER"
+      ],
+      "version": 1
+    }
+  },
+  "adminUserRoles": {
+    "path": "/api/v1/admin/users/00000000-0000-4000-8000-000000000001/roles",
+    "method": "PUT",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "roles": [
+        "USER"
+      ]
+    },
+    "response": {
+      "user_id": "00000000-0000-4000-8000-000000000001",
+      "display_name": "synthetic",
+      "status": "ACTIVE",
+      "roles": [
+        "USER"
+      ],
+      "version": 1
+    }
+  },
+  "jwks": {
+    "path": "/.well-known/jwks.json",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "keys": [
+        {
+          "kty": "RSA",
+          "use": "sig",
+          "alg": "RS256",
+          "kid": "synthetic",
+          "n": "synthetic",
+          "e": "synthetic"
+        }
+      ]
+    }
+  },
+  "userStatusBatch": {
+    "path": "/internal/v1/users/status/batch",
+    "method": "POST",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ]
+    },
+    "response": {
+      "items": [
+        {
+          "user_id": "00000000-0000-4000-8000-000000000001",
+          "status": "ACTIVE",
+          "version": 1
+        }
+      ],
+      "missing_ids": []
+    }
+  },
+  "preferencesBatch": {
+    "path": "/internal/v1/users/preferences/batch",
+    "method": "POST",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ]
+    },
+    "response": {
+      "items": [
+        {
+          "user_id": "00000000-0000-4000-8000-000000000001",
+          "category_ids": [
+            "20000000-0000-4000-8000-000000000001"
+          ],
+          "travel_style_ids": [],
+          "food_preference_ids": [],
+          "budget_level": "LOW",
+          "budget_min": null,
+          "budget_max": null,
+          "currency": "VND",
+          "personalization_enabled": false,
+          "consent_version": 1,
+          "version": 1
+        }
+      ],
+      "missing_ids": []
+    }
+  },
+  "deletionStatus": {
+    "path": "/internal/v1/deletion-requests/00000000-0000-4000-8000-000000000001",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "request_id": "00000000-0000-4000-8000-000000000001",
+      "status": "ACCEPTED",
+      "version": 1
+    }
+  }
+}

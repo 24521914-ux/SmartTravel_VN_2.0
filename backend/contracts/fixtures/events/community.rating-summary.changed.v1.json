@@ -1,0 +1,20 @@
+{
+  "event_id": "184d1ea5-3f08-51a8-a34f-1e4c9344aa27",
+  "event_type": "community.rating-summary.changed.v1",
+  "schema_version": 1,
+  "aggregate_type": "rating",
+  "aggregate_id": "10000000-0000-4000-8000-000000000001",
+  "aggregate_version": 1,
+  "occurred_at": "2026-10-08T00:00:00Z",
+  "producer": "community",
+  "correlation_id": "00000000-0000-4000-8000-000000000001",
+  "causation_id": "00000000-0000-4000-8000-000000000001",
+  "traceparent": "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
+  "payload": {
+    "place_id": "10000000-0000-4000-8000-000000000001",
+    "count": 0,
+    "sum": 0,
+    "version": 1,
+    "as_of": "2026-10-08T00:00:00Z"
+  }
+}

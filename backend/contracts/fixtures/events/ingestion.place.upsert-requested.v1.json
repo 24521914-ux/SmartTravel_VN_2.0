@@ -1,0 +1,40 @@
+{
+  "event_id": "0557fe02-2193-5e2d-8714-e7fe1e9e51f2",
+  "event_type": "ingestion.place.upsert-requested.v1",
+  "schema_version": 1,
+  "aggregate_type": "import",
+  "aggregate_id": "00000000-0000-4000-8000-000000000001",
+  "aggregate_version": 1,
+  "occurred_at": "2026-10-08T00:00:00Z",
+  "producer": "ingestion",
+  "correlation_id": "00000000-0000-4000-8000-000000000001",
+  "causation_id": "00000000-0000-4000-8000-000000000001",
+  "traceparent": "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
+  "payload": {
+    "command_id": "00000000-0000-4000-8000-000000000001",
+    "source_id": "30000000-0000-4000-8000-000000000001",
+    "external_id": "synthetic",
+    "source_version": 1,
+    "source_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "proposed_place_id": "00000000-0000-4000-8000-000000000001",
+    "normalized": {
+      "name": "synthetic",
+      "category_ids": [
+        "20000000-0000-4000-8000-000000000001"
+      ],
+      "latitude": 10.762622,
+      "longitude": 106.660172,
+      "opening_hours": [
+        {
+          "weekday": 0,
+          "open": "09:00",
+          "close": "17:00",
+          "overnight": false
+        }
+      ],
+      "price": 0,
+      "currency": "VND"
+    },
+    "expected_catalog_version": 0
+  }
+}

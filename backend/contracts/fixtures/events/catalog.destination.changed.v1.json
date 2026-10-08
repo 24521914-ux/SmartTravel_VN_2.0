@@ -1,0 +1,22 @@
+{
+  "event_id": "af294f03-ea4f-5e13-b586-9876eec6b1f6",
+  "event_type": "catalog.destination.changed.v1",
+  "schema_version": 1,
+  "aggregate_type": "destination",
+  "aggregate_id": "af294f03-ea4f-5e13-b586-9876eec6b1f6",
+  "aggregate_version": 1,
+  "occurred_at": "2026-10-08T00:00:00Z",
+  "producer": "catalog",
+  "correlation_id": "00000000-0000-4000-8000-000000000001",
+  "causation_id": "00000000-0000-4000-8000-000000000001",
+  "traceparent": "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
+  "payload": {
+    "destination_id": "00000000-0000-4000-8000-000000000001",
+    "name": "synthetic",
+    "status": "ACTIVE",
+    "geographic_unit_ids": [
+      "00000000-0000-4000-8000-000000000001"
+    ],
+    "version": 1
+  }
+}

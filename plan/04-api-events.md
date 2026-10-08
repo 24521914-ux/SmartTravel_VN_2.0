@@ -90,4 +90,4 @@ Retry có tối đa số lần, backoff, dead-letter queue, cảnh báo và côn
 
 ## Những contract phải tạo khi triển khai
 
-`contracts/openapi/{service}.yaml`, `contracts/events/{message}.schema.json`, ví dụ payload, error catalog và compatibility tests. Các đường dẫn này là đầu ra dự kiến của phase, chưa được tạo trong lượt lập kế hoạch. Public schema không import entity database. Event payload chứa PII phải dùng exchange/ACL riêng hoặc internal pull API có kiểm soát.
+P00 đã tạo `backend/contracts/openapi/{service}.yaml`, `backend/contracts/events/{message}.schema.json`, HTTP/event fixtures, registry/checksum, policy/HTTP/event tests tại `backend/platform/`. Revision hiện hành `1.0.0-candidate`, đã validate local và còn review/freeze bàn giao N1/N2. Xem `backend/contracts/README.md` và `backend/platform/P00_HANDOFF.md`. Public schema không import entity database. Event payload chứa PII phải dùng exchange/ACL riêng hoặc internal pull API có kiểm soát.

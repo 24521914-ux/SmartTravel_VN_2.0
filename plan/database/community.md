@@ -1,5 +1,7 @@
 # Database Community Service
 
+> **Cập nhật P00:** người dùng đã chọn MongoDB cho Community/UGC. Nội dung relational và DDL bên dưới là baseline PostgreSQL cũ, chưa được chuyển đổi; không dùng trực tiếp làm migration của Community mới. Xem [thiết kế MongoDB hiện hành](community-mongodb.md) và [quyết định P00](../P00-DECISIONS.md) về replica set, transaction, indexes và invariant.
+
 Community giữ UGC và là owner rating aggregate. Favorite/collection/review gắn user/place bằng external UUID. Service không sở hữu thông tin tài khoản hoặc dữ liệu địa điểm chuẩn.
 
 Database: `community_db`; schema nội bộ: `community`. Có 12 bảng nghiệp vụ/read model và 4 bảng kỹ thuật local. [DDL đầy đủ](sql/community.sql) là đặc tả chi tiết cột, PK, FK, CHECK, UNIQUE, index; chưa chạy trên database. [Quy ước chung](../03-database-conventions.md).

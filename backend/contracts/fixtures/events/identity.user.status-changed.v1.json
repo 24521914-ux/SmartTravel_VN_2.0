@@ -1,0 +1,18 @@
+{
+  "event_id": "bcc601de-f904-5ca3-9500-ce6c0afd799c",
+  "event_type": "identity.user.status-changed.v1",
+  "schema_version": 1,
+  "aggregate_type": "user",
+  "aggregate_id": "00000000-0000-4000-8000-000000000001",
+  "aggregate_version": 1,
+  "occurred_at": "2026-10-08T00:00:00Z",
+  "producer": "identity",
+  "correlation_id": "00000000-0000-4000-8000-000000000001",
+  "causation_id": "00000000-0000-4000-8000-000000000001",
+  "traceparent": "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
+  "payload": {
+    "user_id": "00000000-0000-4000-8000-000000000001",
+    "status": "ACTIVE",
+    "version": 1
+  }
+}
