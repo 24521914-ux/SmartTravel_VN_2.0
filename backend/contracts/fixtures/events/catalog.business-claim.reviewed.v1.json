@@ -1,0 +1,21 @@
+{
+  "event_id": "77630fd3-13a6-567c-ba0c-1b6b73e3a8f1",
+  "event_type": "catalog.business-claim.reviewed.v1",
+  "schema_version": 1,
+  "aggregate_type": "claim",
+  "aggregate_id": "00000000-0000-4000-8000-000000000001",
+  "aggregate_version": 1,
+  "occurred_at": "2026-10-08T00:00:00Z",
+  "producer": "catalog",
+  "correlation_id": "00000000-0000-4000-8000-000000000001",
+  "causation_id": "00000000-0000-4000-8000-000000000001",
+  "traceparent": "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
+  "payload": {
+    "claim_id": "00000000-0000-4000-8000-000000000001",
+    "business_id": "00000000-0000-4000-8000-000000000001",
+    "place_id": "10000000-0000-4000-8000-000000000001",
+    "owner_user_id": "00000000-0000-4000-8000-000000000001",
+    "status": "PENDING",
+    "version": 1
+  }
+}

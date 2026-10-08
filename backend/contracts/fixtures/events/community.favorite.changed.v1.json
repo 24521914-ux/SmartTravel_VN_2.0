@@ -1,0 +1,19 @@
+{
+  "event_id": "6592b7f8-14da-5944-9ebd-362ae2584c19",
+  "event_type": "community.favorite.changed.v1",
+  "schema_version": 1,
+  "aggregate_type": "favorite",
+  "aggregate_id": "6592b7f8-14da-5944-9ebd-362ae2584c19",
+  "aggregate_version": 1,
+  "occurred_at": "2026-10-08T00:00:00Z",
+  "producer": "community",
+  "correlation_id": "00000000-0000-4000-8000-000000000001",
+  "causation_id": "00000000-0000-4000-8000-000000000001",
+  "traceparent": "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
+  "payload": {
+    "user_id": "00000000-0000-4000-8000-000000000001",
+    "place_id": "10000000-0000-4000-8000-000000000001",
+    "action": "ADDED",
+    "occurred_at": "2026-10-08T00:00:00Z"
+  }
+}

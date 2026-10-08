@@ -1,0 +1,396 @@
+{
+  "revision": "1.0.0-candidate",
+  "services": [
+    "identity",
+    "catalog",
+    "community",
+    "trip",
+    "ingestion",
+    "intelligence"
+  ],
+  "messages": {
+    "identity.user.registered.v1": {
+      "producer": "identity",
+      "consumers": [
+        "identity"
+      ],
+      "kind": "event"
+    },
+    "identity.user.status-changed.v1": {
+      "producer": "identity",
+      "consumers": [
+        "catalog",
+        "community",
+        "trip",
+        "ingestion",
+        "intelligence"
+      ],
+      "kind": "event"
+    },
+    "identity.preferences.changed.v1": {
+      "producer": "identity",
+      "consumers": [
+        "intelligence"
+      ],
+      "kind": "event"
+    },
+    "identity.user.deletion-requested.v1": {
+      "producer": "identity",
+      "consumers": [
+        "catalog",
+        "community",
+        "trip",
+        "ingestion",
+        "intelligence"
+      ],
+      "kind": "event"
+    },
+    "domain.user-data-deleted.v1": {
+      "producer": [
+        "catalog",
+        "community",
+        "trip",
+        "ingestion",
+        "intelligence"
+      ],
+      "consumers": [
+        "identity"
+      ],
+      "kind": "event"
+    },
+    "catalog.place.upserted.v1": {
+      "producer": "catalog",
+      "consumers": [
+        "community",
+        "trip",
+        "intelligence"
+      ],
+      "kind": "event"
+    },
+    "catalog.place.visibility-changed.v1": {
+      "producer": "catalog",
+      "consumers": [
+        "community",
+        "trip",
+        "intelligence"
+      ],
+      "kind": "event"
+    },
+    "catalog.destination.changed.v1": {
+      "producer": "catalog",
+      "consumers": [
+        "trip",
+        "intelligence"
+      ],
+      "kind": "event"
+    },
+    "catalog.category.changed.v1": {
+      "producer": "catalog",
+      "consumers": [
+        "identity",
+        "intelligence"
+      ],
+      "kind": "event"
+    },
+    "community.rating-summary.changed.v1": {
+      "producer": "community",
+      "consumers": [
+        "catalog",
+        "intelligence"
+      ],
+      "kind": "event"
+    },
+    "community.review.changed.v1": {
+      "producer": "community",
+      "consumers": [
+        "intelligence",
+        "identity"
+      ],
+      "kind": "event"
+    },
+    "community.favorite.changed.v1": {
+      "producer": "community",
+      "consumers": [
+        "intelligence"
+      ],
+      "kind": "event"
+    },
+    "community.contribution.apply-requested.v1": {
+      "producer": "community",
+      "consumers": [
+        "catalog"
+      ],
+      "kind": "command"
+    },
+    "catalog.contribution.applied.v1": {
+      "producer": "catalog",
+      "consumers": [
+        "community",
+        "identity"
+      ],
+      "kind": "event"
+    },
+    "catalog.contribution.rejected.v1": {
+      "producer": "catalog",
+      "consumers": [
+        "community",
+        "identity"
+      ],
+      "kind": "event"
+    },
+    "catalog.business-claim.reviewed.v1": {
+      "producer": "catalog",
+      "consumers": [
+        "identity"
+      ],
+      "kind": "event"
+    },
+    "trip.item.added.v1": {
+      "producer": "trip",
+      "consumers": [
+        "intelligence"
+      ],
+      "kind": "event"
+    },
+    "trip.changed.v1": {
+      "producer": "trip",
+      "consumers": [
+        "identity"
+      ],
+      "kind": "event"
+    },
+    "ingestion.place.upsert-requested.v1": {
+      "producer": "ingestion",
+      "consumers": [
+        "catalog"
+      ],
+      "kind": "command"
+    },
+    "catalog.place-import.applied.v1": {
+      "producer": "catalog",
+      "consumers": [
+        "ingestion"
+      ],
+      "kind": "event"
+    },
+    "catalog.place-import.rejected.v1": {
+      "producer": "catalog",
+      "consumers": [
+        "ingestion"
+      ],
+      "kind": "event"
+    },
+    "ingestion.source-policy.changed.v1": {
+      "producer": "ingestion",
+      "consumers": [
+        "catalog",
+        "intelligence"
+      ],
+      "kind": "event"
+    },
+    "intelligence.model.deployed.v1": {
+      "producer": "intelligence",
+      "consumers": [
+        "identity"
+      ],
+      "kind": "event"
+    }
+  },
+  "http_operations": {
+    "identity": [
+      "register",
+      "login",
+      "refresh",
+      "logout",
+      "verify_email",
+      "forgot_password",
+      "reset_password",
+      "profile",
+      "updateProfile",
+      "changePassword",
+      "getPreferences",
+      "putPreferences",
+      "preferenceOptions",
+      "listSessions",
+      "revokeSession",
+      "listNotifications",
+      "readNotification",
+      "requestDeletion",
+      "adminUsers",
+      "adminUserStatus",
+      "adminUserRoles",
+      "jwks",
+      "userStatusBatch",
+      "preferencesBatch",
+      "deletionStatus"
+    ],
+    "catalog": [
+      "catalog_api_v1_admin_places_list",
+      "catalog_api_v1_admin_places_create",
+      "catalog_api_v1_admin_places_get",
+      "catalog_api_v1_admin_places_update",
+      "catalog_api_v1_admin_places_delete",
+      "searchPlaces",
+      "getPlace",
+      "placeStatus",
+      "catalog_api_v1_admin_geographic_units_list",
+      "catalog_api_v1_admin_geographic_units_create",
+      "catalog_api_v1_admin_geographic_units_get",
+      "catalog_api_v1_admin_geographic_units_update",
+      "catalog_api_v1_admin_geographic_units_delete",
+      "public_geographic_units",
+      "catalog_api_v1_admin_destinations_list",
+      "catalog_api_v1_admin_destinations_create",
+      "catalog_api_v1_admin_destinations_get",
+      "catalog_api_v1_admin_destinations_update",
+      "catalog_api_v1_admin_destinations_delete",
+      "public_destinations",
+      "catalog_api_v1_admin_categories_list",
+      "catalog_api_v1_admin_categories_create",
+      "catalog_api_v1_admin_categories_get",
+      "catalog_api_v1_admin_categories_update",
+      "catalog_api_v1_admin_categories_delete",
+      "public_categories",
+      "catalog_api_v1_admin_tags_list",
+      "catalog_api_v1_admin_tags_create",
+      "catalog_api_v1_admin_tags_get",
+      "catalog_api_v1_admin_tags_update",
+      "catalog_api_v1_admin_tags_delete",
+      "public_tags",
+      "catalog_api_v1_admin_amenities_list",
+      "catalog_api_v1_admin_amenities_create",
+      "catalog_api_v1_admin_amenities_get",
+      "catalog_api_v1_admin_amenities_update",
+      "catalog_api_v1_admin_amenities_delete",
+      "public_amenities",
+      "catalog_api_v1_admin_offerings_list",
+      "catalog_api_v1_admin_offerings_create",
+      "catalog_api_v1_admin_offerings_get",
+      "catalog_api_v1_admin_offerings_update",
+      "catalog_api_v1_admin_offerings_delete",
+      "public_offerings",
+      "placeOfferings",
+      "catalog_api_v1_businesses_list",
+      "catalog_api_v1_businesses_create",
+      "catalog_api_v1_businesses_get",
+      "catalog_api_v1_businesses_update",
+      "catalog_api_v1_businesses_delete",
+      "catalog_api_v1_businesses_business_id_members_list",
+      "catalog_api_v1_businesses_business_id_members_create",
+      "catalog_api_v1_businesses_business_id_members_get",
+      "catalog_api_v1_businesses_business_id_members_update",
+      "catalog_api_v1_businesses_business_id_members_delete",
+      "verifyBusiness",
+      "createClaim",
+      "changeRequest",
+      "adminReview_claims",
+      "adminReview_change_requests",
+      "adminReview_business_verifications",
+      "adminReview_media",
+      "placeBatch",
+      "validatePlaces",
+      "placeSnapshot",
+      "placeCandidates"
+    ],
+    "community": [
+      "placeReviews",
+      "createReview",
+      "editReview",
+      "deleteReview",
+      "reportReview",
+      "listFavorites",
+      "putFavorite",
+      "deleteFavorite",
+      "community_api_v1_me_collections_list",
+      "community_api_v1_me_collections_create",
+      "community_api_v1_me_collections_get",
+      "community_api_v1_me_collections_update",
+      "community_api_v1_me_collections_delete",
+      "publicCollection",
+      "community_api_v1_collections_collection_id_items_list",
+      "community_api_v1_collections_collection_id_items_create",
+      "community_api_v1_collections_collection_id_items_get",
+      "community_api_v1_collections_collection_id_items_update",
+      "community_api_v1_collections_collection_id_items_delete",
+      "orderCollection",
+      "createContribution",
+      "myContributions",
+      "editContribution",
+      "withdrawContribution",
+      "moderationList_reviews",
+      "moderate_reviews",
+      "moderationList_contributions",
+      "moderate_contributions",
+      "moderationList_reports",
+      "moderate_reports",
+      "ratingsBatch",
+      "ratingSnapshot"
+    ],
+    "trip": [
+      "listTrips",
+      "createTrip",
+      "getTrip",
+      "patchTrip",
+      "deleteTrip",
+      "tripState",
+      "trip_api_v1_trips_trip_id_destinations_list",
+      "trip_api_v1_trips_trip_id_destinations_create",
+      "trip_api_v1_trips_trip_id_destinations_get",
+      "trip_api_v1_trips_trip_id_destinations_update",
+      "trip_api_v1_trips_trip_id_destinations_delete",
+      "trip_api_v1_trips_trip_id_days_list",
+      "trip_api_v1_trips_trip_id_days_create",
+      "trip_api_v1_trips_trip_id_days_get",
+      "trip_api_v1_trips_trip_id_days_update",
+      "trip_api_v1_trips_trip_id_days_delete",
+      "trip_api_v1_trips_trip_id_days_day_id_items_list",
+      "trip_api_v1_trips_trip_id_days_day_id_items_create",
+      "trip_api_v1_trips_trip_id_days_day_id_items_get",
+      "trip_api_v1_trips_trip_id_days_day_id_items_update",
+      "trip_api_v1_trips_trip_id_days_day_id_items_delete",
+      "orderTripItems",
+      "trip_api_v1_trips_trip_id_transfers_list",
+      "trip_api_v1_trips_trip_id_transfers_create",
+      "trip_api_v1_trips_trip_id_transfers_get",
+      "trip_api_v1_trips_trip_id_transfers_update",
+      "trip_api_v1_trips_trip_id_transfers_delete",
+      "estimateRoute",
+      "refreshSnapshots"
+    ],
+    "ingestion": [
+      "ingestion_api_v1_admin_data_sources_list",
+      "ingestion_api_v1_admin_data_sources_create",
+      "ingestion_api_v1_admin_data_sources_get",
+      "ingestion_api_v1_admin_data_sources_update",
+      "ingestion_api_v1_admin_data_sources_delete",
+      "updateSourcePolicy",
+      "createImportJob",
+      "getImportJob",
+      "import_items",
+      "import_errors",
+      "import_candidates",
+      "retryImport",
+      "cancelImport",
+      "importDecision",
+      "sourcePolicy",
+      "sourcePolicyBatch",
+      "sourceLinks"
+    ],
+    "intelligence": [
+      "recommend",
+      "recordInteractions",
+      "myInteractions",
+      "deleteHistory",
+      "buildDataset",
+      "getDataset",
+      "startTraining",
+      "getTraining",
+      "cancelTraining",
+      "listModels",
+      "modelMetrics",
+      "validateModel",
+      "deployModel",
+      "rollbackModel"
+    ]
+  }
+}

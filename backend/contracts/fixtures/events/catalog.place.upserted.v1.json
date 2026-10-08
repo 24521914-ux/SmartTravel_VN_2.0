@@ -1,0 +1,48 @@
+{
+  "event_id": "40f6c16d-db2c-522a-943d-63e09844739b",
+  "event_type": "catalog.place.upserted.v1",
+  "schema_version": 1,
+  "aggregate_type": "place",
+  "aggregate_id": "10000000-0000-4000-8000-000000000001",
+  "aggregate_version": 1,
+  "occurred_at": "2026-10-08T00:00:00Z",
+  "producer": "catalog",
+  "correlation_id": "00000000-0000-4000-8000-000000000001",
+  "causation_id": "00000000-0000-4000-8000-000000000001",
+  "traceparent": "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
+  "payload": {
+    "place_id": "10000000-0000-4000-8000-000000000001",
+    "name": "synthetic",
+    "status": "DRAFT",
+    "version": 1,
+    "latitude": 10.762622,
+    "longitude": 106.660172,
+    "category_ids": [
+      "20000000-0000-4000-8000-000000000001"
+    ],
+    "tag_ids": [
+      "00000000-0000-4000-8000-000000000001"
+    ],
+    "amenity_ids": [
+      "00000000-0000-4000-8000-000000000001"
+    ],
+    "geographic_unit_id": "00000000-0000-4000-8000-000000000001",
+    "destination_ids": [
+      "00000000-0000-4000-8000-000000000001"
+    ],
+    "price": 0,
+    "currency": "VND",
+    "opening_hours": [
+      {
+        "weekday": 0,
+        "open": "09:00",
+        "close": "17:00",
+        "overnight": false
+      }
+    ],
+    "media_keys": [
+      "synthetic"
+    ],
+    "source_version": 1
+  }
+}

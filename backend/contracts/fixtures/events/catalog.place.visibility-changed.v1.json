@@ -1,0 +1,18 @@
+{
+  "event_id": "0cf22247-af8a-5fae-9eb9-a14f0a8118f6",
+  "event_type": "catalog.place.visibility-changed.v1",
+  "schema_version": 1,
+  "aggregate_type": "place",
+  "aggregate_id": "10000000-0000-4000-8000-000000000001",
+  "aggregate_version": 1,
+  "occurred_at": "2026-10-08T00:00:00Z",
+  "producer": "catalog",
+  "correlation_id": "00000000-0000-4000-8000-000000000001",
+  "causation_id": "00000000-0000-4000-8000-000000000001",
+  "traceparent": "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
+  "payload": {
+    "place_id": "10000000-0000-4000-8000-000000000001",
+    "status": "PUBLISHED",
+    "version": 1
+  }
+}

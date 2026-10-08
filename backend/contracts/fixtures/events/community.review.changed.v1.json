@@ -1,0 +1,22 @@
+{
+  "event_id": "03e82952-4808-58b7-aeaf-0577a81663f2",
+  "event_type": "community.review.changed.v1",
+  "schema_version": 1,
+  "aggregate_type": "review",
+  "aggregate_id": "03e82952-4808-58b7-aeaf-0577a81663f2",
+  "aggregate_version": 1,
+  "occurred_at": "2026-10-08T00:00:00Z",
+  "producer": "community",
+  "correlation_id": "00000000-0000-4000-8000-000000000001",
+  "causation_id": "00000000-0000-4000-8000-000000000001",
+  "traceparent": "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
+  "payload": {
+    "review_id": "00000000-0000-4000-8000-000000000001",
+    "user_id": "00000000-0000-4000-8000-000000000001",
+    "place_id": "10000000-0000-4000-8000-000000000001",
+    "previous_status": null,
+    "status": "PENDING",
+    "version": 1,
+    "change_kind": "CREATED"
+  }
+}

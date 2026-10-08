@@ -1,0 +1,17 @@
+{
+  "revision": "1.0.0-candidate",
+  "synthetic_only": true,
+  "seed": 42,
+  "places": 10000,
+  "users": 2000,
+  "reviews": 20000,
+  "trips": 1000,
+  "interactions": 50000,
+  "concurrent_users": 50,
+  "target_requests_per_second": 20,
+  "mix": {"catalog_read": 0.50, "basic_recommendation": 0.20, "trip_read": 0.15, "authenticated_write": 0.15},
+  "latency_target_ms": {"read_p95": 500, "write_p95": 800, "basic_recommendation_p95": 1000},
+  "provider_latency_measured_separately": true,
+  "load_measured": false,
+  "ml_quality_measured": false
+}

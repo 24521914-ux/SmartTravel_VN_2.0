@@ -1,0 +1,19 @@
+{
+  "event_id": "ed64058d-459f-5a24-86ed-a2ff8be22cfe",
+  "event_type": "catalog.place-import.applied.v1",
+  "schema_version": 1,
+  "aggregate_type": "import",
+  "aggregate_id": "00000000-0000-4000-8000-000000000001",
+  "aggregate_version": 1,
+  "occurred_at": "2026-10-08T00:00:00Z",
+  "producer": "catalog",
+  "correlation_id": "00000000-0000-4000-8000-000000000001",
+  "causation_id": "00000000-0000-4000-8000-000000000001",
+  "traceparent": "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
+  "payload": {
+    "command_id": "00000000-0000-4000-8000-000000000001",
+    "source_id": "30000000-0000-4000-8000-000000000001",
+    "place_id": "10000000-0000-4000-8000-000000000001",
+    "catalog_version": 1
+  }
+}

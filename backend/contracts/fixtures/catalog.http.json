@@ -1,0 +1,1645 @@
+{
+  "catalog_api_v1_admin_places_list": {
+    "path": "/api/v1/admin/places",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "place_id": "10000000-0000-4000-8000-000000000001",
+          "name": "synthetic",
+          "status": "DRAFT",
+          "version": 1,
+          "latitude": 10.762622,
+          "longitude": 106.660172,
+          "category_ids": [
+            "20000000-0000-4000-8000-000000000001"
+          ],
+          "tag_ids": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "amenity_ids": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "geographic_unit_id": "00000000-0000-4000-8000-000000000001",
+          "destination_ids": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "price": 0,
+          "currency": "VND",
+          "opening_hours": [
+            {
+              "weekday": 0,
+              "open": "09:00",
+              "close": "17:00",
+              "overnight": false
+            }
+          ],
+          "media_keys": [
+            "synthetic"
+          ],
+          "source_version": 1
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "catalog_api_v1_admin_places_create": {
+    "path": "/api/v1/admin/places",
+    "method": "POST",
+    "status": 201,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "name": "synthetic",
+      "latitude": 10.762622,
+      "longitude": 106.660172,
+      "category_ids": [
+        "20000000-0000-4000-8000-000000000001"
+      ],
+      "tag_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "amenity_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "geographic_unit_id": "00000000-0000-4000-8000-000000000001",
+      "destination_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "price": 0,
+      "currency": "VND",
+      "opening_hours": [
+        {
+          "weekday": 0,
+          "open": "09:00",
+          "close": "17:00",
+          "overnight": false
+        }
+      ],
+      "media_keys": [
+        "synthetic"
+      ]
+    },
+    "response": {
+      "place_id": "10000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "status": "DRAFT",
+      "version": 1,
+      "latitude": 10.762622,
+      "longitude": 106.660172,
+      "category_ids": [
+        "20000000-0000-4000-8000-000000000001"
+      ],
+      "tag_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "amenity_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "geographic_unit_id": "00000000-0000-4000-8000-000000000001",
+      "destination_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "price": 0,
+      "currency": "VND",
+      "opening_hours": [
+        {
+          "weekday": 0,
+          "open": "09:00",
+          "close": "17:00",
+          "overnight": false
+        }
+      ],
+      "media_keys": [
+        "synthetic"
+      ],
+      "source_version": 1
+    }
+  },
+  "catalog_api_v1_admin_places_get": {
+    "path": "/api/v1/admin/places/10000000-0000-4000-8000-000000000001",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "place_id": "10000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "status": "DRAFT",
+      "version": 1,
+      "latitude": 10.762622,
+      "longitude": 106.660172,
+      "category_ids": [
+        "20000000-0000-4000-8000-000000000001"
+      ],
+      "tag_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "amenity_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "geographic_unit_id": "00000000-0000-4000-8000-000000000001",
+      "destination_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "price": 0,
+      "currency": "VND",
+      "opening_hours": [
+        {
+          "weekday": 0,
+          "open": "09:00",
+          "close": "17:00",
+          "overnight": false
+        }
+      ],
+      "media_keys": [
+        "synthetic"
+      ],
+      "source_version": 1
+    }
+  },
+  "catalog_api_v1_admin_places_update": {
+    "path": "/api/v1/admin/places/10000000-0000-4000-8000-000000000001",
+    "method": "PATCH",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "name": "synthetic",
+      "latitude": 10.762622,
+      "longitude": 106.660172,
+      "category_ids": [
+        "20000000-0000-4000-8000-000000000001"
+      ],
+      "tag_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "amenity_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "geographic_unit_id": "00000000-0000-4000-8000-000000000001",
+      "destination_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "price": 0,
+      "currency": "VND",
+      "opening_hours": [
+        {
+          "weekday": 0,
+          "open": "09:00",
+          "close": "17:00",
+          "overnight": false
+        }
+      ],
+      "media_keys": [
+        "synthetic"
+      ]
+    },
+    "response": {
+      "place_id": "10000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "status": "DRAFT",
+      "version": 1,
+      "latitude": 10.762622,
+      "longitude": 106.660172,
+      "category_ids": [
+        "20000000-0000-4000-8000-000000000001"
+      ],
+      "tag_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "amenity_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "geographic_unit_id": "00000000-0000-4000-8000-000000000001",
+      "destination_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "price": 0,
+      "currency": "VND",
+      "opening_hours": [
+        {
+          "weekday": 0,
+          "open": "09:00",
+          "close": "17:00",
+          "overnight": false
+        }
+      ],
+      "media_keys": [
+        "synthetic"
+      ],
+      "source_version": 1
+    }
+  },
+  "catalog_api_v1_admin_places_delete": {
+    "path": "/api/v1/admin/places/10000000-0000-4000-8000-000000000001",
+    "method": "DELETE",
+    "status": 204,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    }
+  },
+  "searchPlaces": {
+    "path": "/api/v1/places",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "place_id": "10000000-0000-4000-8000-000000000001",
+          "name": "synthetic",
+          "status": "PUBLISHED",
+          "version": 1,
+          "latitude": 10.762622,
+          "longitude": 106.660172,
+          "category_ids": [
+            "20000000-0000-4000-8000-000000000001"
+          ],
+          "tag_ids": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "amenity_ids": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "geographic_unit_id": "00000000-0000-4000-8000-000000000001",
+          "destination_ids": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "price": 0,
+          "currency": "VND",
+          "opening_hours": [
+            {
+              "weekday": 0,
+              "open": "09:00",
+              "close": "17:00",
+              "overnight": false
+            }
+          ],
+          "media_keys": [
+            "synthetic"
+          ],
+          "source_version": 1
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "getPlace": {
+    "path": "/api/v1/places/10000000-0000-4000-8000-000000000001",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "place_id": "10000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "status": "PUBLISHED",
+      "version": 1,
+      "latitude": 10.762622,
+      "longitude": 106.660172,
+      "category_ids": [
+        "20000000-0000-4000-8000-000000000001"
+      ],
+      "tag_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "amenity_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "geographic_unit_id": "00000000-0000-4000-8000-000000000001",
+      "destination_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "price": 0,
+      "currency": "VND",
+      "opening_hours": [
+        {
+          "weekday": 0,
+          "open": "09:00",
+          "close": "17:00",
+          "overnight": false
+        }
+      ],
+      "media_keys": [
+        "synthetic"
+      ],
+      "source_version": 1
+    }
+  },
+  "placeStatus": {
+    "path": "/api/v1/admin/places/10000000-0000-4000-8000-000000000001/status",
+    "method": "PUT",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "status": "DRAFT"
+    },
+    "response": {
+      "place_id": "10000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "status": "DRAFT",
+      "version": 1,
+      "latitude": 10.762622,
+      "longitude": 106.660172,
+      "category_ids": [
+        "20000000-0000-4000-8000-000000000001"
+      ],
+      "tag_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "amenity_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "geographic_unit_id": "00000000-0000-4000-8000-000000000001",
+      "destination_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "price": 0,
+      "currency": "VND",
+      "opening_hours": [
+        {
+          "weekday": 0,
+          "open": "09:00",
+          "close": "17:00",
+          "overnight": false
+        }
+      ],
+      "media_keys": [
+        "synthetic"
+      ],
+      "source_version": 1
+    }
+  },
+  "catalog_api_v1_admin_geographic_units_list": {
+    "path": "/api/v1/admin/geographic-units",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "name": "synthetic",
+          "parent_id": null,
+          "level": "COUNTRY",
+          "aliases": [
+            "synthetic"
+          ],
+          "version": 1
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "catalog_api_v1_admin_geographic_units_create": {
+    "path": "/api/v1/admin/geographic-units",
+    "method": "POST",
+    "status": 201,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "name": "synthetic",
+      "parent_id": null,
+      "level": "COUNTRY",
+      "aliases": [
+        "synthetic"
+      ]
+    },
+    "response": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "parent_id": null,
+      "level": "COUNTRY",
+      "aliases": [
+        "synthetic"
+      ],
+      "version": 1
+    }
+  },
+  "catalog_api_v1_admin_geographic_units_get": {
+    "path": "/api/v1/admin/geographic-units/00000000-0000-4000-8000-000000000001",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "parent_id": null,
+      "level": "COUNTRY",
+      "aliases": [
+        "synthetic"
+      ],
+      "version": 1
+    }
+  },
+  "catalog_api_v1_admin_geographic_units_update": {
+    "path": "/api/v1/admin/geographic-units/00000000-0000-4000-8000-000000000001",
+    "method": "PATCH",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "name": "synthetic",
+      "parent_id": null,
+      "level": "COUNTRY",
+      "aliases": [
+        "synthetic"
+      ]
+    },
+    "response": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "parent_id": null,
+      "level": "COUNTRY",
+      "aliases": [
+        "synthetic"
+      ],
+      "version": 1
+    }
+  },
+  "catalog_api_v1_admin_geographic_units_delete": {
+    "path": "/api/v1/admin/geographic-units/00000000-0000-4000-8000-000000000001",
+    "method": "DELETE",
+    "status": 204,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    }
+  },
+  "public_geographic_units": {
+    "path": "/api/v1/geographic-units",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "name": "synthetic",
+          "parent_id": null,
+          "level": "COUNTRY",
+          "aliases": [
+            "synthetic"
+          ],
+          "version": 1
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "catalog_api_v1_admin_destinations_list": {
+    "path": "/api/v1/admin/destinations",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "destination_id": "00000000-0000-4000-8000-000000000001",
+          "name": "synthetic",
+          "status": "ACTIVE",
+          "geographic_unit_ids": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "version": 1
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "catalog_api_v1_admin_destinations_create": {
+    "path": "/api/v1/admin/destinations",
+    "method": "POST",
+    "status": 201,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "name": "synthetic",
+      "geographic_unit_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ]
+    },
+    "response": {
+      "destination_id": "00000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "status": "ACTIVE",
+      "geographic_unit_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "version": 1
+    }
+  },
+  "catalog_api_v1_admin_destinations_get": {
+    "path": "/api/v1/admin/destinations/00000000-0000-4000-8000-000000000001",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "destination_id": "00000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "status": "ACTIVE",
+      "geographic_unit_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "version": 1
+    }
+  },
+  "catalog_api_v1_admin_destinations_update": {
+    "path": "/api/v1/admin/destinations/00000000-0000-4000-8000-000000000001",
+    "method": "PATCH",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "name": "synthetic",
+      "geographic_unit_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ]
+    },
+    "response": {
+      "destination_id": "00000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "status": "ACTIVE",
+      "geographic_unit_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "version": 1
+    }
+  },
+  "catalog_api_v1_admin_destinations_delete": {
+    "path": "/api/v1/admin/destinations/00000000-0000-4000-8000-000000000001",
+    "method": "DELETE",
+    "status": 204,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    }
+  },
+  "public_destinations": {
+    "path": "/api/v1/destinations",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "destination_id": "00000000-0000-4000-8000-000000000001",
+          "name": "synthetic",
+          "status": "ACTIVE",
+          "geographic_unit_ids": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "version": 1
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "catalog_api_v1_admin_categories_list": {
+    "path": "/api/v1/admin/categories",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "name": "synthetic",
+          "active": true,
+          "version": 1
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "catalog_api_v1_admin_categories_create": {
+    "path": "/api/v1/admin/categories",
+    "method": "POST",
+    "status": 201,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "name": "synthetic",
+      "active": true
+    },
+    "response": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "active": true,
+      "version": 1
+    }
+  },
+  "catalog_api_v1_admin_categories_get": {
+    "path": "/api/v1/admin/categories/00000000-0000-4000-8000-000000000001",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "active": true,
+      "version": 1
+    }
+  },
+  "catalog_api_v1_admin_categories_update": {
+    "path": "/api/v1/admin/categories/00000000-0000-4000-8000-000000000001",
+    "method": "PATCH",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "name": "synthetic",
+      "active": true
+    },
+    "response": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "active": true,
+      "version": 1
+    }
+  },
+  "catalog_api_v1_admin_categories_delete": {
+    "path": "/api/v1/admin/categories/00000000-0000-4000-8000-000000000001",
+    "method": "DELETE",
+    "status": 204,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    }
+  },
+  "public_categories": {
+    "path": "/api/v1/categories",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "name": "synthetic",
+          "active": true,
+          "version": 1
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "catalog_api_v1_admin_tags_list": {
+    "path": "/api/v1/admin/tags",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "name": "synthetic",
+          "active": true,
+          "version": 1
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "catalog_api_v1_admin_tags_create": {
+    "path": "/api/v1/admin/tags",
+    "method": "POST",
+    "status": 201,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "name": "synthetic",
+      "active": true
+    },
+    "response": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "active": true,
+      "version": 1
+    }
+  },
+  "catalog_api_v1_admin_tags_get": {
+    "path": "/api/v1/admin/tags/00000000-0000-4000-8000-000000000001",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "active": true,
+      "version": 1
+    }
+  },
+  "catalog_api_v1_admin_tags_update": {
+    "path": "/api/v1/admin/tags/00000000-0000-4000-8000-000000000001",
+    "method": "PATCH",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "name": "synthetic",
+      "active": true
+    },
+    "response": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "active": true,
+      "version": 1
+    }
+  },
+  "catalog_api_v1_admin_tags_delete": {
+    "path": "/api/v1/admin/tags/00000000-0000-4000-8000-000000000001",
+    "method": "DELETE",
+    "status": 204,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    }
+  },
+  "public_tags": {
+    "path": "/api/v1/tags",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "name": "synthetic",
+          "active": true,
+          "version": 1
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "catalog_api_v1_admin_amenities_list": {
+    "path": "/api/v1/admin/amenities",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "name": "synthetic",
+          "active": true,
+          "version": 1
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "catalog_api_v1_admin_amenities_create": {
+    "path": "/api/v1/admin/amenities",
+    "method": "POST",
+    "status": 201,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "name": "synthetic",
+      "active": true
+    },
+    "response": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "active": true,
+      "version": 1
+    }
+  },
+  "catalog_api_v1_admin_amenities_get": {
+    "path": "/api/v1/admin/amenities/00000000-0000-4000-8000-000000000001",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "active": true,
+      "version": 1
+    }
+  },
+  "catalog_api_v1_admin_amenities_update": {
+    "path": "/api/v1/admin/amenities/00000000-0000-4000-8000-000000000001",
+    "method": "PATCH",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "name": "synthetic",
+      "active": true
+    },
+    "response": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "active": true,
+      "version": 1
+    }
+  },
+  "catalog_api_v1_admin_amenities_delete": {
+    "path": "/api/v1/admin/amenities/00000000-0000-4000-8000-000000000001",
+    "method": "DELETE",
+    "status": 204,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    }
+  },
+  "public_amenities": {
+    "path": "/api/v1/amenities",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "name": "synthetic",
+          "active": true,
+          "version": 1
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "catalog_api_v1_admin_offerings_list": {
+    "path": "/api/v1/admin/offerings",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "offering_id": "00000000-0000-4000-8000-000000000001",
+          "place_id": "10000000-0000-4000-8000-000000000001",
+          "type": "SERVICE",
+          "name": "synthetic",
+          "price": 0,
+          "currency": "VND",
+          "version": 1
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "catalog_api_v1_admin_offerings_create": {
+    "path": "/api/v1/admin/offerings",
+    "method": "POST",
+    "status": 201,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "place_id": "10000000-0000-4000-8000-000000000001",
+      "type": "SERVICE",
+      "name": "synthetic",
+      "price": 0,
+      "currency": "VND"
+    },
+    "response": {
+      "offering_id": "00000000-0000-4000-8000-000000000001",
+      "place_id": "10000000-0000-4000-8000-000000000001",
+      "type": "SERVICE",
+      "name": "synthetic",
+      "price": 0,
+      "currency": "VND",
+      "version": 1
+    }
+  },
+  "catalog_api_v1_admin_offerings_get": {
+    "path": "/api/v1/admin/offerings/00000000-0000-4000-8000-000000000001",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "offering_id": "00000000-0000-4000-8000-000000000001",
+      "place_id": "10000000-0000-4000-8000-000000000001",
+      "type": "SERVICE",
+      "name": "synthetic",
+      "price": 0,
+      "currency": "VND",
+      "version": 1
+    }
+  },
+  "catalog_api_v1_admin_offerings_update": {
+    "path": "/api/v1/admin/offerings/00000000-0000-4000-8000-000000000001",
+    "method": "PATCH",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "place_id": "10000000-0000-4000-8000-000000000001",
+      "type": "SERVICE",
+      "name": "synthetic",
+      "price": 0,
+      "currency": "VND"
+    },
+    "response": {
+      "offering_id": "00000000-0000-4000-8000-000000000001",
+      "place_id": "10000000-0000-4000-8000-000000000001",
+      "type": "SERVICE",
+      "name": "synthetic",
+      "price": 0,
+      "currency": "VND",
+      "version": 1
+    }
+  },
+  "catalog_api_v1_admin_offerings_delete": {
+    "path": "/api/v1/admin/offerings/00000000-0000-4000-8000-000000000001",
+    "method": "DELETE",
+    "status": 204,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    }
+  },
+  "public_offerings": {
+    "path": "/api/v1/offerings",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "offering_id": "00000000-0000-4000-8000-000000000001",
+          "place_id": "10000000-0000-4000-8000-000000000001",
+          "type": "SERVICE",
+          "name": "synthetic",
+          "price": 0,
+          "currency": "VND",
+          "version": 1
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "placeOfferings": {
+    "path": "/api/v1/places/10000000-0000-4000-8000-000000000001/offerings",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "offering_id": "00000000-0000-4000-8000-000000000001",
+          "place_id": "10000000-0000-4000-8000-000000000001",
+          "type": "SERVICE",
+          "name": "synthetic",
+          "price": 0,
+          "currency": "VND",
+          "version": 1
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "catalog_api_v1_businesses_list": {
+    "path": "/api/v1/businesses",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "business_id": "00000000-0000-4000-8000-000000000001",
+          "name": "synthetic",
+          "status": "PENDING",
+          "version": 1
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "catalog_api_v1_businesses_create": {
+    "path": "/api/v1/businesses",
+    "method": "POST",
+    "status": 201,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "name": "synthetic"
+    },
+    "response": {
+      "business_id": "00000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "status": "PENDING",
+      "version": 1
+    }
+  },
+  "catalog_api_v1_businesses_get": {
+    "path": "/api/v1/businesses/00000000-0000-4000-8000-000000000001",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "business_id": "00000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "status": "PENDING",
+      "version": 1
+    }
+  },
+  "catalog_api_v1_businesses_update": {
+    "path": "/api/v1/businesses/00000000-0000-4000-8000-000000000001",
+    "method": "PATCH",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "name": "synthetic"
+    },
+    "response": {
+      "business_id": "00000000-0000-4000-8000-000000000001",
+      "name": "synthetic",
+      "status": "PENDING",
+      "version": 1
+    }
+  },
+  "catalog_api_v1_businesses_delete": {
+    "path": "/api/v1/businesses/00000000-0000-4000-8000-000000000001",
+    "method": "DELETE",
+    "status": 204,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    }
+  },
+  "catalog_api_v1_businesses_business_id_members_list": {
+    "path": "/api/v1/businesses/00000000-0000-4000-8000-000000000001/members",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "member_id": "00000000-0000-4000-8000-000000000001",
+          "user_id": "00000000-0000-4000-8000-000000000001",
+          "role": "OWNER",
+          "version": 1
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "catalog_api_v1_businesses_business_id_members_create": {
+    "path": "/api/v1/businesses/00000000-0000-4000-8000-000000000001/members",
+    "method": "POST",
+    "status": 201,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "role": "OWNER"
+    },
+    "response": {
+      "member_id": "00000000-0000-4000-8000-000000000001",
+      "user_id": "00000000-0000-4000-8000-000000000001",
+      "role": "OWNER",
+      "version": 1
+    }
+  },
+  "catalog_api_v1_businesses_business_id_members_get": {
+    "path": "/api/v1/businesses/00000000-0000-4000-8000-000000000001/members/00000000-0000-4000-8000-000000000001",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "member_id": "00000000-0000-4000-8000-000000000001",
+      "user_id": "00000000-0000-4000-8000-000000000001",
+      "role": "OWNER",
+      "version": 1
+    }
+  },
+  "catalog_api_v1_businesses_business_id_members_update": {
+    "path": "/api/v1/businesses/00000000-0000-4000-8000-000000000001/members/00000000-0000-4000-8000-000000000001",
+    "method": "PATCH",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "role": "OWNER"
+    },
+    "response": {
+      "member_id": "00000000-0000-4000-8000-000000000001",
+      "user_id": "00000000-0000-4000-8000-000000000001",
+      "role": "OWNER",
+      "version": 1
+    }
+  },
+  "catalog_api_v1_businesses_business_id_members_delete": {
+    "path": "/api/v1/businesses/00000000-0000-4000-8000-000000000001/members/00000000-0000-4000-8000-000000000001",
+    "method": "DELETE",
+    "status": 204,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    }
+  },
+  "verifyBusiness": {
+    "path": "/api/v1/businesses/00000000-0000-4000-8000-000000000001/verification",
+    "method": "POST",
+    "status": 202,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "evidence_keys": [
+        "synthetic"
+      ]
+    },
+    "response": {
+      "request_id": "00000000-0000-4000-8000-000000000001",
+      "status": "ACCEPTED",
+      "version": 1
+    }
+  },
+  "createClaim": {
+    "path": "/api/v1/businesses/00000000-0000-4000-8000-000000000001/claims",
+    "method": "POST",
+    "status": 201,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "place_id": "10000000-0000-4000-8000-000000000001",
+      "evidence_keys": [
+        "synthetic"
+      ]
+    },
+    "response": {
+      "claim_id": "00000000-0000-4000-8000-000000000001",
+      "business_id": "00000000-0000-4000-8000-000000000001",
+      "place_id": "10000000-0000-4000-8000-000000000001",
+      "owner_user_id": "00000000-0000-4000-8000-000000000001",
+      "status": "PENDING",
+      "version": 1
+    }
+  },
+  "changeRequest": {
+    "path": "/api/v1/claims/00000000-0000-4000-8000-000000000001/change-requests",
+    "method": "POST",
+    "status": 202,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "fields": {
+        "name": "synthetic",
+        "category_ids": [
+          "20000000-0000-4000-8000-000000000001"
+        ],
+        "latitude": 10.762622,
+        "longitude": 106.660172,
+        "opening_hours": [
+          {
+            "weekday": 0,
+            "open": "09:00",
+            "close": "17:00",
+            "overnight": false
+          }
+        ],
+        "price": 0,
+        "currency": "VND"
+      },
+      "expected_version": 1
+    },
+    "response": {
+      "change_request_id": "00000000-0000-4000-8000-000000000001",
+      "claim_id": "00000000-0000-4000-8000-000000000001",
+      "fields": {
+        "name": "synthetic",
+        "category_ids": [
+          "20000000-0000-4000-8000-000000000001"
+        ],
+        "latitude": 10.762622,
+        "longitude": 106.660172,
+        "opening_hours": [
+          {
+            "weekday": 0,
+            "open": "09:00",
+            "close": "17:00",
+            "overnight": false
+          }
+        ],
+        "price": 0,
+        "currency": "VND"
+      },
+      "expected_version": 1,
+      "status": "PENDING",
+      "version": 1
+    }
+  },
+  "adminReview_claims": {
+    "path": "/api/v1/admin/claims/00000000-0000-4000-8000-000000000001/review",
+    "method": "POST",
+    "status": 202,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "action": "APPROVE",
+      "reason": "synthetic"
+    },
+    "response": {
+      "request_id": "00000000-0000-4000-8000-000000000001",
+      "status": "ACCEPTED",
+      "version": 1
+    }
+  },
+  "adminReview_change_requests": {
+    "path": "/api/v1/admin/change-requests/00000000-0000-4000-8000-000000000001/review",
+    "method": "POST",
+    "status": 202,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "action": "APPROVE",
+      "reason": "synthetic"
+    },
+    "response": {
+      "request_id": "00000000-0000-4000-8000-000000000001",
+      "status": "ACCEPTED",
+      "version": 1
+    }
+  },
+  "adminReview_business_verifications": {
+    "path": "/api/v1/admin/business-verifications/00000000-0000-4000-8000-000000000001/review",
+    "method": "POST",
+    "status": 202,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "action": "APPROVE",
+      "reason": "synthetic"
+    },
+    "response": {
+      "request_id": "00000000-0000-4000-8000-000000000001",
+      "status": "ACCEPTED",
+      "version": 1
+    }
+  },
+  "adminReview_media": {
+    "path": "/api/v1/admin/media/00000000-0000-4000-8000-000000000001/review",
+    "method": "POST",
+    "status": 202,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "action": "APPROVE",
+      "reason": "synthetic"
+    },
+    "response": {
+      "request_id": "00000000-0000-4000-8000-000000000001",
+      "status": "ACCEPTED",
+      "version": 1
+    }
+  },
+  "placeBatch": {
+    "path": "/internal/v1/places/batch",
+    "method": "POST",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "ids": [
+        "10000000-0000-4000-8000-000000000001"
+      ]
+    },
+    "response": {
+      "items": [
+        {
+          "place_id": "10000000-0000-4000-8000-000000000001",
+          "name": "synthetic",
+          "status": "PUBLISHED",
+          "version": 1,
+          "latitude": 10.762622,
+          "longitude": 106.660172,
+          "category_ids": [
+            "20000000-0000-4000-8000-000000000001"
+          ],
+          "tag_ids": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "amenity_ids": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "geographic_unit_id": "00000000-0000-4000-8000-000000000001",
+          "destination_ids": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "price": 0,
+          "currency": "VND",
+          "opening_hours": [
+            {
+              "weekday": 0,
+              "open": "09:00",
+              "close": "17:00",
+              "overnight": false
+            }
+          ],
+          "media_keys": [
+            "synthetic"
+          ],
+          "source_version": 1
+        }
+      ],
+      "missing_ids": []
+    }
+  },
+  "validatePlaces": {
+    "path": "/internal/v1/places/validate",
+    "method": "POST",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "ids": [
+        "10000000-0000-4000-8000-000000000001"
+      ]
+    },
+    "response": {
+      "items": [
+        {
+          "place_id": "10000000-0000-4000-8000-000000000001",
+          "public": false,
+          "version": 1
+        }
+      ],
+      "missing_ids": []
+    }
+  },
+  "placeSnapshot": {
+    "path": "/internal/v1/places/snapshot",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "place_id": "10000000-0000-4000-8000-000000000001",
+          "name": "synthetic",
+          "status": "DRAFT",
+          "version": 1,
+          "latitude": 10.762622,
+          "longitude": 106.660172,
+          "category_ids": [
+            "20000000-0000-4000-8000-000000000001"
+          ],
+          "tag_ids": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "amenity_ids": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "geographic_unit_id": "00000000-0000-4000-8000-000000000001",
+          "destination_ids": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "price": 0,
+          "currency": "VND",
+          "opening_hours": [
+            {
+              "weekday": 0,
+              "open": "09:00",
+              "close": "17:00",
+              "overnight": false
+            }
+          ],
+          "media_keys": [
+            "synthetic"
+          ],
+          "source_version": 1
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "placeCandidates": {
+    "path": "/internal/v1/places/candidates",
+    "method": "POST",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "name": "synthetic",
+      "latitude": 10.762622,
+      "longitude": 106.660172
+    },
+    "response": {
+      "items": [
+        {
+          "place_id": "10000000-0000-4000-8000-000000000001",
+          "name": "synthetic",
+          "status": "DRAFT",
+          "version": 1,
+          "latitude": 10.762622,
+          "longitude": 106.660172,
+          "category_ids": [
+            "20000000-0000-4000-8000-000000000001"
+          ],
+          "tag_ids": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "amenity_ids": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "geographic_unit_id": "00000000-0000-4000-8000-000000000001",
+          "destination_ids": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "price": 0,
+          "currency": "VND",
+          "opening_hours": [
+            {
+              "weekday": 0,
+              "open": "09:00",
+              "close": "17:00",
+              "overnight": false
+            }
+          ],
+          "media_keys": [
+            "synthetic"
+          ],
+          "source_version": 1
+        }
+      ],
+      "missing_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ]
+    }
+  }
+}

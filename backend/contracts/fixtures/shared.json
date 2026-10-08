@@ -1,0 +1,26 @@
+{
+  "revision": "1.0.0-candidate",
+  "synthetic_only": true,
+  "users": [
+    {"id":"00000000-0000-4000-8000-000000000001","alias":"U1","roles":["USER"],"consent":true},
+    {"id":"00000000-0000-4000-8000-000000000002","alias":"U2","roles":["USER"],"consent":false},
+    {"id":"00000000-0000-4000-8000-000000000003","alias":"admin","roles":["ADMIN"],"consent":false},
+    {"id":"00000000-0000-4000-8000-000000000004","alias":"business","roles":["BUSINESS"],"consent":false}
+  ],
+  "places": [
+    {"place_id":"10000000-0000-4000-8000-000000000001","name":"Synthetic public place","status":"PUBLISHED","version":1,"latitude":10.762622,"longitude":106.660172},
+    {"place_id":"10000000-0000-4000-8000-000000000002","name":"Synthetic hidden place","status":"HIDDEN","version":2,"latitude":10.76,"longitude":106.66},
+    {"place_id":"10000000-0000-4000-8000-000000000003","name":"Synthetic archived place","status":"ARCHIVED","version":3,"latitude":10.75,"longitude":106.65}
+  ],
+  "categories": [
+    {"id":"20000000-0000-4000-8000-000000000001","active":true},
+    {"id":"20000000-0000-4000-8000-000000000002","active":false}
+  ],
+  "sources": [
+    {"source_id":"30000000-0000-4000-8000-000000000001","source_version":1,"license_version":"synthetic-v1","allow_storage":true,"allow_training":true,"status":"PERMITTED"},
+    {"source_id":"30000000-0000-4000-8000-000000000002","source_version":2,"license_version":"synthetic-v2","allow_storage":false,"allow_training":false,"status":"REVOKED"}
+  ],
+  "trip": {"id":"40000000-0000-4000-8000-000000000001","owner_id":"00000000-0000-4000-8000-000000000001","version":1},
+  "model": {"id":"50000000-0000-4000-8000-000000000001","status":"FIXTURE_ONLY","production_eligible":false},
+  "scenarios": ["success","403","404","409","timeout","duplicate","out-of-order"]
+}

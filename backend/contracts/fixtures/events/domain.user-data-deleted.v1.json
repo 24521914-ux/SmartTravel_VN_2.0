@@ -1,0 +1,19 @@
+{
+  "event_id": "955c16cb-25a6-580c-b847-2b8b0918e3ff",
+  "event_type": "domain.user-data-deleted.v1",
+  "schema_version": 1,
+  "aggregate_type": "deletion",
+  "aggregate_id": "00000000-0000-4000-8000-000000000001",
+  "aggregate_version": 1,
+  "occurred_at": "2026-10-08T00:00:00Z",
+  "producer": "catalog",
+  "correlation_id": "00000000-0000-4000-8000-000000000001",
+  "causation_id": "00000000-0000-4000-8000-000000000001",
+  "traceparent": "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
+  "payload": {
+    "deletion_request_id": "00000000-0000-4000-8000-000000000001",
+    "service": "catalog",
+    "status": "COMPLETED",
+    "artifact_handling": "synthetic"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "event_id": "4db2d6c4-2017-567f-a7f7-5e61b43a4949",
+  "event_type": "ingestion.source-policy.changed.v1",
+  "schema_version": 1,
+  "aggregate_type": "source",
+  "aggregate_id": "30000000-0000-4000-8000-000000000001",
+  "aggregate_version": 1,
+  "occurred_at": "2026-10-08T00:00:00Z",
+  "producer": "ingestion",
+  "correlation_id": "00000000-0000-4000-8000-000000000001",
+  "causation_id": "00000000-0000-4000-8000-000000000001",
+  "traceparent": "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
+  "payload": {
+    "source_id": "30000000-0000-4000-8000-000000000001",
+    "source_version": 1,
+    "license_version": "synthetic",
+    "allow_storage": false,
+    "allow_training": false,
+    "status": "PERMITTED"
+  }
+}

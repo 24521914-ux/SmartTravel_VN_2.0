@@ -1,0 +1,19 @@
+{
+  "event_id": "fb1bf762-9b8e-5d50-9178-1d0a98fb5a55",
+  "event_type": "trip.changed.v1",
+  "schema_version": 1,
+  "aggregate_type": "trip",
+  "aggregate_id": "40000000-0000-4000-8000-000000000001",
+  "aggregate_version": 1,
+  "occurred_at": "2026-10-08T00:00:00Z",
+  "producer": "trip",
+  "correlation_id": "00000000-0000-4000-8000-000000000001",
+  "causation_id": "00000000-0000-4000-8000-000000000001",
+  "traceparent": "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
+  "payload": {
+    "trip_id": "40000000-0000-4000-8000-000000000001",
+    "user_id": "00000000-0000-4000-8000-000000000001",
+    "change_kind": "CREATED",
+    "version": 1
+  }
+}

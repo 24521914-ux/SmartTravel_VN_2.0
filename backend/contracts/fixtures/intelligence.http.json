@@ -1,0 +1,301 @@
+{
+  "recommend": {
+    "path": "/api/v1/recommendations",
+    "method": "POST",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "topN": 1,
+      "currency": "VND",
+      "category_ids": [
+        "20000000-0000-4000-8000-000000000001"
+      ],
+      "budget": 0,
+      "latitude": 10.762622,
+      "longitude": 106.660172,
+      "radius_m": 1
+    },
+    "response": {
+      "request_id": "00000000-0000-4000-8000-000000000001",
+      "version": "synthetic",
+      "data_as_of": "2026-10-08T00:00:00Z",
+      "fallback": false,
+      "items": [
+        {
+          "place_id": "10000000-0000-4000-8000-000000000001",
+          "score": 1,
+          "explanation": "synthetic"
+        }
+      ]
+    }
+  },
+  "recordInteractions": {
+    "path": "/api/v1/interactions/batch",
+    "method": "POST",
+    "status": 202,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "items": [
+        {
+          "event_id": "00000000-0000-4000-8000-000000000001",
+          "session_id": "00000000-0000-4000-8000-000000000001",
+          "type": "SEARCH",
+          "place_id": "10000000-0000-4000-8000-000000000001",
+          "query": "synthetic",
+          "occurred_at": "2026-10-08T00:00:00Z"
+        }
+      ],
+      "analytics_consent": true,
+      "consent_version": 1
+    },
+    "response": {
+      "accepted_ids": [
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "errors": [
+        {
+          "event_id": "00000000-0000-4000-8000-000000000001",
+          "code": "synthetic"
+        }
+      ]
+    }
+  },
+  "myInteractions": {
+    "path": "/api/v1/me/interactions",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "event_id": "00000000-0000-4000-8000-000000000001",
+          "session_id": "00000000-0000-4000-8000-000000000001",
+          "type": "SEARCH",
+          "place_id": "10000000-0000-4000-8000-000000000001",
+          "query": "synthetic",
+          "occurred_at": "2026-10-08T00:00:00Z"
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "deleteHistory": {
+    "path": "/api/v1/me/interactions",
+    "method": "DELETE",
+    "status": 202,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "request_id": "00000000-0000-4000-8000-000000000001",
+      "status": "ACCEPTED",
+      "version": 1
+    }
+  },
+  "buildDataset": {
+    "path": "/api/v1/admin/datasets",
+    "method": "POST",
+    "status": 202,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "source_ids": [
+        "30000000-0000-4000-8000-000000000001"
+      ],
+      "feature_schema_version": 1,
+      "criteria": {
+        "start": "2026-10-08T00:00:00Z",
+        "end": "2026-10-08T00:00:00Z"
+      }
+    },
+    "response": {
+      "dataset_id": "00000000-0000-4000-8000-000000000001",
+      "version": 1,
+      "checksum": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "feature_schema_version": 1,
+      "source_ids": [
+        "30000000-0000-4000-8000-000000000001"
+      ],
+      "status": "BUILDING"
+    }
+  },
+  "getDataset": {
+    "path": "/api/v1/admin/datasets/00000000-0000-4000-8000-000000000001",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "dataset_id": "00000000-0000-4000-8000-000000000001",
+      "version": 1,
+      "checksum": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "feature_schema_version": 1,
+      "source_ids": [
+        "30000000-0000-4000-8000-000000000001"
+      ],
+      "status": "BUILDING"
+    }
+  },
+  "startTraining": {
+    "path": "/api/v1/admin/training-jobs",
+    "method": "POST",
+    "status": 202,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "dataset_id": "00000000-0000-4000-8000-000000000001",
+      "seed": 0,
+      "code_revision": "synthetic"
+    },
+    "response": {
+      "job_id": "00000000-0000-4000-8000-000000000001",
+      "dataset_id": "00000000-0000-4000-8000-000000000001",
+      "status": "QUEUED",
+      "seed": 0,
+      "code_revision": "synthetic",
+      "version": 1
+    }
+  },
+  "getTraining": {
+    "path": "/api/v1/admin/training-jobs/00000000-0000-4000-8000-000000000001",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "job_id": "00000000-0000-4000-8000-000000000001",
+      "dataset_id": "00000000-0000-4000-8000-000000000001",
+      "status": "QUEUED",
+      "seed": 0,
+      "code_revision": "synthetic",
+      "version": 1
+    }
+  },
+  "cancelTraining": {
+    "path": "/api/v1/admin/training-jobs/00000000-0000-4000-8000-000000000001/cancel",
+    "method": "POST",
+    "status": 202,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "job_id": "00000000-0000-4000-8000-000000000001",
+      "dataset_id": "00000000-0000-4000-8000-000000000001",
+      "status": "QUEUED",
+      "seed": 0,
+      "code_revision": "synthetic",
+      "version": 1
+    }
+  },
+  "listModels": {
+    "path": "/api/v1/admin/models",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "items": [
+        {
+          "model_id": "50000000-0000-4000-8000-000000000001",
+          "model_version_id": "50000000-0000-4000-8000-000000000001",
+          "status": "TRAINED",
+          "metrics": {
+            "precision_at_10": 0,
+            "ndcg_at_10": 0
+          },
+          "version": 1
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-08T00:00:00Z",
+      "watermark": 1
+    }
+  },
+  "modelMetrics": {
+    "path": "/api/v1/admin/models/50000000-0000-4000-8000-000000000001/metrics",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "response": {
+      "precision_at_10": 0,
+      "ndcg_at_10": 0
+    }
+  },
+  "validateModel": {
+    "path": "/api/v1/admin/models/50000000-0000-4000-8000-000000000001/validate",
+    "method": "POST",
+    "status": 202,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "reason": "synthetic"
+    },
+    "response": {
+      "request_id": "00000000-0000-4000-8000-000000000001",
+      "status": "ACCEPTED",
+      "version": 1
+    }
+  },
+  "deployModel": {
+    "path": "/api/v1/admin/models/50000000-0000-4000-8000-000000000001/deploy",
+    "method": "POST",
+    "status": 202,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "reason": "synthetic"
+    },
+    "response": {
+      "request_id": "00000000-0000-4000-8000-000000000001",
+      "status": "ACCEPTED",
+      "version": 1
+    }
+  },
+  "rollbackModel": {
+    "path": "/api/v1/admin/models/50000000-0000-4000-8000-000000000001/rollback",
+    "method": "POST",
+    "status": 202,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "reason": "synthetic"
+    },
+    "response": {
+      "request_id": "00000000-0000-4000-8000-000000000001",
+      "status": "ACCEPTED",
+      "version": 1
+    }
+  }
+}
