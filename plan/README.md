@@ -8,14 +8,15 @@ Nguồn nghiệp vụ: `C:\Users\FPT SHOP\Downloads\Chức năng + Database.docx
 
 ## Đọc theo thứ tự
 
-1. [Kiến trúc và quyền sở hữu dữ liệu](01-architecture.md).
-2. [Ánh xạ 42 bảng và 11 nhóm chức năng](02-source-mapping.md).
-3. [Quy ước database và ràng buộc chung](03-database-conventions.md).
-4. [Hợp đồng API, event và xử lý nhất quán](04-api-events.md).
-5. [Chuyển đổi dữ liệu và cutover](05-migration-cutover.md).
-6. [Lộ trình và hướng dẫn hoàn thành từng phase](phases/README.md).
-7. [Phân công nhiều người, review và bàn giao](06-work-assignment.md).
-8. [Kết quả kiểm tra và giới hạn của thiết kế](VALIDATION.md).
+1. [Quy tắc làm việc Git/GitHub cho agent](../AGENTS.md).
+2. [Kiến trúc và quyền sở hữu dữ liệu](01-architecture.md).
+3. [Ánh xạ 42 bảng và 11 nhóm chức năng](02-source-mapping.md).
+4. [Quy ước database và ràng buộc chung](03-database-conventions.md).
+5. [Hợp đồng API, event và xử lý nhất quán](04-api-events.md).
+6. [Chuyển đổi dữ liệu và cutover](05-migration-cutover.md).
+7. [Lộ trình và hướng dẫn hoàn thành từng phase](phases/README.md).
+8. [Phân công nhiều người, review và bàn giao](06-work-assignment.md).
+9. [Kết quả kiểm tra và giới hạn của thiết kế](VALIDATION.md).
 
 ## Hướng dẫn triển khai theo phase
 
