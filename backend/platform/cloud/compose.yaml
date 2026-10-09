@@ -1,0 +1,122 @@
+# DEV ONLY: applications in Docker, databases on Neon/Atlas.
+name: smarttravel-cloud-dev
+x-app: &app
+  init: true
+  depends_on:
+    dev-issuer:
+      condition: service_healthy
+  networks: [cloud-dev]
+x-jwt: &jwt
+  JWT_JWKS_URI: ${JWT_JWKS_URI:-http://dev-issuer:18083/jwks}
+  JWT_ISSUER: ${JWT_ISSUER:-local-test}
+
+services:
+  dev-issuer:
+    build:
+      context: ..
+      dockerfile: cloud/Dockerfile.tools
+    image: smarttravel-cloud-tools:dev
+    init: true
+    ports: ["127.0.0.1:18083:18083"]
+    networks: [cloud-dev]
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:18083/jwks', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  identity:
+    <<: *app
+    build: ../../services/identity-service
+    image: smarttravel-identity:cloud
+    ports: ["127.0.0.1:8101:8101"]
+    environment:
+      <<: *jwt
+      JWT_AUDIENCE: identity
+      DB_URL: ${IDENTITY_DB_URL:?Set IDENTITY_DB_URL in .env}
+      DB_USER: ${IDENTITY_DB_USER:?Set IDENTITY_DB_USER in .env}
+      DB_PASSWORD: ${IDENTITY_DB_PASSWORD:?Set IDENTITY_DB_PASSWORD in .env}
+
+  catalog:
+    <<: *app
+    build: ../../services/catalog-service
+    image: smarttravel-catalog:cloud
+    ports: ["127.0.0.1:8102:8102"]
+    environment:
+      <<: *jwt
+      JWT_AUDIENCE: catalog
+      DB_URL: ${CATALOG_DB_URL:?Set CATALOG_DB_URL in .env}
+      DB_USER: ${CATALOG_DB_USER:?Set CATALOG_DB_USER in .env}
+      DB_PASSWORD: ${CATALOG_DB_PASSWORD:?Set CATALOG_DB_PASSWORD in .env}
+
+  community:
+    <<: *app
+    build: ../../services/community-service
+    image: smarttravel-community:cloud
+    ports: ["127.0.0.1:8103:8103"]
+    environment:
+      <<: *jwt
+      JWT_AUDIENCE: community
+      MONGODB_URI: ${MONGODB_URI:?Set MONGODB_URI in .env}
+
+  trip:
+    <<: *app
+    build: ../../services/trip-service
+    image: smarttravel-trip:cloud
+    ports: ["127.0.0.1:8104:8104"]
+    environment:
+      <<: *jwt
+      JWT_AUDIENCE: trip
+      DB_URL: ${TRIP_DB_URL:?Set TRIP_DB_URL in .env}
+      DB_USER: ${TRIP_DB_USER:?Set TRIP_DB_USER in .env}
+      DB_PASSWORD: ${TRIP_DB_PASSWORD:?Set TRIP_DB_PASSWORD in .env}
+
+  ingestion:
+    <<: *app
+    build: ../../services/ingestion-service
+    image: smarttravel-ingestion:cloud
+    ports: ["127.0.0.1:8105:8105"]
+    environment:
+      <<: *jwt
+      JWT_AUDIENCE: ingestion
+      DB_URL: ${INGESTION_DB_URL:?Set INGESTION_DB_URL in .env}
+      DB_USER: ${INGESTION_DB_USER:?Set INGESTION_DB_USER in .env}
+      DB_PASSWORD: ${INGESTION_DB_PASSWORD:?Set INGESTION_DB_PASSWORD in .env}
+
+  intelligence:
+    <<: *app
+    build: ../../services/intelligence-service
+    image: smarttravel-intelligence:cloud
+    ports: ["127.0.0.1:8106:8106"]
+    environment:
+      <<: *jwt
+      JWT_AUDIENCE: intelligence
+      DB_URL: ${INTELLIGENCE_DB_URL:?Set INTELLIGENCE_DB_URL in .env}
+      DB_USER: ${INTELLIGENCE_DB_USER:?Set INTELLIGENCE_DB_USER in .env}
+      DB_PASSWORD: ${INTELLIGENCE_DB_PASSWORD:?Set INTELLIGENCE_DB_PASSWORD in .env}
+
+  db-check:
+    image: smarttravel-cloud-tools:dev
+    profiles: [tools]
+    command: [python, check_databases.py]
+    networks: [cloud-dev]
+    environment:
+      IDENTITY_DB_URL: ${IDENTITY_DB_URL:?Set IDENTITY_DB_URL in .env}
+      IDENTITY_DB_USER: ${IDENTITY_DB_USER:?Set IDENTITY_DB_USER in .env}
+      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD:?Set IDENTITY_DB_PASSWORD in .env}
+      CATALOG_DB_URL: ${CATALOG_DB_URL:?Set CATALOG_DB_URL in .env}
+      CATALOG_DB_USER: ${CATALOG_DB_USER:?Set CATALOG_DB_USER in .env}
+      CATALOG_DB_PASSWORD: ${CATALOG_DB_PASSWORD:?Set CATALOG_DB_PASSWORD in .env}
+      TRIP_DB_URL: ${TRIP_DB_URL:?Set TRIP_DB_URL in .env}
+      TRIP_DB_USER: ${TRIP_DB_USER:?Set TRIP_DB_USER in .env}
+      TRIP_DB_PASSWORD: ${TRIP_DB_PASSWORD:?Set TRIP_DB_PASSWORD in .env}
+      INGESTION_DB_URL: ${INGESTION_DB_URL:?Set INGESTION_DB_URL in .env}
+      INGESTION_DB_USER: ${INGESTION_DB_USER:?Set INGESTION_DB_USER in .env}
+      INGESTION_DB_PASSWORD: ${INGESTION_DB_PASSWORD:?Set INGESTION_DB_PASSWORD in .env}
+      INTELLIGENCE_DB_URL: ${INTELLIGENCE_DB_URL:?Set INTELLIGENCE_DB_URL in .env}
+      INTELLIGENCE_DB_USER: ${INTELLIGENCE_DB_USER:?Set INTELLIGENCE_DB_USER in .env}
+      INTELLIGENCE_DB_PASSWORD: ${INTELLIGENCE_DB_PASSWORD:?Set INTELLIGENCE_DB_PASSWORD in .env}
+      MONGODB_URI: ${MONGODB_URI:?Set MONGODB_URI in .env}
+
+networks:
+  cloud-dev:
