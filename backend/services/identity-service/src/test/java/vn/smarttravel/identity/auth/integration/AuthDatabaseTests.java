@@ -51,6 +51,11 @@ class AuthDatabaseTests {
             return decoder;
         }
     }
+    @Autowired vn.smarttravel.identity.admin.service.AdminUserService admins;
+    @Autowired vn.smarttravel.identity.internal.service.UserBatchService batches;
+    @Autowired vn.smarttravel.identity.preferences.service.PreferenceService preferences;
+    @Autowired com.fasterxml.jackson.databind.ObjectMapper json;
+    @MockitoBean vn.smarttravel.identity.preferences.client.CategoryClient categories;
     @Autowired AuthService auth;
     @Autowired ProfileService profiles;
     @Autowired SessionService sessions;
@@ -88,6 +93,139 @@ class AuthDatabaseTests {
         if (token != null) h.setBearerAuth(token);
         for (int i=0;i<headers.length;i+=2) h.set(headers[i], headers[i+1]);
         return http.exchange(path, method, new HttpEntity<>(body,h), Map.class);
+    }
+    void assertFrozenSchema(String file, com.fasterxml.jackson.databind.JsonNode value) throws Exception {
+        java.nio.file.Path root=java.nio.file.Path.of("").toAbsolutePath();
+        while(root!=null && !java.nio.file.Files.isDirectory(root.resolve("backend/contracts"))) root=root.getParent();
+        assertThat(root).isNotNull();
+        var schema=json.readTree(root.resolve("backend/contracts/"+file).toFile());
+        var factory=com.networknt.schema.JsonSchemaFactory.getInstance(com.networknt.schema.SpecVersion.VersionFlag.V202012);
+        assertThat(factory.getSchema(schema).validate(value)).isEmpty();
+    }
+    @Test void adminStatusAndRoleUpdatesRecheckPrivilegesAndRevokeAllSessionFamilies() throws Exception {
+        var admin=active(); db.update("INSERT INTO identity.user_roles(user_id,role_code) VALUES (?,'ADMIN')",admin.user());
+        var adminPair=login(admin); var principal=jwt(adminPair); String token=(String)adminPair.get("access_token");
+        var target=active(); var pair=login(target); login(target);
+        var disabled=api(HttpMethod.PATCH,"/api/v1/admin/users/"+target.user()+"/status",Map.of("status","DISABLED"),token,"If-Match","\"2\"");
+        assertThat(disabled.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(disabled.getHeaders().getETag()).isEqualTo("\"3\"");
+        assertThat(disabled.getBody().get("status")).isEqualTo("DISABLED");
+        assertThatThrownBy(() -> profiles.profile(jwt(pair))).isInstanceOf(IdentityException.class);
+        assertThatThrownBy(() -> auth.refresh((String)pair.get("refresh_token"))).isInstanceOf(IdentityException.class);
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.auth_sessions WHERE user_id=? AND revoked_at IS NULL",Integer.class,target.user())).isZero();
+        assertFrozenSchema("events/identity.user.status-changed.v1.schema.json",json.readTree(db.queryForObject("SELECT payload::text FROM identity.outbox_events WHERE aggregate_id=? AND event_type='identity.user.status-changed.v1' AND aggregate_version=3",String.class,target.user().toString())));
+        admins.status(principal,target.user(),json.readTree("{\"status\":\"ACTIVE\"}"),3);
+        var reactivated=login(target);
+        var roles=admins.roles(principal,target.user(),json.readTree("{\"roles\":[\"USER\",\"BUSINESS\"]}"),4);
+        assertThat(roles.get("roles")).isEqualTo(java.util.List.of("BUSINESS","USER"));
+        assertThatThrownBy(() -> profiles.profile(jwt(reactivated))).isInstanceOf(IdentityException.class);
+        assertThat(api(HttpMethod.GET,"/api/v1/admin/users?limit=1",null,token).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThatThrownBy(() -> admins.roles(principal,admin.user(),json.readTree("{\"roles\":[\"USER\"]}"),2)).hasMessage("ADMIN_SELF_MUTATION_FORBIDDEN");
+        // Simulate a role removal by another authorized administrator: stale JWT cannot keep privileges.
+        db.update("DELETE FROM identity.user_roles WHERE user_id=? AND role_code='ADMIN'",admin.user());
+        assertThat(api(HttpMethod.GET,"/api/v1/admin/users",null,token).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+    @Test void adminCannotReviveUnverifiedDeletedOrDeletingAccounts() throws Exception {
+        var admin=active(); db.update("INSERT INTO identity.user_roles(user_id,role_code) VALUES (?,'ADMIN')",admin.user());
+        var principal=jwt(login(admin)); var unverified=pending(email());
+        assertThatThrownBy(() -> admins.status(principal,unverified.user(),json.readTree("{\"status\":\"ACTIVE\"}"),1)).hasMessage("EMAIL_NOT_VERIFIED");
+        var deleting=active();
+        db.update("INSERT INTO identity.data_deletion_requests(deletion_request_id,user_id,policy_version,status) VALUES (?,?,'test','PROCESSING')",UUID.randomUUID(),deleting.user());
+        assertThatThrownBy(() -> admins.status(principal,deleting.user(),json.readTree("{\"status\":\"ACTIVE\"}"),2)).hasMessage("ACCOUNT_DELETION_IN_PROGRESS");
+        assertThatThrownBy(() -> admins.roles(jwt(login(active())),deleting.user(),json.readTree("{\"roles\":[\"ADMIN\"]}"),2)).hasMessage("FORBIDDEN");
+    }
+    @Test void workloadBatchesHaveExplicitMissingIdsAndRejectSessionPrincipals() throws Exception {
+        var account=active(); UUID missing=UUID.randomUUID();
+        var workload=Jwt.withTokenValue("test-workload").header("alg","RS256").subject("intelligence").claim("client_id","intelligence").build();
+        var status=batches.batch(workload,java.util.List.of(account.user(),missing),false);
+        assertThat(status.get("missing_ids")).isEqualTo(java.util.List.of(missing));
+        var prefs=batches.batch(workload,java.util.List.of(account.user(),missing),true);
+        assertThat((java.util.List<?>)prefs.get("items")).hasSize(1);
+        assertThatThrownBy(() -> batches.batch(jwt(login(account)),java.util.List.of(account.user()),true)).hasMessage("WORKLOAD_IDENTITY_REQUIRED");
+        assertThatThrownBy(() -> batches.batch(workload,java.util.List.of(account.user(),account.user()),false)).hasMessage("INVALID_IDS");
+        var openapi=json.readTree(findContract("openapi/identity.yaml").toFile());
+        var factory=com.networknt.schema.JsonSchemaFactory.getInstance(com.networknt.schema.SpecVersion.VersionFlag.V202012);
+        for(var entry:Map.of("status",status,"preferences",prefs).entrySet()) {
+            var schema=openapi.path("paths").path("/internal/v1/users/"+entry.getKey()+"/batch").path("post").path("responses").path("200").path("content").path("application/json").path("schema");
+            assertThat(factory.getSchema(schema).validate(json.valueToTree(entry.getValue()))).isEmpty();
+        }
+    }
+    java.nio.file.Path findContract(String file) {
+        java.nio.file.Path root=java.nio.file.Path.of("").toAbsolutePath();
+        while(root!=null && !java.nio.file.Files.isDirectory(root.resolve("backend/contracts"))) root=root.getParent();
+        assertThat(root).isNotNull(); return root.resolve("backend/contracts/"+file);
+    }
+    @Test void preferencesAreAtomicVersionedAndConsentIsServerOwned() throws Exception {
+        var account=active(); var pair=login(account); var principal=jwt(pair);
+        var before=preferences.get(principal);
+        assertThat(before.get("budget_level")).isEqualTo("MID");
+        assertThat(before.get("personalization_enabled")).isEqualTo(false);
+        UUID option=db.queryForObject("SELECT option_id FROM identity.preference_options WHERE kind='TRAVEL_STYLE' AND active LIMIT 1",UUID.class);
+        UUID category=UUID.randomUUID();
+        var patch=json.readTree(json.writeValueAsString(Map.of("category_ids",java.util.List.of(category),"travel_style_ids",java.util.List.of(option),
+                "budget_level","CUSTOM","budget_min",100,"budget_max",200,"personalization_enabled",true,"consent_version",1)));
+        var updated=preferences.update(principal,patch,1,"preferences-first");
+        assertThat(updated.get("version")).isEqualTo(2L);
+        assertThat(updated.get("consent_version")).isEqualTo(2L);
+        assertThat(updated.get("personalization_enabled")).isEqualTo(true);
+        var replay=preferences.update(principal,patch,1,"preferences-first");
+        assertThat(json.readTree(json.writeValueAsString(replay))).isEqualTo(json.readTree(json.writeValueAsString(updated)));
+        assertThatThrownBy(() -> preferences.update(principal,patch,1,"different-key")).hasMessage("VERSION_CONFLICT");
+        assertThatThrownBy(() -> preferences.update(principal,json.readTree("{\"budget_level\":\"LOW\"}"),1,"preferences-first")).hasMessage("IDEMPOTENCY_CONFLICT");
+        var payload=json.readTree(db.queryForObject("SELECT payload::text FROM identity.outbox_events WHERE aggregate_id=? AND event_type='identity.preferences.changed.v1'",String.class,account.user().toString()));
+        assertFrozenSchema("events/identity.preferences.changed.v1.schema.json",payload);
+        assertThat(payload.path("aggregate_type").asText()).isEqualTo("preferences");
+        assertThat(payload.path("aggregate_version").asLong()).isEqualTo(2);
+        assertThat(payload.path("payload").path("user_id").asText()).isEqualTo(account.user().toString());
+        assertThat(db.queryForObject("SELECT response_status FROM identity.idempotency_records WHERE scope='preferences' AND actor_key=?",Integer.class,account.user().toString())).isEqualTo(200);
+        var unchanged=preferences.update(principal,json.readTree("{\"budget_level\":\"LOW\"}"),2,"next");
+        assertThat(unchanged.get("consent_version")).isEqualTo(2L);
+        var revoked=preferences.update(principal,json.readTree("{\"personalization_enabled\":false,\"consent_version\":2}"),3,"revoke");
+        assertThat(revoked.get("consent_version")).isEqualTo(3L);
+        assertThatThrownBy(() -> preferences.update(principal,json.readTree("{\"consent_version\":99}"),4,"forged-consent")).hasMessage("CONSENT_VERSION_CONFLICT");
+    }
+    @Test void preferenceFailuresRollbackAllSelectionsAuditAndOutbox() throws Exception {
+        var account=active(); var principal=jwt(login(account));
+        UUID food=db.queryForObject("SELECT option_id FROM identity.preference_options WHERE kind='FOOD_PREFERENCE' AND active LIMIT 1",UUID.class);
+        assertThatThrownBy(() -> preferences.update(principal,json.readTree("{\"travel_style_ids\":[\""+food+"\"]}"),1,"wrong-kind")).hasMessage("INVALID_PREFERENCE_OPTION");
+        org.mockito.Mockito.doThrow(new IdentityException(503,"CATEGORY_VALIDATION_UNAVAILABLE")).when(categories).requireActive(any());
+        assertThatThrownBy(() -> preferences.update(principal,json.readTree("{\"category_ids\":[\""+UUID.randomUUID()+"\"],\"personalization_enabled\":true}"),1,"timeout")).hasMessage("CATEGORY_VALIDATION_UNAVAILABLE");
+        assertThat(preferences.get(principal).get("version")).isEqualTo(1L);
+        assertThat(preferences.get(principal).get("personalization_enabled")).isEqualTo(false);
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.outbox_events WHERE aggregate_id=? AND event_type='identity.preferences.changed.v1'",Integer.class,account.user().toString())).isZero();
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.idempotency_records WHERE scope='preferences' AND actor_key=?",Integer.class,account.user().toString())).isZero();
+    }
+    @Test void preferenceHttpContractValidatesHeadersBodyPublicOptionsAndOwnership() {
+        var account=active(); var pair=login(account); String token=(String)pair.get("access_token");
+        var get=api(HttpMethod.GET,"/api/v1/me/preferences",null,token);
+        assertThat(get.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(get.getHeaders().getETag()).isEqualTo("\"1\"");
+        assertThat(api(HttpMethod.PUT,"/api/v1/me/preferences",Map.of("currency","VND"),token,"Idempotency-Key","x").getStatusCode()).isEqualTo(HttpStatus.PRECONDITION_REQUIRED);
+        assertThat(api(HttpMethod.PUT,"/api/v1/me/preferences",Map.of("user_id",UUID.randomUUID()),token,"If-Match","\"1\"","Idempotency-Key","x").getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(api(HttpMethod.PUT,"/api/v1/me/preferences",Map.of("personalization_enabled","true"),token,"If-Match","\"1\"","Idempotency-Key","x").getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(api(HttpMethod.GET,"/api/v1/preference-options?limit=1",null,null).getStatusCode()).isEqualTo(HttpStatus.OK);
+        var page=api(HttpMethod.GET,"/api/v1/preference-options?limit=1",null,null).getBody();
+        assertThat(page.get("next_cursor")).isNotNull();
+        assertThat(api(HttpMethod.GET,"/api/v1/preference-options?limit=1&cursor="+page.get("next_cursor"),null,null).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(api(HttpMethod.GET,"/api/v1/preference-options?limit=2&cursor="+page.get("next_cursor"),null,null).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        auth.logout(jwt(pair),(String)pair.get("refresh_token"));
+        assertThat(api(HttpMethod.GET,"/api/v1/me/preferences",null,token).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+    @Test void concurrentPreferenceUpdatesHaveOneWinner() throws Exception {
+        var account=active(); var principal=jwt(login(account));
+        var patch=json.readTree("{\"personalization_enabled\":true}");
+        var ready=new CountDownLatch(2); var start=new CountDownLatch(1);
+        try(var pool=Executors.newFixedThreadPool(2)) {
+            java.util.concurrent.Callable<Boolean> attempt=() -> {
+                ready.countDown(); start.await();
+                try { preferences.update(principal,patch,1,UUID.randomUUID().toString()); return true; }
+                catch(IdentityException e) { assertThat(e.getMessage()).isEqualTo("VERSION_CONFLICT"); return false; }
+            };
+            var a=pool.submit(attempt); var b=pool.submit(attempt); ready.await(); start.countDown();
+            assertThat(java.util.List.of(a.get(),b.get())).containsExactlyInAnyOrder(true,false);
+        }
+        assertThat(preferences.get(principal).get("version")).isEqualTo(2L);
+        assertThat(preferences.get(principal).get("consent_version")).isEqualTo(2L);
     }
     @Test void canonicalDuplicateRegistrationHasAtomicDefaultsAndIdempotency() {
         String email=email(), key=UUID.randomUUID().toString();

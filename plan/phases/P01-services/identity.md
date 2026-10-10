@@ -1,6 +1,6 @@
 # P01-ID Identity Service — nhóm A
 
-Trạng thái: **IN_PROGRESS — M1 + auth/session đã kiểm chứng**. Evidence và phần còn thiếu tại [progress](../../../progress/PHASE_TASK_CHECKLIST.md). Đã hoàn tất kỹ thuật P01-ID-01/02/03/08; còn preferences/admin/notifications/deletion/transport và review, chưa đạt gate. Dependency: P00, không chờ service khác. Scope: F01, auth/session/role/preferences/consent/notification/deletion. Reviewer: B.
+Trạng thái: **IN_PROGRESS — M1 + auth/session/preferences/admin đã kiểm chứng**. Evidence và phần còn thiếu tại [progress](../../../progress/PHASE_TASK_CHECKLIST.md). Đã hoàn tất kỹ thuật P01-ID-01/02/03/04/08; còn notifications/deletion/transport/category invalidation và review, chưa đạt gate. Dependency: P00, không chờ service khác. Scope: F01, auth/session/role/preferences/consent/notification/deletion. Reviewer: B.
 
 Đọc [database Identity](../../database/identity.md), [DDL](../../database/sql/identity.sql), [contract](../../04-api-events.md) và [gate chung](README.md). Owner sửa `backend/services/identity-service/**` khi triển khai.
 
@@ -23,7 +23,7 @@ Identity tự implement issuer/JWKS/session thật của mình; không giả res
 ## M2 Nghiệp vụ
 
 - [x] P01-ID-03: Register/verify/login/logout/refresh/password reset/change, rate limit; đăng ký không cho tự gán ADMIN, error không lộ tài khoản tồn tại.
-- [ ] P01-ID-04: Profile/preferences/options/category/consent, update atomic và version; admin user/status/roles; xử lý session family khi logout/reset/reuse.
+- [x] P01-ID-04: Profile/preferences/options/category HTTP validation/consent, update atomic và version; admin user/status/roles; xử lý session family khi logout/reset/reuse. DB/API/provider tests PASS; category invalidation consumer vẫn thuộc ID-06.
 - [ ] P01-ID-05: Notification inbox/read/delivery/retry; deletion request/ack/state machine; account disable ngay, không complete sớm.
 
 API: auth register/login/refresh/logout/verify/reset, me/profile/password/preferences/sessions/notifications/deletion, admin users/status/roles và internal user-status/preferences batch. Đủ request/response/error examples cho frontend, không cần frontend mới kiểm được chức năng.

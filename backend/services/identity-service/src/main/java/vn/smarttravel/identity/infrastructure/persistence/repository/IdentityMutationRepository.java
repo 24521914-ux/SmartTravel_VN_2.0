@@ -16,11 +16,11 @@ public class IdentityMutationRepository {
         return rows.isEmpty() ? null : rows.getFirst();
     }
 
-    public void remember(String scope, String actor, String key, String hash, String response) {
+    public void remember(String scope, String actor, String key, String hash, String response, int status) {
         db.update("""
             INSERT INTO identity.idempotency_records(scope,actor_key,idempotency_key,request_hash,response_status,response_body,expires_at)
-            VALUES (?,?,?,?,202,?::jsonb,now()+interval '24 hours')
-            """, scope, actor, key, hash, response);
+            VALUES (?,?,?,?,?,?::jsonb,now()+interval '24 hours')
+            """, scope, actor, key, hash, status, response);
     }
 
     public void audit(UUID actor, UUID user, String action) {
@@ -28,8 +28,8 @@ public class IdentityMutationRepository {
                 UUID.randomUUID(), actor, user.toString(), action);
     }
 
-    public void event(UUID event, UUID user, long version, String type, String envelope) {
-        db.update("INSERT INTO identity.outbox_events(event_id,aggregate_type,aggregate_id,aggregate_version,event_type,payload) VALUES (?,'user',?,?,?,?::jsonb)",
-                event, user.toString(), version, type, envelope);
+    public void event(UUID event, String aggregate, UUID user, long version, String type, String envelope) {
+        db.update("INSERT INTO identity.outbox_events(event_id,aggregate_type,aggregate_id,aggregate_version,event_type,payload) VALUES (?,?,?,?,?,?::jsonb)",
+                event, aggregate, user.toString(), version, type, envelope);
     }
 }
