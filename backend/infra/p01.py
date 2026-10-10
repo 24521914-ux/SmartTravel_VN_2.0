@@ -72,8 +72,9 @@ def expect_denied(env, service, statement, **kwargs):
 
 def verify(env, selected=None):
     for service in ([selected] if selected and selected != 'community' else [] if selected else RELATIONAL):
-        migration = ROOT / f'backend/services/{service}-service/src/main/resources/db/migration/V2__domain_baseline.sql'
-        count = len(re.findall(r'CREATE TABLE ', migration.read_text(encoding='utf-8')))
+        migrations = ROOT / f'backend/services/{service}-service/src/main/resources/db/migration'
+        count = sum(len(re.findall(rf'CREATE TABLE {service}\.', file.read_text(encoding='utf-8')))
+                    for file in migrations.glob('V*__*.sql'))
         result = sql(env, service, f"SELECT count(*) FROM information_schema.tables WHERE table_schema='{service}';")
         assert result.stdout.strip() == str(count), f'{service} domain table count mismatch'
         # A real authenticated runtime role can read/write domain data, but cannot DDL,
@@ -117,7 +118,10 @@ def main():
     env = environment()
     if args.action == 'up':
         compose(env, 'config', '--quiet')
-        compose(env, 'up', '-d', '--wait', *[f'{s}-db' for s in ([args.service] if args.service else SERVICES)])
+        dependencies = [f'{s}-db' for s in ([args.service] if args.service else SERVICES)]
+        if not args.service or args.service == 'identity':
+            dependencies.append('identity-mail')
+        compose(env, 'up', '-d', '--wait', *dependencies)
         if not args.service or args.service == 'community':
             print(compose(env, 'exec', '-T', 'community-db', 'mongosh', '--quiet', '/p01/bootstrap.js').stdout.strip())
             print(compose(env, 'exec', '-T', 'community-db', 'mongosh', '--quiet', '/p01/migrate.js').stdout.strip())

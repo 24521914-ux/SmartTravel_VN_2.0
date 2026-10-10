@@ -1,0 +1,2 @@
+--Đây là file tóm tắt
+fixtures/ chứa request/response mẫu của API và dữ liệu giả dùng chung. Dùng cho test và server stub để phát triển mà chưa cần backend thật.

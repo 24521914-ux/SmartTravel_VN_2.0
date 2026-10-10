@@ -1,0 +1,4 @@
+--Đây chỉ là file tóm tắt
+folder envent chứa envelop và payload để quy trình
+rằng nếu serA gửi message cho serB thì bắt buộc phải
+tuân theo form của envelop và payload như thế này.

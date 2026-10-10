@@ -2,7 +2,7 @@
 
 Identity sở hữu danh tính, tài khoản, phân quyền nền tảng, preference, consent và thông báo theo user. Các preference nhiều giá trị được tách bảng; budget/companion/indoor-outdoor là profile 1–1. Email/password/token không được phát lên event bus công khai.
 
-Database: `identity_db`; schema nội bộ: `identity`. Có 14 bảng nghiệp vụ/read model và 4 bảng kỹ thuật local. [DDL đầy đủ](sql/identity.sql) là đặc tả chi tiết cột, PK, FK, CHECK, UNIQUE, index; chưa chạy trên database. [Quy ước chung](../03-database-conventions.md).
+Database: `identity_db`; schema nội bộ: `identity`. Baseline có 14 bảng nghiệp vụ/read model và 4 bảng kỹ thuật local. Implementation P01 V5 bổ sung 2 operational tables `auth_rate_limits` (hash bucket/window/attempts) và `account_mail_jobs` (AES-GCM encrypted token mail/retry), tổng runtime 20 bảng; DDL/versioned evidence tại `backend/services/identity-service/src/main/resources/db/migration/`, không sửa baseline đã migrate. [DDL đầy đủ](sql/identity.sql) là đặc tả chi tiết cột, PK, FK, CHECK, UNIQUE, index; chưa chạy trên database. [Quy ước chung](../03-database-conventions.md).
 
 ## Sơ đồ khóa ngoại nội bộ
 

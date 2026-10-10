@@ -10,6 +10,9 @@ x-pg: &pg
   volumes:
     - ./postgres/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro
 services:
+  identity-mail:
+    image: axllent/mailpit:v1.27
+    ports: ["127.0.0.1:51025:1025", "127.0.0.1:58025:8025"]
   identity-db:
     <<: *pg
     environment:

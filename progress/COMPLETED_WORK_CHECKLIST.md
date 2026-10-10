@@ -16,7 +16,7 @@ Tiến độ từng task xem [PHASE_TASK_CHECKLIST.md](PHASE_TASK_CHECKLIST.md).
 
 - [x] Backend demo gốc và Maven Wrapper giữ nguyên, không xóa thay đổi người dùng.
 - [x] Platform template Java21/Boot3.5.13/Flyway/health/JWT — `backend/platform/p00-template/`.
-- [x] Sáu skeleton Java build/deploy độc lập — `backend/services/`; chưa có domain API/entity/repository/logic.
+- [x] Sáu skeleton Java build/deploy độc lập — `backend/services/`; P00 chưa có domain API. P01 Identity đã triển khai auth/session/profile như evidence bên dưới; năm service còn lại vẫn ở baseline.
 - [x] Community dùng Spring Data MongoDB, không JPA/JDBC/Flyway; P00 platform_probe giữ nguyên. P01 đã bổ sung domain migrations/index/collections thật, chưa có domain APIs.
 - [x] Correlation/trace MDC, error auth JSON và WWW-Authenticate; audience/issuer/exp/iat/sub/signature validators.
 - [x] Dockerfiles chạy non-root và Compose sáu DB +platform DB +sáu Redis riêng — `backend/platform/compose.p00.yaml`.
@@ -55,12 +55,44 @@ Tiến độ từng task xem [PHASE_TASK_CHECKLIST.md](PHASE_TASK_CHECKLIST.md).
 - [x] Contract tracked revision kiểm trên temporary copy PASS (183 operation/23 messages); workspace validator đang bị bốn `text.txt` untracked có trước task làm manifest mismatch. Giữ nguyên file người dùng và manifest.
 - [ ] Chưa hoàn tất seed/domain/security/adapter/outbox worker/DLQ/broker/frontend client hoặc gate M1–M4. Chi tiết lệnh và evidence tại [checklist P01 M1](PHASE_TASK_CHECKLIST.md#p01-m1--phần-đã-triển-khai-và-kiểm-chứng).
 
+## P01 Identity — auth/session (10/10/2026)
+
+- [x] M1 Identity roles/options + U1/U2/admin/business opt-in fixture seed, V5 operational rate-limit/encrypted mail queue (20 tables, giữ V1–V4 checksum).
+- [x] 13/25 operation thật: auth/verify/reset/change password, profile ETag, sessions cursor/owner/revoke và issuer RS256/JWKS/key rotation. Refresh/account token chỉ hash, consent default false, sensitive requests kiểm current status/session.
+- [x] `python backend/services/identity-service/test-local.py`: **19 tests PASS**, 0 failure/error/skip, gồm **12** DB/API/domain tests trên PostgreSQL disposable thật. Concurrent refresh chỉ một thắng; reuse commit family revoke trước 401; expired/consumed token, reset/password/logout/session ownership và USER không gọi admin/internal.
+- [x] Live jar và non-root image `smarttravel-identity:p01-auth-local`: SMTP Mailpit → verify/login/profile/sessions/refresh/logout, current-session revocation và frozen provider schemas/two event envelopes PASS. Storage/security smoke + permission/rollback probe Identity 20 tables PASS.
+- [x] Local runners, ignored persistent signing/mail/fixture secrets, Mailpit loopback, CI source DB tests/image smoke và rotation/revoke/config runbook — `backend/services/identity-service/README.md`. Chưa remote CI hoặc con người review.
+- [x] Blocker Community CRLF/LF của lượt hồi quy Identity đã được xử lý ở mục EOL bên dưới; full storage chạy lại 6/6 PASS. Lượt Identity cũ chỉ 5 PostgreSQL PASS, không sửa lại lịch sử kiểm thử.
+- [ ] Identity chưa xong P01: preferences/category/consent/admin/internal batches, notifications/deletion/ack, transport/inbox/outbox worker/DLQ và toàn bộ provider/fault/security/handoff. Không READY_FOR_INTEGRATION. Chi tiết tại [checklist](PHASE_TASK_CHECKLIST.md#identity-authsession--evidence-local-10102026).
+
+## Refactor source layout — 10/10/2026
+
+- [x] Sáu service theo service → chức năng → tầng, main/test package khớp thư mục; bootstrap ở root, common security/web và Community storage config về đúng package.
+- [x] Identity tách auth/profile controller/DTO/service/repository; SQL chuyển vào repositories, mail/fixtures/outbox/audit/idempotency và JWT/error helpers tách file/package riêng, giữ transaction và wire contract.
+- [x] Reactor 6/6 clean verify BUILD SUCCESS; Identity 19/19 tests trên PostgreSQL thật PASS; layout/generator safety 6 tests PASS; jar + non-root Identity image live SMTP/provider smoke và 5/5 relational app legacy smoke PASS.
+- [x] Scaffold sinh layout mới; security sync chỉ export proposal review, không overwrite domain security. Quy ước: `backend/services/README.md`; evidence tại checklist chung.
+- [ ] Identity P01 vẫn chưa hoàn tất toàn scope. Blocker EOL Community sau refactor đã xử lý và kiểm runtime PASS ở mục bên dưới; không đổi nội dung migration/database để che lỗi.
+
+## Community EOL checksum — 10/10/2026
+
+- [x] Giữ LF cho migration qua `backend/.gitattributes`; khôi phục file V1 về đúng bytes đã commit, không đổi checksum metadata/applied_at hoặc reset/xóa volume.
+- [x] Java regression RED trên CRLF rồi GREEN trên LF; Community clean verify **7 tests PASS**. Layout/source guards **7 tests PASS**, gồm Git checkout `core.autocrlf=true`; JAR resource khớp checksum gốc `1830d58c…`.
+- [x] Community storage/permissions/rollback PASS, app jar smoke/restart hai lần PASS, image `smarttravel-community:p01-eol-local` build PASS.
+- [x] Full storage hồi quy **6/6 PASS**; read-only snapshot revision và document counts 16 collections trước/sau không đổi. Blocker CRLF/LF đã đóng; không coi đây là Community domain/P01 gate hoàn tất.
+
+## Sửa CI PR #6 — 10/10/2026
+
+- [x] Bổ sung manifest cho bốn ghi chú `text.txt`, không đổi checksum wire artifacts/revision; sửa POSIX runner gọi `bash mvnw` và image smoke dùng Compose DNS DB/SMTP, giữ host bindings loopback.
+- [x] Regression runner 3/3 trên Linux container, image config/network 4/4; Identity PostgreSQL 19/19 và non-root image live auth/SMTP/provider/events PASS local.
+- [x] Đã push `55fdc66` + `e1d1ddd` vào `feature/identity-phase01`; revision `e1d1ddd` **9/9 GitHub Actions checks PASS**. PR #6 `CLEAN`/`MERGEABLE`, chưa merge. Runs/evidence tại [checklist chung](PHASE_TASK_CHECKLIST.md#sửa-ci-pull-request-6--10102026).
+- [ ] Phần Identity workflows tiếp tục đang triển khai riêng, chưa commit/push hoặc đạt gate P01; không suy ra hoàn thành từ CI auth PASS.
+
 ## Chưa được xác nhận / thuộc giai đoạn sau
 
 - [ ] N1/N2 phê duyệt contract/policy candidate và nhận gói; điều phối freeze/đóng gate P00. Agent không tự ký thay.
 - [ ] Chức năng nghiệp vụ/seed đầy đủ, provider adapters/outbox worker/inbox handlers thực và functional/contract/fault tests P01; baseline storage đã có, không tự đóng parent task.
 - [ ] Kết nối thật và frontend nghiệp vụ/E2E/security/load/restore/ML quality P02–P03.
 - [ ] Production domain/provider credentials/licenses/budget/support-EOL review, release/rollback/bàn giao P04.
-- [ ] Remote GitHub Actions pass và commit/push các thay đổi hiện tại.
+- [x] Remote GitHub Actions PR #6 pass và auth/layout/CI fixes đã commit/push như evidence ở trên; không bao gồm Identity workflows mới đang triển khai.
 
 Cơ sở: revision Git nền `83c07f3`, thay đổi chưa commit/push, evidence local ngày08/10/2026. Không lấy thư mục target hoặc source test làm bằng chứng pass; lệnh/kết quả và giới hạn ở manifest. Test apps/stubs/issuers/Vite tạm được dừng; DB/cache Docker/volumes giữ để tiếp tục làm việc.

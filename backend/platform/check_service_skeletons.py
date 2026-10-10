@@ -35,6 +35,10 @@ def check(service, p01=False):
                    DB_MIGRATION_USER=f'{service}_migrator',DB_MIGRATION_PASSWORD=os.environ[f'{service.upper()}_MIGRATION_PASSWORD'])
     else:
         env.update(DB_URL=f'jdbc:postgresql://localhost:{PORTS[service]}/{service}_db',DB_USER=f'{service}_local',DB_PASSWORD=os.environ[f'{service.upper()}_DB_PASSWORD'])
+    if service == 'identity':
+        env.update(SPRING_PROFILES_ACTIVE='p01-local', MAIL_PORT='51025')
+        # This legacy smoke tests DB/security only, not provider availability.
+        env['MANAGEMENT_HEALTH_MAIL_ENABLED'] = 'false'
     env.update(JWT_ISSUER='local-test',JWT_AUDIENCE=service,JWT_JWKS_URI='http://127.0.0.1:18082/jwks')
     with socket.socket() as sock:
         sock.bind(('127.0.0.1',0)); port=sock.getsockname()[1]
@@ -63,8 +67,9 @@ def check(service, p01=False):
                 except (OSError,ValueError): pass
                 time.sleep(1)
             assert ready, f'{service} DB health did not become UP'
+            route = '/api/v1/unknown' if service == 'identity' else '/internal/v1/unknown'
             try:
-                urlopen(f'http://127.0.0.1:{port}/internal/v1/unknown',timeout=3).close()
+                urlopen(f'http://127.0.0.1:{port}{route}',timeout=3).close()
                 raise AssertionError('Unauthenticated private route accepted')
             except HTTPError as error:
                 assert error.code==401, f'Expected 401, got {error.code}'
@@ -75,7 +80,7 @@ def check(service, p01=False):
                 error.close()
             for audience,expected in [(service,404),('catalog' if service=='identity' else 'identity',401)]:
                 token=issuer.token(audience,'USER')
-                req=Request(f'http://127.0.0.1:{port}/internal/v1/unknown',headers={'Authorization':f'Bearer {token}'})
+                req=Request(f'http://127.0.0.1:{port}{route}',headers={'Authorization':f'Bearer {token}'})
                 try:
                     urlopen(req,timeout=5).close()
                     raise AssertionError('Unknown route unexpectedly exists')

@@ -1,6 +1,6 @@
 # P01 M1 — database và runtime độc lập
 
-Đã triển khai baseline storage, **chưa hoàn tất M1/M2/M3/M4 hoặc gate P01**. Tiến độ/evidence tập trung tại `progress/PHASE_TASK_CHECKLIST.md`, không coi smoke unknown-route là API nghiệp vụ.
+Đã triển khai baseline storage sáu service; Identity đã bổ sung M1 + auth/session/profile, **chưa hoàn tất toàn scope M2/M3/M4 hoặc gate P01**. Tiến độ/evidence tập trung tại `progress/PHASE_TASK_CHECKLIST.md`, không coi smoke unknown-route là API nghiệp vụ.
 
 ## Chạy từ checkout sạch
 
@@ -27,6 +27,11 @@ python backend/infra/p01.py verify --service trip
 
 Smoke khởi động từng app với DB runtime role và test JWKS ephemeral, kiểm health/auth/error rồi dừng app/issuer. PostgreSQL Flyway chạy qua connection migrator riêng. Chạy smoke lần hai kiểm validate/checksum/restart; Community migration job kiểm checksum, validators/indexes mọi lần gọi. `verify` dùng DB thật, fixture nằm trong transaction và rollback; không thêm tài khoản đăng nhập mẫu hoặc dữ liệu production.
 
+Identity: `up --service identity` khởi động cả DB + Mailpit (SMTP51025/UI58025, chỉ loopback).
+Auth issuer/login thật dùng `python backend/services/identity-service/run-local.py --fixtures`, không dùng test JWKS của legacy smoke.
+Migrations Identity hiện V1–V5/20 tables, seed user là opt-in local guard, không nằm trong production Flyway.
+DB tests disposable, live jar/image mail/provider tests và secret/key runbook: [Identity README](../services/identity-service/README.md).
+
 Full `verify` cần cả năm PostgreSQL để kiểm credential không dùng được ở DB khác (cả username sai và username runtime thật của DB đích với password nguồn). Single-service mode không ghi nhận cross-container test đã pass. Chưa kiểm outbox worker/broker/DLQ/HTTP domain handlers.
 
 ## Secrets và quyền
@@ -51,7 +56,7 @@ Relational app env:
 - `DB_MIGRATION_USER=<service>_migrator`, `DB_MIGRATION_PASSWORD` riêng.
 - `JWT_JWKS_URI`, `JWT_ISSUER`, `JWT_AUDIENCE` như P00; app port 8101–8106.
 
-Runtime không có DDL, không đọc Flyway history, không UPDATE/DELETE/TRUNCATE audit; migration V3 grant từng bảng hiện hành. **Migration tương lai phải grant rõ các bảng/sequence mới**, không tự cấp DDL/default blanket grants. V1 probe giữ checksum bất biến; V2 domain baseline từ SQL đã chốt; V3 privilege; Identity V4 seed role USER/BUSINESS/ADMIN, không seed user/password.
+Runtime không có DDL, không đọc Flyway history, không UPDATE/DELETE/TRUNCATE audit; migration V3 grant từng bảng hiện hành. **Migration tương lai phải grant rõ các bảng/sequence mới**, không tự cấp DDL/default blanket grants. V1 probe giữ checksum bất biến; V2 domain baseline từ SQL đã chốt; V3 privilege; Identity V4 seed role USER/BUSINESS/ADMIN, không seed user/password; V5 thêm options, profile default và hai bảng operational rate-limit/encrypted mail queue với explicit grants.
 
 Triển khai ngoài dev nên chạy migration job với credential migrator trước, rồi app/worker `DB_MIGRATION_ENABLED=false`, không truyền migration password vào process runtime. Migration job vẫn phải validate Flyway trước deploy vì runtime không đọc history. Không cho runtime sửa schema để chữa lỗi boot.
 
@@ -67,7 +72,8 @@ MongoDB không có FK: media ownership/parent-version/reorder/reference và cont
 
 ## Migration/rollback runbook
 
-- Không sửa V1/V2 đã áp dụng. Flyway validate mismatch hoặc Community checksum/drift phải fail deploy, không auto-refresh/repair.
+- Không sửa nội dung V1/V2 đã áp dụng. Flyway validate mismatch hoặc Community checksum/drift phải fail deploy, không auto-refresh/repair.
+- Community migration `.js` phải giữ LF: `backend/.gitattributes` áp dụng `text eol=lf` cho `services/community-service/src/main/resources/db/migration/*.js`. Mongo migrator và app guard đều hash **raw bytes**, không normalize hoặc bỏ qua drift khi validate. Nếu Git/Windows từng đổi CRLF, chỉ khôi phục LF sau khi xác nhận bản LF trùng committed V1/checksum DB; không sửa metadata hoặc xóa volumes. Clean build lại JAR/image vì resource trong artifact cũ vẫn có thể là CRLF. Regression tests kiểm canonical V1 hash và Git checkout với `core.autocrlf=true`.
 - Mongo migration có exclusive lock; nếu crash, điều tra collection/index/history, xử lý migration lỗi rồi mới dùng migration identity xóa `migration_lock` document `_id=schema`. Không tự steal lock hoặc xóa dữ liệu domain.
 - Bootstrap password áp dụng khi volume mới; thay `.env.local` không rotate role đã có. Rotation phải là tác vụ quản trị riêng, không xóa volume.
 - Rollback image/config tương thích schema; migration mới expand-only. Không DROP database hoặc `down -v` để chữa lỗi.
@@ -78,4 +84,4 @@ MongoDB không có FK: media ownership/parent-version/reorder/reference và cont
 
 `.github/workflows/p01-services.yml`: matrix 6 service, build/unit/security, DB riêng, migrate/restart/smoke/constraint tests, image artifact; shared contract change chạy checks cả sáu. CI source đã parse, **chưa chạy GitHub Actions**. Domain/provider/fault tests, dependency scans và production deployment gate còn phải bổ sung theo P01.
 
-Tiếp tục M1: option/taxonomy/geo/registry/itinerary/visibility fixtures theo common IDs, auth issuer/JWKS thật của Identity, runtime broker/storage và các adapter stub. Sau đó M2 domain APIs/rules/security, M3 transport/contract/fault tests; Intelligence chỉ triển khai training sau nghiệm thu Basic. Candidate P00 chưa có chữ ký N1/N2/freeze; tiếp tục code dựa revision `1.0.0-candidate`, không tự ghi gate đã được con người duyệt.
+Tiếp tục M1 của năm service còn lại: taxonomy/geo/registry/itinerary/visibility fixtures theo common IDs, runtime broker/storage và các adapter stub. Identity issuer/JWKS/options/user fixture đã có. Sau đó M2 domain APIs/rules/security, M3 transport/contract/fault tests; Intelligence chỉ triển khai training sau nghiệm thu Basic. Candidate P00 chưa có chữ ký N1/N2/freeze; tiếp tục code dựa revision `1.0.0-candidate`, không tự ghi gate đã được con người duyệt.

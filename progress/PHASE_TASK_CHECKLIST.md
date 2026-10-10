@@ -85,16 +85,59 @@ Nguồn: [sáu gói service](../plan/phases/P01-services/README.md). Các nhóm 
 
 ### Identity — [yêu cầu chi tiết](../plan/phases/P01-services/identity.md)
 
-- [ ] P01-ID-01: Migration, seed và dữ liệu kiểm thử.
-- [ ] P01-ID-02: App/security/JWT/JWKS/key rotation và local runtime.
-- [ ] P01-ID-03: Register/verify/login/logout/refresh/password và rate limit.
-- [ ] P01-ID-04: Profile/preferences/consent/admin và quản lý session.
+- [x] P01-ID-01: Migration/roles/options và U1/U2/admin/business opt-in seed — V5 + `LocalIdentityFixtures`; DB/API tests thật. Identity hiện 20 bảng (14 domain + 4 technical baseline + 2 operational auth/mail), V1–V4 giữ checksum.
+- [x] P01-ID-02: Issuer RS256/JWKS public-only, persistent key rotation, secret injection/guard, health/local Mailpit, image và CI source. Local pass; chưa remote CI hoặc reviewer ký.
+- [x] P01-ID-03: Register/verify/login/logout/refresh/forgot/reset/change password; DB rate limit, hash tokens/password, atomic audit/outbox/mail queue và reuse revoke family.
+- [ ] P01-ID-04: **Đang làm** — profile ETag, password/session owner/revocation/cursor đã có; còn preferences/consent/category/options và admin APIs.
 - [ ] P01-ID-05: Notification và quy trình deletion/ack.
 - [ ] P01-ID-06: Category client, events, outbox/inbox và audit.
 - [ ] P01-ID-07: Contract/provider tests và bảo vệ cấu hình test.
-- [ ] P01-ID-08: Test token/email/refresh đồng thời/JWT.
+- [x] P01-ID-08: Canonical/duplicate email; single-use/expired account tokens; expired refresh idle/absolute session; concurrent refresh một thắng + commit reuse revocation; JWT issuer/audience/expiry/signature/key rotation.
 - [ ] P01-ID-09: Test phân quyền, timeout, duplicate và consent.
-- [ ] P01-ID-10: Bàn giao artifact, test report và runbook.
+- [ ] P01-ID-10: Có auth image/runtime/test/rotation runbook; chưa bàn giao đủ Identity scope hoặc N2 review.
+
+#### Identity auth/session — evidence local 10/10/2026
+
+Nhánh `feature/identity-phase01`, nền `main` fast-forward `efc7871`; không sửa/xóa untracked của người dùng, không thay contract candidate/manifest.
+Artifacts: `backend/services/identity-service/` (13/25 operation); `backend/infra/compose.p01.yaml` bổ sung Mailpit chỉ bind loopback; CI matrix Identity bổ sung DB tests/image provider smoke.
+
+- `python backend/services/identity-service/test-local.py`: **19 tests PASS**, 0 failure/error/skip; **12** DB/API/domain + **7** unit/security. Container PostgreSQL16 mới do runner sở hữu, V1–V5 migrate thật, không dùng P00/P01 volumes; stop sau test.
+- `python backend/services/identity-service/check-local.py`: jar health UP; register → SMTP Mailpit thật → verify → login → me/sessions → refresh → logout; sensitive me JWT cũ 401. JWKS/auth/profile/sessions/error responses + hai outbound event envelopes validate frozen schema PASS; public JWKS không có RSA private fields.
+- `python backend/infra/p01.py smoke --service identity` và `verify --service identity`: PASS, **20 bảng**, runtime permissions/storage constraints/rollback. Legacy smoke dùng test issuer chỉ cho security probe, không giả login API.
+- `docker build -t smarttravel-identity:p01-auth-local backend/services/identity-service`; `python backend/services/identity-service/check-local.py --image smarttravel-identity:p01-auth-local`: build + **non-root container** health/Flyway/SMTP/auth/provider PASS. Jar/image probe tự dừng, DB/Mailpit/synthetic records giữ lại.
+- Secrets local signing/mail/fixture được generate một lần trong ignored `.local/`, không in ra log hoặc đưa vào image. U1 consent true là opt-in fixture; registration default false có DB test.
+- Password PBKDF2/refresh+account token SHA-256, idempotency body HMAC; opaque session cursor, strong ETag. Reuse reject sau transaction commit; test concurrency kiểm một thắng và cả family revoke, không rollback theo 401.
+- Maven không có DB env sẽ skip 12 DB tests; không ghi skip là PASS. SMTP sandbox mock trong DB tests kiểm bounded retries; live jar/image dùng SMTP sink thật. SMTP send có thể lặp nếu crash trước commit; chưa hứa exactly-once.
+- `./backend/mvnw -B -f backend/services/pom.xml verify`: reactor **6/6 BUILD SUCCESS**; ordinary run skip 12 Identity DB tests theo env guard, không thay kết quả disposable DB 19/19 ở trên.
+- CI YAML/Python syntax và `git diff --check` PASS; chưa remote CI. Auth provider smoke không thay coverage batch/preferences/notification/deletion, không tự ký N2 hoặc đóng gate.
+- Hồi quy `python backend/infra/p01.py verify`: **5 PostgreSQL PASS**, Community bị chặn immutable migration checksum. Điều tra read-only: file Community checkout có 67 CRLF, hash `b5642d9e…`; hash sau LF-normalize `1830d58c…` khớp metadata đã lưu. Không có logical Git diff Community. Không repair checksum/reset/xóa volume; đây là lịch sử blocker trước khi sửa EOL ở mục Community bên dưới. Blocker hiện đã xử lý; không ghi ngược toàn bộ 6/6 storage suite PASS cho lượt Identity cũ.
+
+**Còn thiếu:** P01-ID-04 preferences/options/category/consent/admin/internal batches; P01-ID-05 notification/deletion; P01-ID-06 outbox transport/inbox/category client/audit/idempotency toàn scope; P01-ID-07/09 provider/fault/security toàn scope; P01-ID-10 handoff đầy đủ/reviewer. Xem [Identity local-run/rotation/limits](../backend/services/identity-service/README.md). Chưa READY_FOR_INTEGRATION.
+
+#### Sửa CI Pull Request #6 — 10/10/2026
+
+- Logs GitHub Actions `38038783854`/`38038783866`: hai contract jobs thất bại do manifest thiếu bốn ghi chú `text.txt`; Identity DB runner lỗi POSIX `PermissionError` vì `backend/mvnw` có mode `100644`.
+- Manifest đã review và bổ sung **chỉ bốn** file ghi chú; toàn bộ checksum có trước, OpenAPI/event schema/fixture/registry và revision candidate giữ nguyên. Không bỏ validator hoặc refresh checksum tự động trong CI.
+- Runner dùng `bash mvnw` trên POSIX, `mvnw.cmd` trên Windows. Regression `backend/platform/test_identity_runner.py` chạy **3/3 PASS trên Linux container** (wrapper mode0644, đường dẫn có dấu cách); Windows 2 PASS/1 POSIX-only skip. CI shared-contract job đã thêm regression.
+- `validate_contracts.py`: **183 operations/23 messages + manifest PASS**; checksum 3, layout 7, policy 7, HTTP stub 3 và event harness 2 tests PASS.
+- `python backend/services/identity-service/test-local.py`: **19/19 PASS**, 0 failures/errors/skips trên PostgreSQL disposable; container test tự dừng. `git diff --check` PASS.
+- Revision `55fdc66`: CI remote `38039502691`/`38039502694` đã PASS contracts/verify/frontend và năm service; Identity DB tests đã vượt qua, nhưng bước image smoke lộ lỗi Linux `host.docker.internal:56434` connection refused (DB bind loopback). Không ghi nhận lần chạy này 9/9 PASS.
+- Image probe sửa sang Compose DNS `identity-db:5432` + `identity-mail:1025`, tự phát hiện network từ container DB, không mở rộng host port bindings. Regression image config/network **4/4 PASS**; build `smarttravel-identity:pr6-ci-local` và live non-root image + DB/SMTP/JWKS/auth/provider/events **PASS**. Credentials/signing/mail local cũ được tái dùng qua file ignored, không sửa/reset volumes hoặc fixture password.
+- Fix thực hiện trong worktree riêng để giữ nguyên phần Identity workflows đang triển khai ở checkout chính. Revision `e1d1ddd`: **GitHub Actions 9/9 PASS**, P01 run [38039822779](https://github.com/24521914-ux/SmartTravel_VN/actions/runs/38039822779) và P00 run [38039822801](https://github.com/24521914-ux/SmartTravel_VN/actions/runs/38039822801). PR [#6](https://github.com/24521914-ux/SmartTravel_VN/pull/6) `CLEAN`/`MERGEABLE`, chưa tự merge. Đây là CI auth/baseline, không đóng gate Identity P01 hoặc thay reviewer ký.
+
+#### Refactor cấu trúc sáu service — 10/10/2026
+
+Theo yêu cầu người dùng: **service → chức năng → tầng**, giữ nhánh hiện tại để không làm mất Identity work chưa commit.
+
+- Identity tách `auth/controller|dto|service|repository`, `profile/controller|dto|service|repository`; JWT/JWKS/current principal về `security`, mail/fixture/technical persistence về `infrastructure`, exception/error/correlation/header helpers về `shared`.
+- SQL chuyển vào repository; transaction ở feature service, rate-limit vẫn REQUIRES_NEW; row-lock order và refresh reuse commit-before-401 giữ nguyên. Mỗi top-level class/record một file, không tạo folder rỗng cho nghiệp vụ chưa triển khai.
+- Năm service còn lại chuyển SecurityConfiguration sang `security/config`, error/filter sang `shared/web`; Community MongoStorageConfiguration sang `infrastructure/persistence/config`. Bootstrap giữ package gốc để component scan không đổi.
+- Main/test packages/imports cập nhật; scaffold sinh layout mới, security template sync chỉ export review proposals (không blind-overwrite P01 Identity security).
+- `./backend/mvnw -B -f backend/services/pom.xml clean verify`: **6/6 BUILD SUCCESS**; ordinary run có 12 DB tests skip theo env guard.
+- `python backend/services/identity-service/test-local.py`: **19/19 PASS**, gồm 12 PostgreSQL/API integration và 7 unit/security, 0 failure/error/skip sau refactor.
+- `python backend/platform/test_service_layout.py`: **6 tests PASS** — package/path, root bootstrap, one type/file, layer database boundary, scaffold/export safety. CI source đã thêm suite này, chưa remote CI evidence.
+- Live jar và non-root image `smarttravel-identity:p01-layout-local`: auth/SMTP/provider/event schemas PASS. Legacy runtime smoke Identity/Catalog/Trip/Ingestion/Intelligence **5/5 PASS**. Community build/unit PASS; lúc refactor chưa kiểm lại live runtime do checksum CRLF/LF blocker. Sau đó đã xử lý và kiểm runtime Community PASS tại mục EOL bên dưới, không sửa nội dung migration/metadata.
+- Không đổi route/request/response/claims hoặc migration/database; chưa mở thêm nghiệp vụ hoặc đóng gate. Quy ước chi tiết: [services README](../backend/services/README.md).
 
 ### Catalog — [yêu cầu chi tiết](../plan/phases/P01-services/catalog.md)
 
@@ -112,6 +155,17 @@ Nguồn: [sáu gói service](../plan/phases/P01-services/README.md). Các nhóm 
 - [ ] P01-CA-12: Bàn giao artifact, EXPLAIN, test report và hướng dẫn.
 
 ### Community — [yêu cầu chi tiết](../plan/phases/P01-services/community.md)
+
+#### Sửa blocker checksum CRLF/LF — 10/10/2026
+
+- [x] `backend/.gitattributes` giữ LF cho Community migration `.js`; chỉ khôi phục CRLF → LF sau khi kiểm bản LF **trùng từng byte với HEAD**. Không đổi logic V1, không đổi `core.autocrlf` toàn máy, không normalize/bỏ qua raw checksum trong migrator hoặc startup guard.
+- [x] Java regression `immutableMigrationResourceRetainsCanonicalLfChecksum`: chạy **RED** trên resource CRLF (1 failure như dự kiến), rồi **GREEN** sau chuẩn hóa. Pin checksum immutable V1 `1830d58c5c42a83ac2de46824c9964aa161f94117e32eb02d7b95ab35fd30e1f`; resource trong JAR mới khớp cùng checksum.
+- [x] `./backend/mvnw -B -f backend/services/community-service/pom.xml clean verify`: **7 tests PASS**, 0 failure/error/skip, BUILD SUCCESS.
+- [x] `python backend/platform/test_service_layout.py`: **7 tests PASS**, thêm Git checkout filter với `core.autocrlf=true` vẫn giữ nguyên canonical LF. CI path filters bổ sung `backend/.gitattributes`; mới có source, chưa remote CI.
+- [x] `python backend/infra/p01.py verify --service community`: checksum + 16 collections/validators/indexes, permissions/unique/rating/schema/transaction rollback PASS. `smoke --service community` chạy **hai lần PASS**, app health UP, real JWT/JWKS/auth/error; không cần reset dữ liệu.
+- [x] `python backend/infra/p01.py verify`: hồi quy storage **6/6 PASS**, blocker đã đóng. Read-only snapshot trước/sau kiểm revision `_id/checksum/applied_at` và document count của 16 collections không đổi (fingerprint `1a618269…8494`). Các storage fixture chạy transaction rồi abort/rollback; không sửa metadata/checksum hoặc xóa volumes.
+- [x] Build image `smarttravel-community:p01-eol-local` PASS, dùng JAR đã clean build với canonical LF. Chỉ ghi image build; runtime đã kiểm bằng app jar, không tuyên bố container deployment/rollback gate.
+- Runbook: `backend/infra/README.md`, `backend/services/community-service/README.md`. Git status không có logical diff migration V1; app/test processes đã dừng, dependencies/volumes giữ nguyên. Không mở thêm Community domain API hoặc đóng gate P01-CO.
 
 - [ ] P01-CO-01: MongoDB versioned collections/index/schema validation migration, seed và visibility projection.
 - [ ] P01-CO-02: App/security/local runtime và harness.

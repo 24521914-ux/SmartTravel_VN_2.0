@@ -1,10 +1,10 @@
 name: P01 independent services
 on:
   pull_request:
-    paths: ['backend/services/**', 'backend/infra/**', 'backend/platform/**', 'backend/contracts/**', 'backend/.mvn/**', 'backend/mvnw*', '.github/workflows/p01-services.yml']
+    paths: ['backend/services/**', 'backend/infra/**', 'backend/platform/**', 'backend/contracts/**', 'backend/.gitattributes', 'backend/.mvn/**', 'backend/mvnw*', '.github/workflows/p01-services.yml']
   push:
     branches: [main]
-    paths: ['backend/services/**', 'backend/infra/**', 'backend/contracts/**', '.github/workflows/p01-services.yml']
+    paths: ['backend/services/**', 'backend/infra/**', 'backend/contracts/**', 'backend/.gitattributes', '.github/workflows/p01-services.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -28,6 +28,9 @@ jobs:
           python-version: '3.12'
       - name: Build one service and run unit/security tests
         run: bash backend/mvnw -B -f backend/services/pom.xml -pl ${{ matrix.service }}-service -am clean verify
+      - name: Identity domain tests on disposable real PostgreSQL
+        if: matrix.service == 'identity'
+        run: python backend/services/identity-service/test-local.py
       - name: Install signed local JWKS issuer dependencies
         run: python -m pip install -r backend/platform/requirements-validation.txt
       - name: Start only this service's real database
@@ -41,6 +44,9 @@ jobs:
         run: |
           docker build -t smarttravel-${{ matrix.service }}:${{ github.sha }} backend/services/${{ matrix.service }}-service
           docker save smarttravel-${{ matrix.service }}:${{ github.sha }} | gzip > image-${{ matrix.service }}-${{ github.sha }}.tar.gz
+      - name: Identity image, real mail and frozen provider schemas
+        if: matrix.service == 'identity'
+        run: python backend/services/identity-service/check-local.py --image smarttravel-identity:${{ github.sha }}
       - name: Archive test evidence and revision image (no credentials)
         uses: actions/upload-artifact@v4
         with:
@@ -63,6 +69,9 @@ jobs:
       - run: python -m pip install -r backend/platform/requirements-validation.txt
       - name: Shared contract change checks all six provider/consumer fixtures
         run: |
+          python backend/platform/test_service_layout.py
+          python backend/platform/test_identity_runner.py
+          python backend/platform/test_identity_image.py
           python backend/platform/validate_contracts.py
           python backend/platform/test_contract_checksums.py
           python backend/platform/test_contract_policy.py
