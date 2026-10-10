@@ -65,6 +65,24 @@ Nguồn: [checklist P00](../plan/phases/P00-scope-architecture.md).
 
 Nguồn: [sáu gói service](../plan/phases/P01-services/README.md). Các nhóm có thể làm song song sau P00.
 
+**Đang làm M1**, nhánh `feature/backend-phase01`, revision nền `main` đã pull fast-forward; evidence local ngày 10/10/2026. Agent triển khai kỹ thuật theo yêu cầu bắt đầu P01, không thay chữ ký N1/N2 hoặc tự freeze candidate `1.0.0-candidate`. Các parent task bên dưới chưa tích vì còn seed/domain/runtime/adapter trong scope.
+
+### P01 M1 — phần đã triển khai và kiểm chứng
+
+- [x] M1.a: Năm Flyway V2 baseline thật + bốn bảng kỹ thuật/service; giữ V1 đã bàn giao, V3 grant runtime, Identity V4 seed ba role. Artifacts: `backend/services/*/src/main/resources/db/migration/`. Số bảng tổng: Identity 18, Catalog 28, Trip 11, Ingestion 10, Intelligence 14. Chưa đủ seed/options/test users/taxonomy/geo/itinerary theo task M1.
+- [x] M1.b: Community V1 versioned migration: 16 collections, schema validators, indexes, checksum/drift check/exclusive lock; runtime revision guard + transaction manager snapshot/majority. Artifacts: `backend/services/community-service/**`, `backend/infra/mongo/`. Không dùng SQL/Flyway cho Community; ownership/reference/reorder vẫn thuộc domain code.
+- [x] M1.c: Compose P01 riêng project/volumes/ports, PostgreSQL admin/migrator/runtime riêng, MongoDB auth/keyfile/custom runtime role; không chạm dữ liệu P00. Runtime bị chặn DDL/Flyway history/audit mutation và credential DB khác. Lệnh `python backend/infra/p01.py up`, `verify` PASS trên DB thật; PostgreSQL kiểm cả username nguồn và username đích với password nguồn.
+- [x] M1.d: `./backend/mvnw -B -f backend/services/pom.xml clean verify`: BUILD SUCCESS, **21 tests**, 0 failures/errors/skips (18 JWT/security + 3 Community revision guard). Build clean xử lý resource migration cũ còn trong target, không xóa source.
+- [x] M1.e: `python backend/infra/p01.py smoke`: **6/6** app chạy lần lượt với DB riêng + signed test JWKS, health UP, JWT đúng tới unknown route 404, sai audience/no JWT 401, error/correlation đúng. Identity/Community đã smoke lặp riêng; tất cả relational migration đã validate qua các lần rebuild/restart. Đã dừng toàn bộ P01 dependencies (giữ volumes), chỉ `up --service trip`, smoke/verify Trip PASS khi năm DB/app đối tác không chạy, rồi khởi động lại dependencies P01. Không phải domain API hoặc Identity issuer thật.
+- [x] M1.f: `python backend/infra/p01.py verify`: **6/6** PASS. PostgreSQL runtime DML/transaction rollback/inbox unique, canonical email/consent default, PostGIS/rating/overnight hours, cross-trip composite FK/deferrable reorder, active source job/raw dedup, interaction dedup/training-source check. Community kiểm unique/schema/rating bounds/permissions và rollback review+rating+outbox+inbox trong transaction thật. Đây là storage tests, chưa chứng minh domain worker/dedup side effects.
+- [x] M1.g: Build **6/6** Docker images `smarttravel-<service>:p01-m1-local` PASS. Chưa container app runtime/deploy/rollback probe.
+- [x] M1.h: Thêm CI matrix độc lập từng service và shared-contract checks — `.github/workflows/p01-services.yml`; parse YAML PASS, image CI tag commit SHA + rollback image artifact. P00 workflow bỏ smoke service trên credential/volume cũ, giữ platform tests. **Chưa remote CI run**, dependency scan/domain provider/fault gates còn phải bổ sung.
+- [x] M1.i: Runbook setup/secret/migration/rollback — `backend/infra/README.md`; local secret ngẫu nhiên `.env.local` đã ignore. App test/stub/issuer được dừng, DB P01/volumes giữ lại; không DROP/down -v.
+- [x] M1.j: Contract **tracked artifacts** giữ nguyên checksum, 183 operations/23 messages PASS trên bản sao temporary chỉ từ `git ls-files backend/contracts`; checksum suite 3 tests PASS. Validator trực tiếp workspace **FAIL manifest** do bốn `text.txt` untracked đã có trước task (không sửa/xóa/refresh manifest của người dùng). Không ghi nhận workspace validator PASS.
+- [ ] Review: chưa có reviewer con người ký; không gọi unit/security/storage tests là review N1/N2.
+
+**Tiếp theo:** hoàn thiện seed/local dependencies/auth issuer của M1, rồi API/rules/security M2; transport/clients/contracts/fault M3 và gate M4 của cả sáu. Broker/object storage/Redis use cases/gateway/frontend client chưa triển khai ở lượt này. Chưa có service READY_FOR_INTEGRATION; chưa mở P02.
+
 ### Identity — [yêu cầu chi tiết](../plan/phases/P01-services/identity.md)
 
 - [ ] P01-ID-01: Migration, seed và dữ liệu kiểm thử.

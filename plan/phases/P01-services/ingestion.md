@@ -1,6 +1,6 @@
 # P01-IG Ingestion Service — nhóm E
 
-Trạng thái: **NOT_STARTED**. Dependency: P00, không chờ Catalog/Identity/Intelligence. Scope source/job/raw/normalize/dedup/provenance. Reviewer: F.
+Trạng thái: **IN_PROGRESS — M1 baseline storage/runtime**. Evidence và phần còn thiếu tại [progress](../../../progress/PHASE_TASK_CHECKLIST.md). Chưa hoàn tất P01-IG-01/02 hoặc gate. Dependency: P00, không chờ Catalog/Identity/Intelligence. Scope source/job/raw/normalize/dedup/provenance. Reviewer: F.
 
 [Database Ingestion](../../database/ingestion.md) · [DDL](../../database/sql/ingestion.sql) · [Contract](../../04-api-events.md) · [Gate](README.md). Owner: `backend/services/ingestion-service/**`.
 

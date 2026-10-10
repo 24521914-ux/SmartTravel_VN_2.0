@@ -1,6 +1,6 @@
 # P01-TR Trip Service — nhóm D
 
-Trạng thái: **NOT_STARTED**. Dependency: P00, không chờ Identity/Catalog/Intelligence. Scope F09/F10. Reviewer: E.
+Trạng thái: **IN_PROGRESS — M1 baseline storage/runtime**. Evidence và phần còn thiếu tại [progress](../../../progress/PHASE_TASK_CHECKLIST.md). Chưa hoàn tất P01-TR-01/02 hoặc gate. Dependency: P00, không chờ Identity/Catalog/Intelligence. Scope F09/F10. Reviewer: E.
 
 [Database Trip](../../database/trip.md) · [DDL](../../database/sql/trip.sql) · [Contract](../../04-api-events.md) · [Gate](README.md). Owner: `backend/services/trip-service/**`.
 

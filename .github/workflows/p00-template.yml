@@ -61,8 +61,8 @@ jobs:
           JWT_ISSUER: local-test
           JWT_AUDIENCE: trip
         run: bash backend/mvnw -B -f backend/platform/p00-template/pom.xml verify
-      - name: Start each skeleton independently with its own database
-        run: python backend/platform/check_service_skeletons.py
+      # Service runtime now uses P01 domain migrations and restricted roles.
+      # Its independent DB/security probes live in p01-services.yml, not P00 volumes.
       - name: Build platform image
         run: docker build -t smarttravel-p00-template:ci backend/platform/p00-template
       - name: Stop local containers without deleting volumes

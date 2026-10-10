@@ -1,6 +1,6 @@
 # P01-ID Identity Service — nhóm A
 
-Trạng thái: **NOT_STARTED**. Dependency: P00, không chờ service khác. Scope: F01, auth/session/role/preferences/consent/notification/deletion. Reviewer: B.
+Trạng thái: **IN_PROGRESS — M1 baseline storage/runtime**. Evidence và phần còn thiếu tại [progress](../../../progress/PHASE_TASK_CHECKLIST.md). Chưa hoàn tất P01-ID-01/02 hoặc gate. Dependency: P00, không chờ service khác. Scope: F01, auth/session/role/preferences/consent/notification/deletion. Reviewer: B.
 
 Đọc [database Identity](../../database/identity.md), [DDL](../../database/sql/identity.sql), [contract](../../04-api-events.md) và [gate chung](README.md). Owner sửa `backend/services/identity-service/**` khi triển khai.
 
