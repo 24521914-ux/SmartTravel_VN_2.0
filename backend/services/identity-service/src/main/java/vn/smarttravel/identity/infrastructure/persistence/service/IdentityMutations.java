@@ -33,22 +33,30 @@ public class IdentityMutations {
     }
 
     public void remember(String scope, String actor, String key, String hash, Map<String, Object> response) {
-        repository.remember(scope, actor, key, hash, encode(response));
+        remember(scope, actor, key, hash, response, 202);
+    }
+
+    public void remember(String scope, String actor, String key, String hash, Map<String, Object> response, int status) {
+        repository.remember(scope, actor, key, hash, encode(response), status);
     }
 
     public void audit(UUID actor, UUID user, String action) { repository.audit(actor, user, action); }
 
     public void event(UUID user, long version, String type, Map<String, Object> payload) {
+        event("user", user, version, type, payload);
+    }
+
+    public void event(String aggregate, UUID user, long version, String type, Map<String, Object> payload) {
         UUID event = UUID.randomUUID(), correlation;
         try { correlation = UUID.fromString(MDC.get("correlationId")); }
         catch (Exception e) { correlation = UUID.randomUUID(); }
         var envelope = new java.util.LinkedHashMap<String, Object>();
         envelope.put("event_id", event); envelope.put("event_type", type); envelope.put("schema_version", 1);
-        envelope.put("aggregate_type", "user"); envelope.put("aggregate_id", user); envelope.put("aggregate_version", version);
+        envelope.put("aggregate_type", aggregate); envelope.put("aggregate_id", user); envelope.put("aggregate_version", version);
         envelope.put("occurred_at", Instant.now().toString()); envelope.put("producer", "identity");
         envelope.put("correlation_id", correlation); envelope.put("causation_id", correlation);
         envelope.put("traceparent", "00-" + correlation.toString().replace("-", "") + "-" + event.toString().replace("-", "").substring(0,16) + "-01");
         envelope.put("payload", payload);
-        repository.event(event, user, version, type, encode(envelope));
+        repository.event(event, aggregate, user, version, type, encode(envelope));
     }
 }

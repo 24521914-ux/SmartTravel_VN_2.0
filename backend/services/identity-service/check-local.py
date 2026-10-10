@@ -137,6 +137,19 @@ def main():
             assert status == 200; validate('/api/v1/auth/login','POST',status,pair)
             status, profile = request(base,'/api/v1/me',token=pair['access_token'])
             assert status == 200; validate('/api/v1/me','GET',status,profile)
+            status, options = request(base,'/api/v1/preference-options')
+            assert status == 200; validate('/api/v1/preference-options','GET',status,options)
+            status, preferences = request(base,'/api/v1/me/preferences',token=pair['access_token'])
+            assert status == 200; validate('/api/v1/me/preferences','GET',status,preferences)
+            assert preferences['personalization_enabled'] is False and preferences['consent_version'] == 1
+            preference_headers = {'If-Match':'"1"', 'Idempotency-Key':secrets.token_hex(16)}
+            status, updated = request(base,'/api/v1/me/preferences','PUT',dict(personalization_enabled=True,consent_version=1),
+                                      token=pair['access_token'],headers=preference_headers)
+            assert status == 200; validate('/api/v1/me/preferences','PUT',status,updated)
+            assert updated['consent_version'] == 2 and updated['version'] == 2
+            status, replay = request(base,'/api/v1/me/preferences','PUT',dict(personalization_enabled=True,consent_version=1),
+                                     token=pair['access_token'],headers=preference_headers)
+            assert status == 200 and replay == updated
             status, sessions = request(base,'/api/v1/me/sessions',token=pair['access_token'])
             assert status == 200; validate('/api/v1/me/sessions','GET',status,sessions)
             status, renewed = request(base,'/api/v1/auth/refresh','POST',dict(refresh_token=pair['refresh_token']))
@@ -146,13 +159,13 @@ def main():
             status, body = request(base,'/api/v1/me',token=renewed['access_token'])
             assert status == 401; validate('/api/v1/me','GET',status,body)
             events = sql(environment(),'identity',f"SELECT payload::text FROM identity.outbox_events WHERE aggregate_id='{profile['user_id']}' ORDER BY aggregate_version;").stdout.splitlines()
-            assert len(events) == 2
+            assert len(events) == 3
             for row in events:
                 event = json.loads(row)
                 schema = json.loads((CONTRACTS / ('events/'+event['event_type']+'.schema.json')).read_text(encoding='utf-8'))
                 Draft202012Validator(schema, format_checker=FormatChecker()).validate(event)
                 assert not any(key in event['payload'] for key in ['email','password','token','password_hash'])
-            print('PASS live Identity: health, real SMTP verification, auth/profile/session/JWKS schemas, revocation, 2 event snapshots')
+            print('PASS live Identity: health, real SMTP verification, auth/profile/preferences/options/session/JWKS schemas, consent/idempotency, revocation, 3 event snapshots')
         except Exception as error:
             log.seek(0)
             detail = log.read().decode('utf-8',errors='replace')[-6000:]
