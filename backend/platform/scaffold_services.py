@@ -46,7 +46,10 @@ public class ServiceApplication {{
     public static void main(String[] args) {{ SpringApplication.run(ServiceApplication.class, args); }}
 }}
 ''')
-    save(base/'SecurityConfiguration.java',security.replace('package vn.smarttravel.platform;',f'package vn.smarttravel.{s};'))
+    save(base/'security/config/SecurityConfiguration.java',security.replace('package vn.smarttravel.platform;',f'package vn.smarttravel.{s}.security.config;'))
+    for name in ['CorrelationFilter.java', 'ApiErrorController.java']:
+        source=BACKEND/'platform/p00-template/src/main/java/vn/smarttravel/platform'/name
+        save(base/'shared/web'/name,source.read_text(encoding='utf-8').replace('package vn.smarttravel.platform;',f'package vn.smarttravel.{s}.shared.web;'))
     config=f'''spring.application.name={s}-service
 server.port=${{PORT:{8101+index}}}
 management.endpoints.web.exposure.include=health,info
@@ -64,7 +67,7 @@ logging.pattern.level=%5p [correlation=%X{{correlationId}}]
     save(dest/'src/main/resources/application.properties',config)
     for test in ['SecurityConfigurationTests.java','JwksIntegrationTests.java']:
         content=(BACKEND/'platform/p00-template/src/test/java/vn/smarttravel/platform'/test).read_text(encoding='utf-8')
-        save(dest/f'src/test/java/vn/smarttravel/{s}'/test,content.replace('package vn.smarttravel.platform;',f'package vn.smarttravel.{s};'))
+        save(dest/f'src/test/java/vn/smarttravel/{s}/security/config'/test,content.replace('package vn.smarttravel.platform;',f'package vn.smarttravel.{s}.security.config;'))
     save(dest/'Dockerfile',f'''FROM eclipse-temurin:21-jre
 WORKDIR /app
 COPY --chown=10001:10001 target/{s}-service-0.0.1-SNAPSHOT.jar /app/application.jar

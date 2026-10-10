@@ -1,0 +1,4 @@
+--Đây là file tóm tắt
+Catalog Service vừa xử lý một yêu cầu của doanh nghiệp muốn nhận quyền quản lý
+một địa điểm và phát thông báo cho các service khác biết kết quả.
+Chỉ là data giả để test

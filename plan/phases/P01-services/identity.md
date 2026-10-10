@@ -1,6 +1,6 @@
 # P01-ID Identity Service — nhóm A
 
-Trạng thái: **IN_PROGRESS — M1 baseline storage/runtime**. Evidence và phần còn thiếu tại [progress](../../../progress/PHASE_TASK_CHECKLIST.md). Chưa hoàn tất P01-ID-01/02 hoặc gate. Dependency: P00, không chờ service khác. Scope: F01, auth/session/role/preferences/consent/notification/deletion. Reviewer: B.
+Trạng thái: **IN_PROGRESS — M1 + auth/session đã kiểm chứng**. Evidence và phần còn thiếu tại [progress](../../../progress/PHASE_TASK_CHECKLIST.md). Đã hoàn tất kỹ thuật P01-ID-01/02/03/08; còn preferences/admin/notifications/deletion/transport và review, chưa đạt gate. Dependency: P00, không chờ service khác. Scope: F01, auth/session/role/preferences/consent/notification/deletion. Reviewer: B.
 
 Đọc [database Identity](../../database/identity.md), [DDL](../../database/sql/identity.sql), [contract](../../04-api-events.md) và [gate chung](README.md). Owner sửa `backend/services/identity-service/**` khi triển khai.
 
@@ -17,12 +17,12 @@ Identity tự implement issuer/JWKS/session thật của mình; không giả res
 
 ## M1 Database và local runtime
 
-- [ ] P01-ID-01: Flyway cho 14 bảng domain + 4 kỹ thuật; role/options seed, canonical email UNIQUE, auth session/token hash và dữ liệu U1/U2/admin/business test.
-- [ ] P01-ID-02: App/security/JWT issuer/JWKS/key rotation local, secret injection/log redact, health/CI/local compose; không có credential DB service khác.
+- [x] P01-ID-01: Flyway cho 14 bảng domain + 4 kỹ thuật baseline (V5 thêm 2 operational auth/mail); role/options seed, canonical email UNIQUE, auth session/token hash và dữ liệu U1/U2/admin/business test.
+- [x] P01-ID-02: App/security/JWT issuer/JWKS/key rotation local, secret injection/log redact, health/CI/local compose; không có credential DB service khác.
 
 ## M2 Nghiệp vụ
 
-- [ ] P01-ID-03: Register/verify/login/logout/refresh/password reset/change, rate limit; đăng ký không cho tự gán ADMIN, error không lộ tài khoản tồn tại.
+- [x] P01-ID-03: Register/verify/login/logout/refresh/password reset/change, rate limit; đăng ký không cho tự gán ADMIN, error không lộ tài khoản tồn tại.
 - [ ] P01-ID-04: Profile/preferences/options/category/consent, update atomic và version; admin user/status/roles; xử lý session family khi logout/reset/reuse.
 - [ ] P01-ID-05: Notification inbox/read/delivery/retry; deletion request/ack/state machine; account disable ngay, không complete sớm.
 
@@ -35,7 +35,7 @@ API: auth register/login/refresh/logout/verify/reset, me/profile/password/prefer
 
 ## M4 Kiểm nhận và bàn giao
 
-- [ ] P01-ID-08: Email duplicate, token consumed/expired/reused; hai refresh đồng thời chỉ một thắng; JWT expiry/audience/key rotation đúng.
+- [x] P01-ID-08: Email duplicate, token consumed/expired/reused; hai refresh đồng thời chỉ một thắng; JWT expiry/audience/key rotation đúng.
 - [ ] P01-ID-09: USER không cấp ADMIN/đọc user khác; category timeout đúng policy; duplicate notification không gửi hai lần; missing ack không complete; consent mặc định false.
 - [ ] P01-ID-10: Bàn giao image/migrations/OpenAPI/event samples/test report/local-run, key rotation/revoke runbook và config nối thật.
 
