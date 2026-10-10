@@ -123,7 +123,7 @@ Artifacts: `backend/services/identity-service/` (13/25 operation); `backend/infr
 - `python backend/services/identity-service/test-local.py`: **19/19 PASS**, 0 failures/errors/skips trên PostgreSQL disposable; container test tự dừng. `git diff --check` PASS.
 - Revision `55fdc66`: CI remote `38039502691`/`38039502694` đã PASS contracts/verify/frontend và năm service; Identity DB tests đã vượt qua, nhưng bước image smoke lộ lỗi Linux `host.docker.internal:56434` connection refused (DB bind loopback). Không ghi nhận lần chạy này 9/9 PASS.
 - Image probe sửa sang Compose DNS `identity-db:5432` + `identity-mail:1025`, tự phát hiện network từ container DB, không mở rộng host port bindings. Regression image config/network **4/4 PASS**; build `smarttravel-identity:pr6-ci-local` và live non-root image + DB/SMTP/JWKS/auth/provider/events **PASS**. Credentials/signing/mail local cũ được tái dùng qua file ignored, không sửa/reset volumes hoặc fixture password.
-- Fix thực hiện trong worktree riêng để giữ nguyên phần Identity workflows đang triển khai ở checkout chính. **Chờ CI remote của revision network sửa**, không coi local pass là remote pass hoặc đóng gate Identity P01.
+- Fix thực hiện trong worktree riêng để giữ nguyên phần Identity workflows đang triển khai ở checkout chính. Revision `e1d1ddd`: **GitHub Actions 9/9 PASS**, P01 run [38039822779](https://github.com/24521914-ux/SmartTravel_VN/actions/runs/38039822779) và P00 run [38039822801](https://github.com/24521914-ux/SmartTravel_VN/actions/runs/38039822801). PR [#6](https://github.com/24521914-ux/SmartTravel_VN/pull/6) `CLEAN`/`MERGEABLE`, chưa tự merge. Đây là CI auth/baseline, không đóng gate Identity P01 hoặc thay reviewer ký.
 
 #### Refactor cấu trúc sáu service — 10/10/2026
 

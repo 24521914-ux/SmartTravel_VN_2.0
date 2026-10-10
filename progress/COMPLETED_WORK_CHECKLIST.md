@@ -80,12 +80,19 @@ Tiến độ từng task xem [PHASE_TASK_CHECKLIST.md](PHASE_TASK_CHECKLIST.md).
 - [x] Community storage/permissions/rollback PASS, app jar smoke/restart hai lần PASS, image `smarttravel-community:p01-eol-local` build PASS.
 - [x] Full storage hồi quy **6/6 PASS**; read-only snapshot revision và document counts 16 collections trước/sau không đổi. Blocker CRLF/LF đã đóng; không coi đây là Community domain/P01 gate hoàn tất.
 
+## Sửa CI PR #6 — 10/10/2026
+
+- [x] Bổ sung manifest cho bốn ghi chú `text.txt`, không đổi checksum wire artifacts/revision; sửa POSIX runner gọi `bash mvnw` và image smoke dùng Compose DNS DB/SMTP, giữ host bindings loopback.
+- [x] Regression runner 3/3 trên Linux container, image config/network 4/4; Identity PostgreSQL 19/19 và non-root image live auth/SMTP/provider/events PASS local.
+- [x] Đã push `55fdc66` + `e1d1ddd` vào `feature/identity-phase01`; revision `e1d1ddd` **9/9 GitHub Actions checks PASS**. PR #6 `CLEAN`/`MERGEABLE`, chưa merge. Runs/evidence tại [checklist chung](PHASE_TASK_CHECKLIST.md#sửa-ci-pull-request-6--10102026).
+- [ ] Phần Identity workflows tiếp tục đang triển khai riêng, chưa commit/push hoặc đạt gate P01; không suy ra hoàn thành từ CI auth PASS.
+
 ## Chưa được xác nhận / thuộc giai đoạn sau
 
 - [ ] N1/N2 phê duyệt contract/policy candidate và nhận gói; điều phối freeze/đóng gate P00. Agent không tự ký thay.
 - [ ] Chức năng nghiệp vụ/seed đầy đủ, provider adapters/outbox worker/inbox handlers thực và functional/contract/fault tests P01; baseline storage đã có, không tự đóng parent task.
 - [ ] Kết nối thật và frontend nghiệp vụ/E2E/security/load/restore/ML quality P02–P03.
 - [ ] Production domain/provider credentials/licenses/budget/support-EOL review, release/rollback/bàn giao P04.
-- [ ] Remote GitHub Actions pass và commit/push các thay đổi hiện tại.
+- [x] Remote GitHub Actions PR #6 pass và auth/layout/CI fixes đã commit/push như evidence ở trên; không bao gồm Identity workflows mới đang triển khai.
 
 Cơ sở: revision Git nền `83c07f3`, thay đổi chưa commit/push, evidence local ngày08/10/2026. Không lấy thư mục target hoặc source test làm bằng chứng pass; lệnh/kết quả và giới hạn ở manifest. Test apps/stubs/issuers/Vite tạm được dừng; DB/cache Docker/volumes giữ để tiếp tục làm việc.
