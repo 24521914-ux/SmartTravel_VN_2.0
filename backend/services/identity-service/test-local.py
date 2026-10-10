@@ -23,6 +23,13 @@ def run(args, env, text=None):
     return result.stdout.strip()
 
 
+def maven_command(windows=None):
+    """Use bash on POSIX: Git/archives may not preserve mvnw's executable bit."""
+    windows = os.name == 'nt' if windows is None else windows
+    wrapper = str(ROOT / 'backend' / ('mvnw.cmd' if windows else 'mvnw'))
+    return [wrapper] if windows else ['bash', wrapper]
+
+
 def main():
     name = 'smarttravel-identity-test-' + secrets.token_hex(6)
     admin, migrator, runtime = [secrets.token_hex(24) for _ in range(3)]
@@ -52,8 +59,7 @@ def main():
         test_env.pop('JWT_JWKS_URI', None)
         test_env.pop('IDENTITY_KEYS_FILE', None)
         test_env.pop('IDENTITY_MAIL_KEY', None)
-        wrapper = str(ROOT / 'backend' / ('mvnw.cmd' if os.name == 'nt' else 'mvnw'))
-        result = subprocess.run([wrapper, '-B', '-f', 'backend/services/identity-service/pom.xml', 'clean', 'verify'],
+        result = subprocess.run(maven_command() + ['-B', '-f', 'backend/services/identity-service/pom.xml', 'clean', 'verify'],
                                 cwd=ROOT, env=test_env)
         if result.returncode:
             raise RuntimeError('Identity test build failed; see test output')

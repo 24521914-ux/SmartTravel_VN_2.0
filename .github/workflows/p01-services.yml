@@ -70,6 +70,7 @@ jobs:
       - name: Shared contract change checks all six provider/consumer fixtures
         run: |
           python backend/platform/test_service_layout.py
+          python backend/platform/test_identity_runner.py
           python backend/platform/validate_contracts.py
           python backend/platform/test_contract_checksums.py
           python backend/platform/test_contract_policy.py

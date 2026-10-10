@@ -114,6 +114,15 @@ Artifacts: `backend/services/identity-service/` (13/25 operation); `backend/infr
 
 **Còn thiếu:** P01-ID-04 preferences/options/category/consent/admin/internal batches; P01-ID-05 notification/deletion; P01-ID-06 outbox transport/inbox/category client/audit/idempotency toàn scope; P01-ID-07/09 provider/fault/security toàn scope; P01-ID-10 handoff đầy đủ/reviewer. Xem [Identity local-run/rotation/limits](../backend/services/identity-service/README.md). Chưa READY_FOR_INTEGRATION.
 
+#### Sửa CI Pull Request #6 — 10/10/2026
+
+- Logs GitHub Actions `38038783854`/`38038783866`: hai contract jobs thất bại do manifest thiếu bốn ghi chú `text.txt`; Identity DB runner lỗi POSIX `PermissionError` vì `backend/mvnw` có mode `100644`.
+- Manifest đã review và bổ sung **chỉ bốn** file ghi chú; toàn bộ checksum có trước, OpenAPI/event schema/fixture/registry và revision candidate giữ nguyên. Không bỏ validator hoặc refresh checksum tự động trong CI.
+- Runner dùng `bash mvnw` trên POSIX, `mvnw.cmd` trên Windows. Regression `backend/platform/test_identity_runner.py` chạy **3/3 PASS trên Linux container** (wrapper mode0644, đường dẫn có dấu cách); Windows 2 PASS/1 POSIX-only skip. CI shared-contract job đã thêm regression.
+- `validate_contracts.py`: **183 operations/23 messages + manifest PASS**; checksum 3, layout 7, policy 7, HTTP stub 3 và event harness 2 tests PASS.
+- `python backend/services/identity-service/test-local.py`: **19/19 PASS**, 0 failures/errors/skips trên PostgreSQL disposable; container test tự dừng. `git diff --check` PASS.
+- Fix thực hiện trong worktree riêng để giữ nguyên phần Identity workflows đang triển khai ở checkout chính. **Chờ CI remote của revision sửa**, không coi local pass là remote pass hoặc đóng gate Identity P01.
+
 #### Refactor cấu trúc sáu service — 10/10/2026
 
 Theo yêu cầu người dùng: **service → chức năng → tầng**, giữ nhánh hiện tại để không làm mất Identity work chưa commit.
