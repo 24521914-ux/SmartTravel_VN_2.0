@@ -121,7 +121,9 @@ Artifacts: `backend/services/identity-service/` (13/25 operation); `backend/infr
 - Runner dùng `bash mvnw` trên POSIX, `mvnw.cmd` trên Windows. Regression `backend/platform/test_identity_runner.py` chạy **3/3 PASS trên Linux container** (wrapper mode0644, đường dẫn có dấu cách); Windows 2 PASS/1 POSIX-only skip. CI shared-contract job đã thêm regression.
 - `validate_contracts.py`: **183 operations/23 messages + manifest PASS**; checksum 3, layout 7, policy 7, HTTP stub 3 và event harness 2 tests PASS.
 - `python backend/services/identity-service/test-local.py`: **19/19 PASS**, 0 failures/errors/skips trên PostgreSQL disposable; container test tự dừng. `git diff --check` PASS.
-- Fix thực hiện trong worktree riêng để giữ nguyên phần Identity workflows đang triển khai ở checkout chính. **Chờ CI remote của revision sửa**, không coi local pass là remote pass hoặc đóng gate Identity P01.
+- Revision `55fdc66`: CI remote `38039502691`/`38039502694` đã PASS contracts/verify/frontend và năm service; Identity DB tests đã vượt qua, nhưng bước image smoke lộ lỗi Linux `host.docker.internal:56434` connection refused (DB bind loopback). Không ghi nhận lần chạy này 9/9 PASS.
+- Image probe sửa sang Compose DNS `identity-db:5432` + `identity-mail:1025`, tự phát hiện network từ container DB, không mở rộng host port bindings. Regression image config/network **4/4 PASS**; build `smarttravel-identity:pr6-ci-local` và live non-root image + DB/SMTP/JWKS/auth/provider/events **PASS**. Credentials/signing/mail local cũ được tái dùng qua file ignored, không sửa/reset volumes hoặc fixture password.
+- Fix thực hiện trong worktree riêng để giữ nguyên phần Identity workflows đang triển khai ở checkout chính. **Chờ CI remote của revision network sửa**, không coi local pass là remote pass hoặc đóng gate Identity P01.
 
 #### Refactor cấu trúc sáu service — 10/10/2026
 

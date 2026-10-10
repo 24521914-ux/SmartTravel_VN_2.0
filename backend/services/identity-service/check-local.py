@@ -22,7 +22,7 @@ ROOT = SERVICE.parents[2]
 spec = importlib.util.spec_from_file_location('identity_run_local', SERVICE / 'run-local.py')
 local = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(local)
-from p01 import environment, sql
+from p01 import compose, environment, run, sql
 CONTRACTS = ROOT / 'backend/contracts'
 API = json.loads((CONTRACTS / 'openapi/identity.yaml').read_text(encoding='utf-8'))
 
@@ -50,6 +50,26 @@ def validate(path, method, status, body):
         assert body is None
 
 
+def image_environment(env):
+    """Use Compose DNS/internal ports, not Linux-inaccessible loopback publications."""
+    return dict(env, PORT='8101', DB_URL='jdbc:postgresql://identity-db:5432/identity_db',
+                MAIL_HOST='identity-mail', MAIL_PORT='1025',
+                JWT_JWKS_URI='http://127.0.0.1:8101/.well-known/jwks.json',
+                IDENTITY_KEYS_FILE='/run/identity/keys.json')
+
+
+def dependency_network():
+    source = environment()
+    container = compose(source, 'ps', '-q', 'identity-db').stdout.strip()
+    if not container:
+        raise RuntimeError('Start the P01 Identity database before the image probe')
+    networks = json.loads(run(['docker', 'inspect', '--format', '{{json .NetworkSettings.Networks}}',
+                               container], source).stdout)
+    if len(networks) != 1:
+        raise RuntimeError('Expected one Compose network for the Identity database')
+    return next(iter(networks))
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--image', help='Run an already built Identity image instead of the jar')
@@ -61,9 +81,7 @@ def main():
     name = 'smarttravel-identity-smoke-' + secrets.token_hex(6)
     with tempfile.TemporaryFile() as log, tempfile.TemporaryDirectory() as secret_directory:
         if args.image:
-            env.update(PORT='8101', DB_URL='jdbc:postgresql://host.docker.internal:56434/identity_db',
-                       MAIL_HOST='host.docker.internal', JWT_JWKS_URI='http://127.0.0.1:8101/.well-known/jwks.json',
-                       IDENTITY_KEYS_FILE='/run/identity/keys.json')
+            env = image_environment(env)
             # Host directory is private; the bind-mounted file is readable by the non-root image UID.
             keys = Path(secret_directory) / 'keys.json'
             keys.write_bytes((SERVICE / '.local/keys.json').read_bytes())
@@ -73,7 +91,7 @@ def main():
                          'DB_MIGRATION_PASSWORD','DB_MIGRATION_ENABLED','JWT_ISSUER','JWT_AUDIENCE','JWT_JWKS_URI',
                          'IDENTITY_KEYS_FILE','IDENTITY_ACTIVE_KID','IDENTITY_MAIL_KEY','MAIL_HOST','MAIL_PORT',
                          'IDENTITY_FIXTURE_PASSWORD','IDENTITY_FIXTURES_ENABLED']
-            command = ['docker','run','--rm','--name',name,'--add-host=host.docker.internal:host-gateway',
+            command = ['docker','run','--rm','--name',name,'--network',dependency_network(),
                        '-p',f'127.0.0.1:{port}:8101','-v',f'{keys.as_posix()}:/run/identity/keys.json:ro']
             for key in variables:
                 command += ['-e',key]
