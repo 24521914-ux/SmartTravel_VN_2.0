@@ -1,0 +1,114 @@
+# Independent P01 databases; does not modify/reuse P00 volumes or containers.
+name: smarttravel-p01
+x-pg: &pg
+  image: postgres:16-alpine
+  healthcheck:
+    test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+    interval: 3s
+    timeout: 3s
+    retries: 40
+  volumes:
+    - ./postgres/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro
+services:
+  identity-db:
+    <<: *pg
+    environment:
+      SERVICE: identity
+      POSTGRES_DB: identity_db
+      POSTGRES_USER: identity_admin
+      POSTGRES_PASSWORD: ${IDENTITY_ADMIN_PASSWORD:?required}
+      MIGRATION_PASSWORD: ${IDENTITY_MIGRATION_PASSWORD:?required}
+      RUNTIME_PASSWORD: ${IDENTITY_RUNTIME_PASSWORD:?required}
+    ports: ["127.0.0.1:56434:5432"]
+    volumes:
+      - identity-data:/var/lib/postgresql/data
+      - ./postgres/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro
+  catalog-db:
+    <<: *pg
+    image: postgis/postgis:16-3.5
+    environment:
+      SERVICE: catalog
+      POSTGRES_DB: catalog_db
+      POSTGRES_USER: catalog_admin
+      POSTGRES_PASSWORD: ${CATALOG_ADMIN_PASSWORD:?required}
+      MIGRATION_PASSWORD: ${CATALOG_MIGRATION_PASSWORD:?required}
+      RUNTIME_PASSWORD: ${CATALOG_RUNTIME_PASSWORD:?required}
+    ports: ["127.0.0.1:56432:5432"]
+    volumes:
+      - catalog-data:/var/lib/postgresql/data
+      - ./postgres/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro
+  trip-db:
+    <<: *pg
+    environment:
+      SERVICE: trip
+      POSTGRES_DB: trip_db
+      POSTGRES_USER: trip_admin
+      POSTGRES_PASSWORD: ${TRIP_ADMIN_PASSWORD:?required}
+      MIGRATION_PASSWORD: ${TRIP_MIGRATION_PASSWORD:?required}
+      RUNTIME_PASSWORD: ${TRIP_RUNTIME_PASSWORD:?required}
+    ports: ["127.0.0.1:56435:5432"]
+    volumes:
+      - trip-data:/var/lib/postgresql/data
+      - ./postgres/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro
+  ingestion-db:
+    <<: *pg
+    environment:
+      SERVICE: ingestion
+      POSTGRES_DB: ingestion_db
+      POSTGRES_USER: ingestion_admin
+      POSTGRES_PASSWORD: ${INGESTION_ADMIN_PASSWORD:?required}
+      MIGRATION_PASSWORD: ${INGESTION_MIGRATION_PASSWORD:?required}
+      RUNTIME_PASSWORD: ${INGESTION_RUNTIME_PASSWORD:?required}
+    ports: ["127.0.0.1:56436:5432"]
+    volumes:
+      - ingestion-data:/var/lib/postgresql/data
+      - ./postgres/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro
+  intelligence-db:
+    <<: *pg
+    image: pgvector/pgvector:pg16
+    environment:
+      SERVICE: intelligence
+      POSTGRES_DB: intelligence_db
+      POSTGRES_USER: intelligence_admin
+      POSTGRES_PASSWORD: ${INTELLIGENCE_ADMIN_PASSWORD:?required}
+      MIGRATION_PASSWORD: ${INTELLIGENCE_MIGRATION_PASSWORD:?required}
+      RUNTIME_PASSWORD: ${INTELLIGENCE_RUNTIME_PASSWORD:?required}
+    ports: ["127.0.0.1:56437:5432"]
+    volumes:
+      - intelligence-data:/var/lib/postgresql/data
+      - ./postgres/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro
+  community-keygen:
+    image: mongo:8.0
+    entrypoint: [bash, -ec]
+    command: ['if [ ! -s /keys/replica.key ]; then openssl rand -base64 756 > /keys/replica.key; fi; chmod 400 /keys/replica.key; chown 999:999 /keys/replica.key']
+    volumes: [community-key:/keys]
+    restart: "no"
+  community-db:
+    image: mongo:8.0
+    command: [mongod, --replSet, rs0, --bind_ip_all, --keyFile, /keys/replica.key]
+    depends_on:
+      community-keygen: {condition: service_completed_successfully}
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: community_admin
+      MONGO_INITDB_ROOT_PASSWORD: ${COMMUNITY_ADMIN_PASSWORD:?required}
+      COMMUNITY_MIGRATION_PASSWORD: ${COMMUNITY_MIGRATION_PASSWORD:?required}
+      COMMUNITY_RUNTIME_PASSWORD: ${COMMUNITY_RUNTIME_PASSWORD:?required}
+    ports: ["127.0.0.1:57117:27017"]
+    volumes:
+      - community-data:/data/db
+      - community-key:/keys:ro
+      - ./mongo:/p01:ro
+      - ../services/community-service/src/main/resources/db/migration:/migrations:ro
+    healthcheck:
+      test: [CMD, mongosh, --quiet, --eval, 'db.adminCommand({ping:1})']
+      interval: 3s
+      timeout: 5s
+      retries: 40
+volumes:
+  identity-data:
+  catalog-data:
+  trip-data:
+  ingestion-data:
+  intelligence-data:
+  community-data:
+  community-key:

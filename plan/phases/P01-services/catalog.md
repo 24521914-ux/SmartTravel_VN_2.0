@@ -1,6 +1,6 @@
 # P01-CA Catalog Service — nhóm B
 
-Trạng thái: **NOT_STARTED**. Dependency: P00; không chờ Identity/Community/Ingestion. Scope: F02/F03/F04, geo/place/search/offering/business và canonical data. Reviewer: C.
+Trạng thái: **IN_PROGRESS — M1 baseline storage/runtime**. Evidence và phần còn thiếu tại [progress](../../../progress/PHASE_TASK_CHECKLIST.md). Chưa hoàn tất P01-CA-01/02 hoặc gate. Dependency: P00; không chờ Identity/Community/Ingestion. Scope: F02/F03/F04, geo/place/search/offering/business và canonical data. Reviewer: C.
 
 [Database Catalog](../../database/catalog.md) · [DDL](../../database/sql/catalog.sql) · [Contract](../../04-api-events.md) · [Gate](README.md). Owner: `backend/services/catalog-service/**`.
 

@@ -17,7 +17,7 @@ Tiến độ từng task xem [PHASE_TASK_CHECKLIST.md](PHASE_TASK_CHECKLIST.md).
 - [x] Backend demo gốc và Maven Wrapper giữ nguyên, không xóa thay đổi người dùng.
 - [x] Platform template Java21/Boot3.5.13/Flyway/health/JWT — `backend/platform/p00-template/`.
 - [x] Sáu skeleton Java build/deploy độc lập — `backend/services/`; chưa có domain API/entity/repository/logic.
-- [x] Community dùng Spring Data MongoDB, không JPA/JDBC/Flyway; relational skeletons dùng migration platform_probe, không thay domain migrations P01.
+- [x] Community dùng Spring Data MongoDB, không JPA/JDBC/Flyway; P00 platform_probe giữ nguyên. P01 đã bổ sung domain migrations/index/collections thật, chưa có domain APIs.
 - [x] Correlation/trace MDC, error auth JSON và WWW-Authenticate; audience/issuer/exp/iat/sub/signature validators.
 - [x] Dockerfiles chạy non-root và Compose sáu DB +platform DB +sáu Redis riêng — `backend/platform/compose.p00.yaml`.
 - [x] React/TypeScript/Vite frontend scaffold và API dev proxy — `frontend/`; chưa có màn nghiệp vụ hoàn chỉnh.
@@ -46,10 +46,19 @@ Tiến độ từng task xem [PHASE_TASK_CHECKLIST.md](PHASE_TASK_CHECKLIST.md).
 - [x] Frontend build và HTTP Vite dev proxy PASS; npm audit **0 vulnerabilities** lúc kiểm tra.
 - [x] Sáu service images và platform image build PASS; platform container health đã smoke UP.
 
+## P01 đang triển khai — M1 storage/runtime (10/10/2026)
+
+- [x] Năm PostgreSQL Flyway baseline domain + technical tables, runtime grants và Identity role seed; Community V1 16 collections/validator/index/checksum, revision startup guard và transaction manager.
+- [x] Compose/runner/runbook riêng tại `backend/infra/`; admin/migrator/runtime tách riêng, MongoDB authenticated replica set, secret local đã ignore; không dùng lại/xóa volume P00.
+- [x] Maven clean verify **21 tests PASS**, 6/6 app standalone DB/JWKS smoke, 6/6 storage/permission/constraint/rollback probes và 6/6 image build PASS.
+- [x] CI matrix theo service + shared-contract checks đã có source/YAML parse, chưa có remote CI evidence. Không ghi nhận dependency scan/deploy/rollback đã pass.
+- [x] Contract tracked revision kiểm trên temporary copy PASS (183 operation/23 messages); workspace validator đang bị bốn `text.txt` untracked có trước task làm manifest mismatch. Giữ nguyên file người dùng và manifest.
+- [ ] Chưa hoàn tất seed/domain/security/adapter/outbox worker/DLQ/broker/frontend client hoặc gate M1–M4. Chi tiết lệnh và evidence tại [checklist P01 M1](PHASE_TASK_CHECKLIST.md#p01-m1--phần-đã-triển-khai-và-kiểm-chứng).
+
 ## Chưa được xác nhận / thuộc giai đoạn sau
 
 - [ ] N1/N2 phê duyệt contract/policy candidate và nhận gói; điều phối freeze/đóng gate P00. Agent không tự ký thay.
-- [ ] Chức năng nghiệp vụ, domain migration/index/collections, provider adapters/outbox/inbox thực và test P01.
+- [ ] Chức năng nghiệp vụ/seed đầy đủ, provider adapters/outbox worker/inbox handlers thực và functional/contract/fault tests P01; baseline storage đã có, không tự đóng parent task.
 - [ ] Kết nối thật và frontend nghiệp vụ/E2E/security/load/restore/ML quality P02–P03.
 - [ ] Production domain/provider credentials/licenses/budget/support-EOL review, release/rollback/bàn giao P04.
 - [ ] Remote GitHub Actions pass và commit/push các thay đổi hiện tại.

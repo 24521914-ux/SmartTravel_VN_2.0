@@ -1,5 +1,7 @@
 # Nền tảng P00 — hướng dẫn chạy độc lập
 
+> **P01 đã bắt đầu M1:** source service hiện có domain migrations và runtime roles riêng, không còn boot trên bootstrap credentials P00 theo mục 3 dưới đây. Chạy service hiện hành theo [`backend/infra/README.md`](../infra/README.md), `python backend/infra/p01.py up/smoke/verify`; P00 hướng dẫn dưới đây giữ làm lịch sử template/contract và dependencies cũ. Không áp domain migration vào volume P00 để chữa boot.
+
 Triển khai kỹ thuật đã kiểm chứng; gate/bàn giao N1/N2 còn READY_FOR_REVIEW. Xem [manifest](P00_HANDOFF.md), `plan/P00-DECISIONS.md`, `plan/P00-POLICIES.md` và `backend/contracts/README.md` từ root repo. Chưa có chức năng nghiệp vụ hoàn thành hoặc kết nối runtime sáu service.
 
 ## 1. Build và contract tests

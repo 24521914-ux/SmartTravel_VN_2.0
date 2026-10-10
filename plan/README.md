@@ -1,10 +1,10 @@
 # Kế hoạch SmartTravel VN với 6 microservice
 
-Ngày lập: 08/10/2026. Trạng thái hiện hành: **P00 hoàn tất triển khai kỹ thuật, READY_FOR_REVIEW**; còn xác nhận bàn giao N1/N2 và freeze contract. P01–P04 chưa triển khai nghiệp vụ. Evidence tại [manifest P00](../backend/platform/P00_HANDOFF.md).
+Ngày lập: 08/10/2026. Trạng thái hiện hành: **P00 hoàn tất triển khai kỹ thuật, READY_FOR_REVIEW**; còn xác nhận bàn giao N1/N2 và freeze contract. P01 đang triển khai M1 baseline database/runtime độc lập (evidence trong progress); chưa có domain APIs, chưa đạt gate P01. P02–P04 chưa triển khai. Evidence tại [manifest P00](../backend/platform/P00_HANDOFF.md).
 
 Phạm vi được chốt gồm **Identity, Catalog, Community, Trip, Intelligence và Ingestion Service**. Ingestion là service thứ sáu do người dùng xác nhận. API Gateway, message broker, object storage và hệ thống observability là hạ tầng hỗ trợ, không tính thêm vào sáu service nghiệp vụ.
 
-Nguồn nghiệp vụ: `C:\Users\FPT SHOP\Downloads\Chức năng + Database.docx`, gồm 11 nhóm chức năng và 42 bảng. Nội dung tài liệu được dùng làm đầu vào yêu cầu; thiết kế bổ sung được ghi rõ trong bộ kế hoạch. Backend demo gốc có `DemoApplication`, cấu hình tên ứng dụng và dependency. P00 đã bổ sung sáu skeleton riêng tại `backend/services/`, contract/fixture và platform migration probe; chưa có entity/API/migration nghiệp vụ hoặc dữ liệu monolith. Scope hiện hành là triển khai mới.
+Nguồn nghiệp vụ: `C:\Users\FPT SHOP\Downloads\Chức năng + Database.docx`, gồm 11 nhóm chức năng và 42 bảng. Nội dung tài liệu được dùng làm đầu vào yêu cầu; thiết kế bổ sung được ghi rõ trong bộ kế hoạch. Backend demo gốc có `DemoApplication`, cấu hình tên ứng dụng và dependency. P00 đã bổ sung sáu skeleton riêng tại `backend/services/`, contract/fixture và platform migration probe. P01 đã thêm baseline migration/index/collections thật và credential isolation tại `backend/infra/`; chưa có domain entity/API/handlers hoặc dữ liệu monolith. Scope hiện hành là triển khai mới.
 
 ## Quyết định P00 hiện hành
 

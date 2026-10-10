@@ -1,0 +1,2 @@
+# Docker executes these scripts with /bin/sh, including on Windows hosts.
+*.sh text eol=lf

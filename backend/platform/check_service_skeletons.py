@@ -19,11 +19,20 @@ BACKEND=Path(__file__).resolve().parents[1]
 SERVICES=['identity','catalog','community','trip','ingestion','intelligence']
 PORTS={'identity':55434,'catalog':55432,'trip':55435,'ingestion':55436,'intelligence':55437}
 
-def check(service):
-    # Do not inject bootstrap credentials for other service databases into a child app.
-    env={key:value for key,value in os.environ.items() if not key.endswith('_DB_PASSWORD') and key not in ['DB_PASSWORD','DB_URL','DB_USER','MONGODB_URI']}
+def check(service, p01=False):
+    # Never pass another service's database/admin/migration secrets to an app.
+    env={key:value for key,value in os.environ.items() if not any(marker in key for marker in ['PASSWORD','MONGODB_URI','DB_URL','DB_USER','DB_MIGRATION'])}
     if service=='community':
-        env['MONGODB_URI']='mongodb://localhost:57017/community_db?replicaSet=rs0&directConnection=true'
+        if p01:
+            from urllib.parse import quote
+            password=quote(os.environ['COMMUNITY_RUNTIME_PASSWORD'],safe='')
+            env['MONGODB_URI']=f'mongodb://community_runtime:{password}@localhost:57117/community_db?authSource=community_db&replicaSet=rs0&directConnection=true'
+        else:
+            env['MONGODB_URI']='mongodb://localhost:57017/community_db?replicaSet=rs0&directConnection=true'
+    elif p01:
+        env.update(DB_URL=f'jdbc:postgresql://localhost:{PORTS[service]+1000}/{service}_db',
+                   DB_USER=f'{service}_runtime',DB_PASSWORD=os.environ[f'{service.upper()}_RUNTIME_PASSWORD'],
+                   DB_MIGRATION_USER=f'{service}_migrator',DB_MIGRATION_PASSWORD=os.environ[f'{service.upper()}_MIGRATION_PASSWORD'])
     else:
         env.update(DB_URL=f'jdbc:postgresql://localhost:{PORTS[service]}/{service}_db',DB_USER=f'{service}_local',DB_PASSWORD=os.environ[f'{service.upper()}_DB_PASSWORD'])
     env.update(JWT_ISSUER='local-test',JWT_AUDIENCE=service,JWT_JWKS_URI='http://127.0.0.1:18082/jwks')
@@ -83,5 +92,6 @@ def check(service):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(); parser.add_argument('--service',choices=SERVICES)
+    parser.add_argument('--p01',action='store_true',help='Use isolated P01 databases with migration/runtime roles')
     args=parser.parse_args()
-    for service in [args.service] if args.service else SERVICES: check(service)
+    for service in [args.service] if args.service else SERVICES: check(service,p01=args.p01)
