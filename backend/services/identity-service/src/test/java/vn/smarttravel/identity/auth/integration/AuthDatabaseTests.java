@@ -56,6 +56,9 @@ class AuthDatabaseTests {
     @Autowired vn.smarttravel.identity.preferences.service.PreferenceService preferences;
     @Autowired com.fasterxml.jackson.databind.ObjectMapper json;
     @MockitoBean vn.smarttravel.identity.preferences.client.CategoryClient categories;
+    @Autowired vn.smarttravel.identity.notifications.service.NotificationConsumer notificationConsumer;
+    @Autowired vn.smarttravel.identity.notifications.service.NotificationService notifications;
+    @Autowired org.springframework.transaction.support.TransactionTemplate transactions;
     @Autowired AuthService auth;
     @Autowired ProfileService profiles;
     @Autowired SessionService sessions;
@@ -101,6 +104,91 @@ class AuthDatabaseTests {
         var schema=json.readTree(root.resolve("backend/contracts/"+file).toFile());
         var factory=com.networknt.schema.JsonSchemaFactory.getInstance(com.networknt.schema.SpecVersion.VersionFlag.V202012);
         assertThat(factory.getSchema(schema).validate(value)).isEmpty();
+    }
+    com.fasterxml.jackson.databind.node.ObjectNode tripEvent(UUID user, UUID trip, long version) {
+        var event=json.createObjectNode();
+        event.put("event_id",UUID.randomUUID().toString()); event.put("event_type","trip.changed.v1");
+        event.put("schema_version",1); event.put("aggregate_type","trip"); event.put("aggregate_id",trip.toString());
+        event.put("aggregate_version",version); event.put("occurred_at",java.time.Instant.now().toString());
+        event.put("producer","trip"); event.put("correlation_id",UUID.randomUUID().toString()); event.putNull("causation_id");
+        event.put("traceparent","00-0123456789abcdef0123456789abcdef-0123456789abcdef-01");
+        event.putObject("payload").put("trip_id",trip.toString()).put("user_id",user.toString()).put("change_kind","UPDATED").put("version",version);
+        return event;
+    }
+    @Test void notificationFrozenCatalogAndCommunityFixturesUseAllowlistedTemplates() throws Exception {
+        var owner=active();
+        for(String type:java.util.List.of("catalog.business-claim.reviewed.v1","community.review.changed.v1")) {
+            var event=(com.fasterxml.jackson.databind.node.ObjectNode)json.readTree(findContract("fixtures/events/"+type+".json").toFile());
+            var payload=(com.fasterxml.jackson.databind.node.ObjectNode)event.get("payload");
+            event.put("event_id",UUID.randomUUID().toString());
+            payload.put(type.startsWith("catalog")?"owner_user_id":"user_id",owner.user().toString());
+            // Candidate Community sample uses a generic envelope ID; preserve frozen artifact, align this test instance.
+            event.put("aggregate_id",payload.get(type.startsWith("catalog")?"claim_id":"review_id").asText());
+            notificationConsumer.accept(event); notificationConsumer.accept(event);
+        }
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.notifications WHERE user_id=?",Integer.class,owner.user())).isEqualTo(2);
+        var payloads=db.queryForList("SELECT payload::text FROM identity.notifications WHERE user_id=?",String.class,owner.user());
+        for(var value:payloads) assertThat(json.readTree(value).size()).isEqualTo(2); // title + object reference only
+    }
+    @Test void notificationInboxAndInAppDeliveryDedupAndRollbackAreAtomic() {
+        var account=active(); UUID trip=UUID.randomUUID(); var event=tripEvent(account.user(),trip,2);
+        assertThatThrownBy(() -> transactions.executeWithoutResult(status -> {
+            notificationConsumer.accept(event); throw new IllegalStateException("simulated consumer crash");
+        })).isInstanceOf(IllegalStateException.class);
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.inbox_events WHERE event_id=?",Integer.class,UUID.fromString(event.get("event_id").asText()))).isZero();
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.notifications WHERE user_id=?",Integer.class,account.user())).isZero();
+        notificationConsumer.accept(event); notificationConsumer.accept(event);
+        notificationConsumer.accept(tripEvent(account.user(),trip,1));
+        notificationConsumer.accept(tripEvent(account.user(),trip,2));
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.notifications WHERE user_id=?",Integer.class,account.user())).isEqualTo(1);
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.notification_deliveries d JOIN identity.notifications n USING(notification_id) WHERE user_id=? AND d.status='SENT' AND channel='IN_APP'",Integer.class,account.user())).isEqualTo(1);
+    }
+    @Test void notificationReadChecksOwnershipAndIdempotencyAndFrozenProviderSchemas() throws Exception {
+        var owner=active(); var stranger=active();
+        notificationConsumer.accept(tripEvent(owner.user(),UUID.randomUUID(),1));
+        UUID id=db.queryForObject("SELECT notification_id FROM identity.notifications WHERE user_id=?",UUID.class,owner.user());
+        String token=(String)login(owner).get("access_token");
+        var missing=api(HttpMethod.PATCH,"/api/v1/me/notifications/"+id+"/read",null,token);
+        assertThat(missing.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        var forbidden=api(HttpMethod.PATCH,"/api/v1/me/notifications/"+id+"/read",null,(String)login(stranger).get("access_token"),"Idempotency-Key","read");
+        assertThat(forbidden.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        var first=api(HttpMethod.PATCH,"/api/v1/me/notifications/"+id+"/read",null,token,"Idempotency-Key","read");
+        assertThat(first.getStatusCode()).isEqualTo(HttpStatus.OK); assertThat(first.getHeaders().getETag()).isEqualTo("\"2\"");
+        assertThat(api(HttpMethod.PATCH,"/api/v1/me/notifications/"+id+"/read",null,token,"Idempotency-Key","read").getBody()).isEqualTo(first.getBody());
+        assertThat(api(HttpMethod.PATCH,"/api/v1/me/notifications/"+id+"/read",null,token,"Idempotency-Key","another").getBody()).isEqualTo(first.getBody());
+        var list=api(HttpMethod.GET,"/api/v1/me/notifications",null,token);
+        var openapi=json.readTree(findContract("openapi/identity.yaml").toFile());
+        var factory=com.networknt.schema.JsonSchemaFactory.getInstance(com.networknt.schema.SpecVersion.VersionFlag.V202012);
+        for(var entry:Map.of("/api/v1/me/notifications",Map.entry("get",list.getBody()),"/api/v1/me/notifications/{notification_id}/read",Map.entry("patch",first.getBody())).entrySet()) {
+            var schema=openapi.path("paths").path(entry.getKey()).path(entry.getValue().getKey()).path("responses").path("200").path("content").path("application/json").path("schema");
+            assertThat(factory.getSchema(schema).validate(json.valueToTree(entry.getValue().getValue()))).isEmpty();
+        }
+        assertThat(db.queryForObject("SELECT version FROM identity.notifications WHERE notification_id=?",Long.class,id)).isEqualTo(2);
+    }
+    @Test void notificationInvalidEventsDoNotConsumeInboxAndInactiveRecipientsAreIgnored() {
+        var owner=active(); var bad=tripEvent(owner.user(),UUID.randomUUID(),1);
+        bad.withObject("/payload").put("private_profile","must not leak");
+        assertThatThrownBy(() -> notificationConsumer.accept(bad)).isInstanceOf(IllegalArgumentException.class);
+        bad.withObject("/payload").remove("private_profile"); bad.put("aggregate_id",UUID.randomUUID().toString());
+        assertThatThrownBy(() -> notificationConsumer.accept(bad)).isInstanceOf(IllegalArgumentException.class);
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.inbox_events WHERE event_id=?",Integer.class,UUID.fromString(bad.get("event_id").asText()))).isZero();
+        notificationConsumer.accept(tripEvent(UUID.randomUUID(),UUID.randomUUID(),1));
+        db.update("UPDATE identity.users SET status='SUSPENDED' WHERE user_id=?",owner.user());
+        notificationConsumer.accept(tripEvent(owner.user(),UUID.randomUUID(),1));
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.notifications WHERE user_id=?",Integer.class,owner.user())).isZero();
+    }
+    @Test void notificationCursorIsBoundToOwnerAndHasStableInsertionCutoff() {
+        var owner=active(); var principal=jwt(login(owner));
+        for(int i=0;i<3;i++) notificationConsumer.accept(tripEvent(owner.user(),UUID.randomUUID(),1));
+        var first=notifications.list(principal,null,1); String cursor=(String)first.get("next_cursor");
+        assertThat(cursor).isNotNull();
+        notificationConsumer.accept(tripEvent(owner.user(),UUID.randomUUID(),1));
+        var second=notifications.list(principal,cursor,1);
+        var third=notifications.list(principal,(String)second.get("next_cursor"),1);
+        assertThat(third.get("next_cursor")).isNull();
+        assertThatThrownBy(() -> notifications.list(jwt(login(active())),cursor,1)).isInstanceOf(IdentityException.class);
+        assertThatThrownBy(() -> notifications.list(principal,cursor,2)).isInstanceOf(IdentityException.class);
+        assertThatThrownBy(() -> notifications.list(principal,null,101)).isInstanceOf(IdentityException.class);
     }
     @Test void adminStatusAndRoleUpdatesRecheckPrivilegesAndRevokeAllSessionFamilies() throws Exception {
         var admin=active(); db.update("INSERT INTO identity.user_roles(user_id,role_code) VALUES (?,'ADMIN')",admin.user());
