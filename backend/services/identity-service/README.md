@@ -117,3 +117,20 @@ category invalidation consumer; outbox dispatch/inbox handlers/retry/DLQ/retenti
 AMQP dependency hiện mới chuẩn bị; broker health mặc định tắt (`IDENTITY_TRANSPORT_ENABLED=false`), chưa có worker/transport. Không bật cờ để tuyên bố đã kết nối.
 Cần provider tests đủ 25 operation/events, security/fault regression toàn scope và handoff reviewer N2.
 Không mở P02 hoặc đóng gate dựa trên auth smoke. Frontend/provider production chưa triển khai trong lượt này.
+
+## P01 notification inbox group
+
+This group adds the authenticated notification list and mark-as-read endpoints:
+`GET /api/v1/me/notifications` and `PATCH /api/v1/me/notifications/{notification_id}/read`.
+Cursors are bound to the owner and insertion cutoff. Mark-as-read requires an
+`Idempotency-Key`, checks ownership, and returns the current version as an ETag.
+
+The fixture consumer validates the frozen Catalog claim, Community review, and
+Trip event schemas, deduplicates deliveries, ignores stale aggregate versions,
+and stores only an allowlisted title and object reference. Inbox bookkeeping and
+in-app delivery are committed in one PostgreSQL transaction.
+
+Verify this group with `python backend/services/identity-service/test-local.py`.
+The harness runs the notification integration tests against a disposable real
+PostgreSQL database. Broker wiring, email notification delivery, and account
+deletion are separate groups; this group does not claim those gates complete.
