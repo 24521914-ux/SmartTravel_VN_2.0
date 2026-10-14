@@ -1,4 +1,5 @@
 /mvnw text eol=lf
+/infra/rabbit/*.sh text eol=lf
 *.cmd text eol=crlf
 # MongoDB migration checksums hash raw bytes; checkout must preserve canonical LF.
 /services/community-service/src/main/resources/db/migration/*.js text eol=lf
