@@ -23,10 +23,12 @@ public class PreferenceService {
     private final AccountMail secrets;
     private final CategoryClient categories;
     private final CursorPages cursors;
+    private final vn.smarttravel.identity.preferences.repository.CategoryStateRepository states;
     public PreferenceService(PreferenceRepository repository, TransactionTemplate tx, CurrentUser current,
-                             IdentityMutations mutations, AccountMail secrets, CategoryClient categories, CursorPages cursors) {
+                             IdentityMutations mutations, AccountMail secrets, CategoryClient categories, CursorPages cursors,
+                             vn.smarttravel.identity.preferences.repository.CategoryStateRepository states) {
         this.repository=repository; this.tx=tx; this.current=current; this.mutations=mutations;
-        this.secrets=secrets; this.categories=categories; this.cursors=cursors;
+        this.secrets=secrets; this.categories=categories; this.cursors=cursors; this.states=states;
     }
     public Map<String,Object> get(Jwt jwt) {
         return tx.execute(status -> repository.snapshot(current.requireUser(jwt)));
@@ -36,6 +38,7 @@ public class PreferenceService {
         var patch=PreferencePatch.parse(body);
         String hash=secrets.digest(mutations.encode(Map.of("version",version,"body",patch)));
         return tx.execute(status -> {
+            states.lockSelections();
             UUID user=current.requireUser(jwt); // serializes updates and status/session changes for this owner
             var replay=mutations.idempotent("preferences",user.toString(),key,hash);
             if(replay!=null) return replay;
@@ -49,6 +52,7 @@ public class PreferenceService {
             repository.validateOptions((List<UUID>)merged.get("food_preference_ids"),"FOOD_PREFERENCE");
             // Revalidate the full category selection, not only IDs added in this request.
             categories.requireActive((List<UUID>)merged.get("category_ids"));
+            states.requireNotInvalidated((List<UUID>)merged.get("category_ids"));
             boolean changed=!old.get("personalization_enabled").equals(merged.get("personalization_enabled"));
             repository.update(user,merged,changed);
             var response=repository.snapshot(user);

@@ -17,8 +17,21 @@ public class CategoryClient {
     private final String baseUrl;
     private final ObjectMapper json;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).followRedirects(HttpClient.Redirect.NEVER).build();
-    public CategoryClient(@Value("${identity.catalog.base-url:}") String baseUrl, ObjectMapper json) {
+    public CategoryClient(String baseUrl, ObjectMapper json) {
         this.baseUrl=baseUrl; this.json=json;
+    }
+    @org.springframework.beans.factory.annotation.Autowired
+    public CategoryClient(@Value("${identity.catalog.base-url:}") String baseUrl, ObjectMapper json, org.springframework.core.env.Environment env) {
+        this(baseUrl,json);
+        if(!baseUrl.isBlank()) {
+            var uri=URI.create(baseUrl);
+            if(uri.getHost()==null || uri.getUserInfo()!=null || uri.getQuery()!=null || uri.getFragment()!=null ||
+                    (!"https".equals(uri.getScheme()) && !"http".equals(uri.getScheme())))
+                throw new IllegalStateException("Catalog origin must be a plain HTTP(S) endpoint");
+            if(!vn.smarttravel.identity.security.service.IssuerKeys.local(env) &&
+                    (!"https".equals(uri.getScheme()) || Set.of("localhost","127.0.0.1","::1","0.0.0.0").contains(uri.getHost())))
+                throw new IllegalStateException("Local Catalog stub configuration is forbidden outside test/local profiles");
+        }
     }
 
     public void requireActive(List<UUID> ids) {
@@ -36,8 +49,10 @@ public class CategoryClient {
                 String url=baseUrl.replaceAll("/$","")+"/api/v1/categories?limit=100";
                 if(cursor!=null) url+="&cursor="+URLEncoder.encode(cursor,StandardCharsets.UTF_8);
                 var request=HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofNanos(Math.min(nanos,Duration.ofSeconds(2).toNanos()))).GET().build();
-                var response=http.send(request,HttpResponse.BodyHandlers.ofString());
-                if(response.statusCode()!=200 || response.body().length()>1_000_000) throw new IllegalStateException();
+                // Limit streaming bytes and the body deadline, including chunked responses after headers.
+                var response=http.send(request,new vn.smarttravel.identity.shared.http.LimitedBodyHandler(
+                        1_000_000,Duration.ofNanos(Math.min(deadline-System.nanoTime(),Duration.ofSeconds(2).toNanos()))));
+                if(response.statusCode()!=200) throw new IllegalStateException();
                 var body=json.readTree(response.body());
                 if(!body.path("items").isArray() || body.path("items").size()>100 || !body.has("next_cursor")) throw new IllegalStateException();
                 for(var item:body.path("items")) {

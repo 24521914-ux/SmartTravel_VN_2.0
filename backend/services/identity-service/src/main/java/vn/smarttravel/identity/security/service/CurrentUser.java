@@ -21,6 +21,8 @@ public class CurrentUser {
         return row;
     }
 
+    public java.util.List<String> roles(UUID user) { return repository.roles(user); }
+
     public static boolean active(Map<String, Object> row) { return row != null && "ACTIVE".equals(row.get("status")); }
 
     public static boolean live(Map<String, Object> row) {

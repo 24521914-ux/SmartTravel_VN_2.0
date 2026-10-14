@@ -41,6 +41,7 @@ public class IdentityMutations {
     }
 
     public void audit(UUID actor, UUID user, String action) { repository.audit(actor, user, action); }
+    public void auditSystem(UUID user, String action) { repository.auditSystem(user,action); }
 
     public void event(UUID user, long version, String type, Map<String, Object> payload) {
         event("user", user, version, type, payload);

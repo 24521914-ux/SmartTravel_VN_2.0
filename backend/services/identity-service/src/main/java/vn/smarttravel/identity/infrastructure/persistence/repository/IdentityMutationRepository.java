@@ -28,6 +28,11 @@ public class IdentityMutationRepository {
                 UUID.randomUUID(), actor, user.toString(), action);
     }
 
+    public void auditSystem(UUID user, String action) {
+        db.update("INSERT INTO identity.audit_logs(audit_id,actor_type,entity_type,entity_id,action) VALUES (?,'SYSTEM','user',?,?)",
+                UUID.randomUUID(),user.toString(),action);
+    }
+
     public void event(UUID event, String aggregate, UUID user, long version, String type, String envelope) {
         db.update("INSERT INTO identity.outbox_events(event_id,aggregate_type,aggregate_id,aggregate_version,event_type,payload) VALUES (?,?,?,?,?,?::jsonb)",
                 event, aggregate, user.toString(), version, type, envelope);
