@@ -35,8 +35,9 @@ def check(service, p01=False):
                    DB_MIGRATION_USER=f'{service}_migrator',DB_MIGRATION_PASSWORD=os.environ[f'{service.upper()}_MIGRATION_PASSWORD'])
     else:
         env.update(DB_URL=f'jdbc:postgresql://localhost:{PORTS[service]}/{service}_db',DB_USER=f'{service}_local',DB_PASSWORD=os.environ[f'{service.upper()}_DB_PASSWORD'])
+    env['SPRING_PROFILES_ACTIVE']='p01local' if service != 'identity' else 'p01-local'
     if service == 'identity':
-        env.update(SPRING_PROFILES_ACTIVE='p01-local', MAIL_PORT='51025')
+        env.update(MAIL_PORT='51025')
         # This legacy smoke tests DB/security only, not provider availability.
         env['MANAGEMENT_HEALTH_MAIL_ENABLED'] = 'false'
     env.update(JWT_ISSUER='local-test',JWT_AUDIENCE=service,JWT_JWKS_URI='http://127.0.0.1:18082/jwks')
@@ -67,7 +68,7 @@ def check(service, p01=False):
                 except (OSError,ValueError): pass
                 time.sleep(1)
             assert ready, f'{service} DB health did not become UP'
-            route = '/api/v1/unknown' if service == 'identity' else '/internal/v1/unknown'
+            route = '/api/v1/unknown'
             try:
                 urlopen(f'http://127.0.0.1:{port}{route}',timeout=3).close()
                 raise AssertionError('Unauthenticated private route accepted')

@@ -1,10 +1,10 @@
 name: P01 independent services
 on:
   pull_request:
-    paths: ['backend/services/**', 'backend/infra/**', 'backend/platform/**', 'backend/contracts/**', 'backend/.gitattributes', 'backend/.mvn/**', 'backend/mvnw*', '.github/workflows/p01-services.yml']
+    paths: ['backend/services/**', 'backend/infra/**', 'backend/platform/**', 'frontend/**', 'backend/contracts/**', 'backend/.gitattributes', 'backend/.mvn/**', 'backend/mvnw*', '.github/workflows/p01-services.yml']
   push:
     branches: [main]
-    paths: ['backend/services/**', 'backend/infra/**', 'backend/contracts/**', 'backend/.gitattributes', '.github/workflows/p01-services.yml']
+    paths: ['backend/services/**', 'backend/infra/**', 'backend/platform/**', 'frontend/**', 'backend/contracts/**', 'backend/.gitattributes', '.github/workflows/p01-services.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -28,9 +28,16 @@ jobs:
           python-version: '3.12'
       - name: Build one service and run unit/security tests
         run: bash backend/mvnw -B -f backend/services/pom.xml -pl ${{ matrix.service }}-service -am clean verify
-      - name: Identity domain tests on disposable real PostgreSQL
-        if: matrix.service == 'identity'
-        run: python backend/services/identity-service/test-local.py
+      - name: Domain and transport tests on owned disposable dependencies
+        run: |
+          runner="backend/services/${{ matrix.service }}-service/test-local.py"
+          if [ -f "$runner" ]; then
+            if grep -q -- "--transport" "$runner"; then
+              python "$runner" --transport
+            else
+              python "$runner"
+            fi
+          fi
       - name: Install signed local JWKS issuer dependencies
         run: python -m pip install -r backend/platform/requirements-validation.txt
       - name: Start only this service's real database
@@ -79,3 +86,33 @@ jobs:
           python backend/platform/test_event_harness.py
 # Domain provider/fault tests and dependency scan gates are added with M2/M3.
 # These storage probes do not assert READY_FOR_INTEGRATION.
+  platform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Gateway live signed-JWKS routing, security, CORS and request limits
+        run: bash backend/mvnw -B -f backend/platform/api-gateway/pom.xml clean verify
+      - name: Frontend client behavior, auth concurrency and type/build checks
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run test:contracts
+          npm run build
+          npm audit --audit-level=high
+      - name: Build Gateway revision image
+        run: docker build -t smarttravel-api-gateway:${{ github.sha }} backend/platform/api-gateway
+      - uses: actions/upload-artifact@v4
+        with:
+          name: platform-${{ github.sha }}
+          path: backend/platform/api-gateway/target/surefire-reports/
