@@ -67,7 +67,7 @@ class MongoStorageConfigurationTests {
     void matchingImmutableRevisionAllowsStartup() throws Exception {
         try (var input = new ClassPathResource("db/migration/V1__community_baseline.js").getInputStream()) {
             String checksum = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(input.readAllBytes()));
-            when(revisions.first()).thenReturn(new Document("checksum", checksum));
+            try(var second=new ClassPathResource("db/migration/V2__provider_name_limits.js").getInputStream();var third=new ClassPathResource("db/migration/V3__user_mutation_fences.js").getInputStream()){String next=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(second.readAllBytes()));String fence=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(third.readAllBytes()));when(revisions.first()).thenReturn(new Document("checksum", checksum),new Document("checksum",next),new Document("checksum",fence));}
             assertDoesNotThrow(() -> configuration.migrationRevisionGuard(mongo).afterSingletonsInstantiated());
         }
     }

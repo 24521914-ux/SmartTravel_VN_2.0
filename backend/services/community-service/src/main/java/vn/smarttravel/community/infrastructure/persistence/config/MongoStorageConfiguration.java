@@ -30,10 +30,10 @@ public class MongoStorageConfiguration {
     @Bean
     SmartInitializingSingleton migrationRevisionGuard(MongoTemplate mongo) {
         return () -> {
-            try (var input = new ClassPathResource("db/migration/V1__community_baseline.js").getInputStream()) {
+            for(String name:java.util.List.of("V1__community_baseline","V2__provider_name_limits","V3__user_mutation_fences"))try (var input = new ClassPathResource("db/migration/"+name+".js").getInputStream()) {
                 String checksum = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(input.readAllBytes()));
                 Document revision = mongo.getCollection("schema_migrations")
-                        .find(new Document("_id", "V1__community_baseline")).first();
+                        .find(new Document("_id", name)).first();
                 if (revision == null || !checksum.equals(revision.getString("checksum"))) {
                     throw new IllegalStateException("Community storage migration missing or checksum mismatch; run migration job");
                 }
