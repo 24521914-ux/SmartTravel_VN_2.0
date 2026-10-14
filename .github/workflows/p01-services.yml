@@ -31,6 +31,9 @@ jobs:
       - name: Identity domain tests on disposable real PostgreSQL
         if: matrix.service == 'identity'
         run: python backend/services/identity-service/test-local.py
+      - name: Catalog domain and transport tests on disposable PostGIS and RabbitMQ
+        if: matrix.service == 'catalog'
+        run: python backend/services/catalog-service/test-local.py --transport
       - name: Install signed local JWKS issuer dependencies
         run: python -m pip install -r backend/platform/requirements-validation.txt
       - name: Start only this service's real database
