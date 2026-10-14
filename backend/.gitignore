@@ -32,3 +32,9 @@ build/
 ### VS Code ###
 .vscode/
 ag-kit/
+
+# Python runner artifacts
+__pycache__/
+*.py[cod]
+.test-local.log
+.local/
