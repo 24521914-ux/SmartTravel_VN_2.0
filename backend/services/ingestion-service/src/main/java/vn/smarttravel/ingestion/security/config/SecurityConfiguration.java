@@ -34,13 +34,20 @@ public class SecurityConfiguration {
                 .build();
     }
 
+    // Kept for standalone decoder contract tests.
+    JwtDecoder jwtDecoder(String jwks, String issuer, String audience) {
+        return jwtDecoder(jwks, issuer, audience, "");
+    }
+
     @Bean
     JwtDecoder jwtDecoder(@Value("${security.jwt.jwk-set-uri}") String jwks,
                           @Value("${security.jwt.issuer}") String issuer,
-                          @Value("${security.jwt.audience}") String audience) {
+                          @Value("${security.jwt.audience}") String audience,
+                          @Value("${security.identity-session-uri:}") String sessionUri) {
         var decoder = NimbusJwtDecoder.withJwkSetUri(jwks).build();
         decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
                 JwtValidators.createDefaultWithIssuer(issuer), audienceValidator(audience),
+                new LiveSessionValidator(sessionUri),
                 new org.springframework.security.oauth2.jwt.JwtClaimValidator<java.time.Instant>("exp", java.util.Objects::nonNull),
                 new org.springframework.security.oauth2.jwt.JwtClaimValidator<java.time.Instant>("iat", java.util.Objects::nonNull),
                 new org.springframework.security.oauth2.jwt.JwtClaimValidator<String>("sub", value -> value != null && !value.isBlank())));
