@@ -24,6 +24,15 @@ public class SecurityConfiguration {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        .requestMatchers("/api/v1/recommendations").permitAll()
+                        .requestMatchers("/api/v1/admin/**").hasAuthority("SCOPE_intelligence:admin")
+                        .requestMatchers("/internal/v1/events").access((authentication,context)->{
+                            var principal=authentication.get();boolean workload=principal instanceof org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken token && token.getToken().getClaimAsString("client_id")!=null && !token.getToken().getClaimAsString("client_id").isBlank() && !token.getToken().hasClaim("sid");
+                            return new org.springframework.security.authorization.AuthorizationDecision(workload && principal.getAuthorities().stream().anyMatch(a->a.getAuthority().equals("SCOPE_intelligence:internal")));
+                        })
+                        .requestMatchers("/internal/**").denyAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET,"/api/v1/me/**").hasAuthority("SCOPE_intelligence:read")
+                        .requestMatchers("/api/v1/interactions/**","/api/v1/me/**").hasAuthority("SCOPE_intelligence:write")
                         .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint((request, response, error) -> writeError(response, 401, "UNAUTHORIZED"))
@@ -34,13 +43,20 @@ public class SecurityConfiguration {
                 .build();
     }
 
+    // Kept for standalone decoder contract tests.
+    JwtDecoder jwtDecoder(String jwks, String issuer, String audience) {
+        return jwtDecoder(jwks, issuer, audience, "");
+    }
+
     @Bean
     JwtDecoder jwtDecoder(@Value("${security.jwt.jwk-set-uri}") String jwks,
                           @Value("${security.jwt.issuer}") String issuer,
-                          @Value("${security.jwt.audience}") String audience) {
+                          @Value("${security.jwt.audience}") String audience,
+                          @Value("${security.identity-session-uri:}") String sessionUri) {
         var decoder = NimbusJwtDecoder.withJwkSetUri(jwks).build();
         decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
                 JwtValidators.createDefaultWithIssuer(issuer), audienceValidator(audience),
+                new LiveSessionValidator(sessionUri),
                 new org.springframework.security.oauth2.jwt.JwtClaimValidator<java.time.Instant>("exp", java.util.Objects::nonNull),
                 new org.springframework.security.oauth2.jwt.JwtClaimValidator<java.time.Instant>("iat", java.util.Objects::nonNull),
                 new org.springframework.security.oauth2.jwt.JwtClaimValidator<String>("sub", value -> value != null && !value.isBlank())));

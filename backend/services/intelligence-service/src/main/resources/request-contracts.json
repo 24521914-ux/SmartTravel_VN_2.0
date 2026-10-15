@@ -1,0 +1,255 @@
+[
+  {
+    "method": "POST",
+    "path": "/api/v1/recommendations",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "topN": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "currency": {
+          "type": "string",
+          "enum": [
+            "VND"
+          ]
+        },
+        "category_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "maxItems": 100
+        },
+        "budget": {
+          "type": "number",
+          "minimum": 0
+        },
+        "latitude": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "longitude": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        },
+        "radius_m": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 100000
+        }
+      },
+      "required": [
+        "topN",
+        "currency"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/interactions/batch",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "event_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "session_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "SEARCH",
+                  "PLACE_VIEW"
+                ]
+              },
+              "place_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "query": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 512
+              },
+              "occurred_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "event_id",
+              "session_id",
+              "type",
+              "place_id",
+              "query",
+              "occurred_at"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 100,
+          "minItems": 1
+        },
+        "analytics_consent": {
+          "const": true
+        },
+        "consent_version": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "items",
+        "analytics_consent",
+        "consent_version"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/datasets",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "source_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "maxItems": 100
+        },
+        "feature_schema_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "criteria": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "end": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "start",
+            "end"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "source_ids",
+        "feature_schema_version",
+        "criteria"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/training-jobs",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "dataset_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "code_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        }
+      },
+      "required": [
+        "dataset_id",
+        "seed",
+        "code_revision"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/models/{model_id}/validate",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/models/{model_id}/deploy",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/models/{model_id}/rollback",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "additionalProperties": false
+    }
+  }
+]
