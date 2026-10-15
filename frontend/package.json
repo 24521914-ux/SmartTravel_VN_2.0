@@ -6,14 +6,17 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
+    "test:contracts": "node --test scripts/mock-contract-test.mjs",
+    "test:gateway": "node scripts/gateway-smoke.mjs",
     "preview": "vite preview --host 127.0.0.1",
-    "test:contracts": "node --test scripts/mock-contract-test.mjs"
+    "test:browser": "node scripts/browser-smoke.mjs"
   },
   "dependencies": {
     "react": "19.2.0",
     "react-dom": "19.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
     "@vitejs/plugin-react": "5.1.1",

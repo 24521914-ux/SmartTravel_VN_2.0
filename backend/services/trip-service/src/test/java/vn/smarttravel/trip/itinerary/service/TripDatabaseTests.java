@@ -52,6 +52,19 @@ class TripDatabaseTests {
     UUID day(UUID trip){return id(service.day(trip,USER,null,match(trip),map("date","2026-10-02")).get("day_id"));}
     Map<String,Object> item(UUID place){return map("place_id",place.toString(),"note","Fixture visit","duration_minutes",45,"locked",false,"recommendation_request_id",null);}
     UUID add(UUID trip,UUID day,UUID place){return id(service.addItem(trip,USER,day,match(trip),UUID.randomUUID().toString(),item(place)).get("item_id"));}
+    @Test void historicalStreamRequiresScopedWorkloadAndUnknownInternalRoutesAreDenied()throws Exception{
+        String path="/internal/v1/interactions/snapshot";
+        var scope=new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_trip:internal");
+        mvc.perform(MockMvcRequestBuilders.get(path).with(jwt().jwt(j->j.subject(USER.toString()).claim("sid",UUID.randomUUID().toString())).authorities(scope)))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+        mvc.perform(MockMvcRequestBuilders.get(path).with(jwt().jwt(j->j.subject("intelligence-worker").claim("client_id","intelligence-worker")).authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_trip:read"))))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+        var workload=jwt().jwt(j->j.subject("intelligence-worker").claim("client_id","intelligence-worker")).authorities(scope);
+        mvc.perform(MockMvcRequestBuilders.get(path).with(workload))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+        mvc.perform(MockMvcRequestBuilders.get("/internal/v1/unknown").with(workload))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+    }
     @SuppressWarnings("unchecked") Map<String,Object> http(String method,String path,Object body,int expected,String match,String key)throws Exception{
         var request=MockMvcRequestBuilders.request(org.springframework.http.HttpMethod.valueOf(method),path).with(jwt().jwt(j->j.subject(USER.toString()).claim("scope","trip:read trip:write")));
         if(body!=null)request.contentType("application/json").content(JSON.writeValueAsBytes(body));if(match!=null)request.header("If-Match",match);if(key!=null)request.header("Idempotency-Key",key);

@@ -26,11 +26,10 @@ public class SecurityConfiguration {
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/api/v1/recommendations").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasAuthority("SCOPE_intelligence:admin")
-                        .requestMatchers("/internal/v1/events").access((authentication,context)->{
+                        .requestMatchers("/internal/v1/**").access((authentication,context)->{
                             var principal=authentication.get();boolean workload=principal instanceof org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken token && token.getToken().getClaimAsString("client_id")!=null && !token.getToken().getClaimAsString("client_id").isBlank() && !token.getToken().hasClaim("sid");
                             return new org.springframework.security.authorization.AuthorizationDecision(workload && principal.getAuthorities().stream().anyMatch(a->a.getAuthority().equals("SCOPE_intelligence:internal")));
                         })
-                        .requestMatchers("/internal/**").denyAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET,"/api/v1/me/**").hasAuthority("SCOPE_intelligence:read")
                         .requestMatchers("/api/v1/interactions/**","/api/v1/me/**").hasAuthority("SCOPE_intelligence:write")
                         .anyRequest().authenticated())

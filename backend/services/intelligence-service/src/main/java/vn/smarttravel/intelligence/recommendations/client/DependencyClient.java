@@ -21,7 +21,13 @@ public class DependencyClient {
     private final String catalog,ingestion,token;
     @Value("${intelligence.catalog-token:}") private String catalogToken="";
     @Value("${intelligence.ingestion-token:}") private String ingestionToken="";
-    private String credential(String base){String scoped=base.equals(catalog)?catalogToken:base.equals(ingestion)?ingestionToken:token;return scoped==null||scoped.isBlank()?token:scoped;}
+    @Value("${intelligence.community-token:}") private String communityToken="";
+    @Value("${intelligence.trip-token:}") private String tripToken="";
+    @Value("${intelligence.trip-url:http://127.0.0.1:8104}") private String trip;
+    @Value("${intelligence.identity-token:}") private String identityToken="";
+    private String credential(String base){String scoped=base.equals(catalog)?catalogToken:base.equals(ingestion)?ingestionToken:base.equals(community)?communityToken:base.equals(trip)?tripToken:identityToken;return scoped==null||scoped.isBlank()?token:scoped;}
+    @Value("${intelligence.community-url:http://127.0.0.1:8103}") private String community;
+    @Value("${intelligence.identity-url:http://127.0.0.1:8101}") private String identity;
     public DependencyClient(@Value("${intelligence.catalog-url:http://127.0.0.1:8102}") String catalog,
             @Value("${intelligence.ingestion-url:http://127.0.0.1:8105}") String ingestion,
             @Value("${intelligence.workload-token:}") String token){this.catalog=catalog;this.ingestion=ingestion;this.token=token;}
@@ -43,5 +49,16 @@ public class DependencyClient {
     public List<JsonNode> policies(List<UUID> ids) {
         var result=new ArrayList<JsonNode>();for(JsonNode p:post(ingestion,"/internal/v1/sources/policies/batch",ids).path("items"))result.add(p);
         if(result.size()!=ids.size())throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"SOURCE_POLICY_MISSING");return result;
+    }
+    public JsonNode snapshot(String cursor){return snapshot(catalog,"/internal/v1/places/features-snapshot",cursor);}
+    public JsonNode ratingsSnapshot(String cursor){return snapshot(community,"/internal/v1/ratings/snapshot",cursor);}
+    public JsonNode interactionsSnapshot(String cursor){return snapshot(trip,"/internal/v1/interactions/snapshot",cursor);}
+    public JsonNode preferencesSnapshot(String cursor){return snapshot(identity,"/internal/v1/users/preferences/snapshot",cursor);}
+    private JsonNode snapshot(String base,String path,String cursor){
+        try{
+            String query="?limit=100"+(cursor==null?"":"&cursor="+java.net.URLEncoder.encode(cursor,java.nio.charset.StandardCharsets.UTF_8));
+            var request=HttpRequest.newBuilder(URI.create(base+path+query)).timeout(vn.smarttravel.intelligence.shared.http.RecommendationDeadline.remaining());String access=credential(base);if(!access.isBlank())request.header("Authorization","Bearer "+access);
+            var response=client.send(request.GET().build(),new vn.smarttravel.intelligence.shared.http.LimitedBodyHandler(1024*1024,vn.smarttravel.intelligence.shared.http.RecommendationDeadline.remaining()));if(response.statusCode()!=200)throw new IllegalStateException();return read(new String(response.body(),java.nio.charset.StandardCharsets.UTF_8));
+        }catch(Exception e){if(e instanceof InterruptedException)Thread.currentThread().interrupt();throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"SNAPSHOT_UNAVAILABLE");}
     }
 }

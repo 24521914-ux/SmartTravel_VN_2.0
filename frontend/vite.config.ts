@@ -7,7 +7,7 @@ export default defineConfig({
     host: '127.0.0.1',
     port: 5173,
     strictPort: true,
-    // Local synthetic Catalog stub only. Production must use a real Gateway.
-    proxy: { '/api': { target: process.env.P00_STUB_TARGET ?? 'http://127.0.0.1:18082', changeOrigin: true } },
+    // The application uses the real integration Gateway. P00 fixtures are opt-in.
+    proxy: { '/api': { target: process.env.P02_GATEWAY_TARGET ?? process.env.P00_STUB_TARGET ?? 'http://127.0.0.1:58080', changeOrigin: true } },
   },
 });

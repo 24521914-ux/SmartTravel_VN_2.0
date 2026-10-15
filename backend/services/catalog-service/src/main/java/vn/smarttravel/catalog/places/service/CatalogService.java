@@ -15,6 +15,7 @@ public class CatalogService {
     public Object taxonomy(String kind){return repository.taxonomy(kind);}
     public boolean rating(UUID event,Map<String,Object> payload){return repository.rating(event,payload);}
     public Object adminSearch(Map<String,String> query){return vn.smarttravel.catalog.shared.web.Representations.page(repository.adminList().stream().map(vn.smarttravel.catalog.shared.web.Representations::place).toList());}
+    public Object featureSnapshot(){return vn.smarttravel.catalog.shared.web.Representations.page(repository.featureSnapshot());}
     public Object candidates(Map<String,Object> body){return Map.of("items",repository.candidates(body).stream().map(vn.smarttravel.catalog.shared.web.Representations::place).toList(),"missing_ids",List.of());}
     public Object publicTaxonomy(String kind){return vn.smarttravel.catalog.shared.web.Representations.page(taxonomy.list(kind).stream().filter(row->kind.equals("destinations")?"PUBLISHED".equals(row.get("status")):kind.equals("geographic-units")?"ACTIVE".equals(row.get("status")):Boolean.TRUE.equals(row.get("active"))).map(row->vn.smarttravel.catalog.shared.web.Representations.taxonomy(kind,row)).toList());}
 }

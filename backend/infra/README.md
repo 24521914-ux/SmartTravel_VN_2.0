@@ -1,6 +1,10 @@
-# P01 M1 — database và runtime độc lập
+# P01 — database và runtime độc lập
 
-Đã triển khai baseline storage sáu service; Identity đã bổ sung M1 + auth/session/profile, **chưa hoàn tất toàn scope M2/M3/M4 hoặc gate P01**. Tiến độ/evidence tập trung tại `progress/PHASE_TASK_CHECKLIST.md`, không coi smoke unknown-route là API nghiệp vụ.
+Sáu service đã có domain API, HTTP adapters và transport độc lập. Evidence hiện hành và
+trạng thái review/handoff tập trung tại `progress/PHASE_TASK_CHECKLIST.md`.
+Các mục baseline M1 bên dưới là lịch sử triển khai ngày10/10; mục hoàn thiện cuối tài liệu
+và README từng service ghi commands/config hiện hành. Smoke unknown-route chỉ kiểm DB/security;
+domain, frozen provider và broker fault gates dùng các runners riêng.
 
 ## Chạy từ checkout sạch
 
@@ -85,3 +89,61 @@ MongoDB không có FK: media ownership/parent-version/reorder/reference và cont
 `.github/workflows/p01-services.yml`: matrix 6 service, build/unit/security, DB riêng, migrate/restart/smoke/constraint tests, image artifact; shared contract change chạy checks cả sáu. CI source đã parse, **chưa chạy GitHub Actions**. Domain/provider/fault tests, dependency scans và production deployment gate còn phải bổ sung theo P01.
 
 Tiếp tục M1 của năm service còn lại: taxonomy/geo/registry/itinerary/visibility fixtures theo common IDs, runtime broker/storage và các adapter stub. Identity issuer/JWKS/options/user fixture đã có. Sau đó M2 domain APIs/rules/security, M3 transport/contract/fault tests; Intelligence chỉ triển khai training sau nghiệm thu Basic. Candidate P00 chưa có chữ ký N1/N2/freeze; tiếp tục code dựa revision `1.0.0-candidate`, không tự ghi gate đã được con người duyệt.
+
+## Lượt hoàn thiện P01 — 10–11/10/2026
+
+Phần M1 ở trên là evidence lịch sử. Code domain/adapter/provider/transport đang được ghép
+và kiểm độc lập; trạng thái chính xác tại `progress/PHASE_TASK_CHECKLIST.md`.
+`p01.py up --service <service>` khởi động DB của đúng service và local broker dùng chung,
+chỉ Identity cần mail sink. Không yêu cầu runtime hoặc DB của năm partner services.
+Tên Compose `identity-broker` được giữ để bảo toàn volume/credentials đã có; broker là
+hạ tầng local, không phải dependency nghiệp vụ Identity.
+
+Bootstrap broker tạo `<service>_runtime` theo secret `<SERVICE>_BROKER_PASSWORD`. Runtime
+configure/read chỉ topology của mình, publish chỉ events của mình và deletion ack;
+không publish vào inbound để giả partner. Test fixture publisher chỉ write inbound với
+allowlist registry và read capture/DLQ. Capture queue phải được app tạo chỉ trong local/test.
+Mỗi Java process chỉ nhận password DB/broker của chính nó; không pass toàn bộ `.env.local`.
+`BROKER_OPERATOR_PASSWORD` của Identity chỉ cấp CLI maintenance, không cấp normal app.
+Bootstrap không rotate password user đã tồn tại; đổi password là tác vụ quản trị riêng.
+
+```text
+python backend/services/<service>-service/test-local.py --transport
+python backend/services/identity-service/test-local.py --transport --isolated-source
+python backend/platform/build_service_image.py identity --tag smarttravel-identity:<revision> --jar backend/services/identity-service/.local/verified-build/identity-service-0.0.1-SNAPSHOT.jar
+python backend/services/identity-service/check-local.py --transport --image smarttravel-identity:<revision>
+```
+
+Runner disposable không sử dụng persistent P01 volume. Identity source-copy runner giữ JAR
+checkout đang được process khác dùng; jar/reports mới nằm trong `.local/verified-build` ignored.
+Image helper tạo context chỉ có Dockerfile/JAR, không copy `.env.local`, keys hoặc runtime logs.
+Service runbooks ghi profile local, test JWKS/workload token, adapter config và limits riêng.
+Gateway/client độc lập tại `backend/platform/api-gateway/README.md` và `frontend/src/api/`.
+
+CI source bổ sung real domain/provider/broker faults cho từng service, Gateway/clients và
+image tag revision. Frontend npm audit enforces the high severity threshold. GitHub dependency review
+is unsupported for this private repository without Advanced Security; backend
+vulnerability scanning is not claimed by this workflow. Remote CI must pass.
+Local test/image pass không thay owner/reviewer handoff, contract freeze hoặc P02 integration.
+
+## Kiểm tra revision cuối từ source
+
+Trên Windows dùng `backend/mvnw.cmd`; trên Linux dùng `bash backend/mvnw` (không phụ thuộc executable bit).
+Cài `requirements-validation.txt` trước image/provider probes. Chạy mỗi service với DB/broker
+disposable và partner HTTP stub riêng bằng `test-local.py --transport`; Identity có
+`--isolated-source` để giữ JAR checkout đang chạy. Sau mỗi build, tạo image từ đúng verified JAR
+bằng `build_service_image.py`, rồi gọi `check-local.py --image <tag>`; thêm `--transport` cho Identity.
+Năm image probes còn lại tự tạo và dọn DB/network/JWKS của mình. Identity live probe dùng DB/mail/broker P01,
+thêm synthetic records và tự dừng container app; giữ dependencies và dữ liệu hiện có.
+
+Community V3 bổ sung `user_mutation_fences` (tổng17 collections). Bootstrap cập nhật đúng
+runtime role để chỉ cấp DML cho collection mới; audit/moderation vẫn append-only.
+Migrator kiểm raw checksum V1/V2/V3, strict validators/indexes; restart không sửa checksum
+hoặc tự repair drift. Storage probe kiểm fence write/rollback cùng các quyền cũ.
+PostgreSQL migrations vẫn expand-only; Intelligence V9 chỉ cấp EXECUTE một function cố định
+để xóa/anonymize actor identifiers, không cấp UPDATE/DELETE audit cho runtime.
+
+Không đổi secret file để chữa authentication lỗi và không xóa persistent volumes.
+Sau khi build JAR cuối, `p01.py smoke` áp dụng/validate migrations với migrator;
+`p01.py verify` chạy storage/permission/cross-DB rollback checks trên runtime accounts.
+Migration count/image digest/test count của từng gói được ghi tại checklist chung.

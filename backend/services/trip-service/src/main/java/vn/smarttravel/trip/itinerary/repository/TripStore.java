@@ -33,6 +33,10 @@ public class TripStore {
         var envelope=map("event_id",event,"event_type",type,"schema_version",1,"aggregate_type",type.startsWith("domain.")?"deletion":"trip","aggregate_id",aggregate,"aggregate_version",version,"occurred_at",Instant.now().toString(),"producer","trip","correlation_id",correlation,"causation_id",correlation,"traceparent","00-"+correlation.toString().replace("-","")+"-"+event.toString().replace("-","").substring(0,16)+"-01","payload",payload);
         db.update("INSERT INTO trip.outbox_events(event_id,aggregate_type,aggregate_id,aggregate_version,event_type,payload) VALUES (?, ?, ?, ?, ?, ?::jsonb)",event,envelope.get("aggregate_type"),aggregate.toString(),version,type,encode(envelope));
     }
+    public Object interactionsSnapshot(){
+        var rows=db.queryForList("SELECT payload::text FROM trip.outbox_events WHERE event_type='trip.item.added.v1' AND occurred_at>=now()-interval '90 days' ORDER BY event_id");
+        return vn.smarttravel.trip.shared.web.SnapshotPages.page(rows.stream().map(row->decode(row.get("payload"))).toList());
+    }
     public Map<String,Object> tripResponse(Map<String,Object> t) {return map("trip_id",t.get("trip_id"),"owner_id",t.get("user_id"),"name",t.get("title"),"start_date",t.get("start_date").toString(),"end_date",t.get("end_date").toString(),"timezone",t.get("timezone"),"currency",t.get("currency").toString().strip(),"budget",t.get("budget")==null?0:t.get("budget"),"state",t.get("status"),"version",t.get("version"));}
     public Map<String,Object> page(List<?> items,long version) { return map("items",items,"next_cursor",null,"as_of",Instant.now().toString(),"watermark",Math.max(1,version)); }
     public List<Map<String,Object>> queryForList(String sql,Object...args){return db.queryForList(sql,args);}

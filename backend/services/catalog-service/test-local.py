@@ -36,7 +36,7 @@ def main():
         run(['docker','run','--rm','-d','--name',name,'-e','POSTGRES_PASSWORD','-e','POSTGRES_DB=catalog_db','-p','127.0.0.1::5432','postgis/postgis:16-3.5'], env)
         started = True
         for _ in range(60):
-            if subprocess.run(['docker','exec',name,'pg_isready','-h','127.0.0.1','-U','postgres'], capture_output=True).returncode == 0:
+            if subprocess.run(['docker','exec',name,'pg_isready','-U','postgres'], capture_output=True).returncode == 0:
                 break
             time.sleep(1)
         else:

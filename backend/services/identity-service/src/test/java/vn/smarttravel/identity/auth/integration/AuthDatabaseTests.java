@@ -39,10 +39,35 @@ import static org.mockito.Mockito.doAnswer;
 @SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties={"security.jwt.issuer=identity-test", "identity.mail.poll-ms=3600000", "management.health.mail.enabled=false",
                 "identity.fixtures.enabled=true", "identity.fixtures.password=synthetic-fixture-password-123",
-                "identity.notifications.email-enabled=true", "identity.notifications.poll-ms=3600000"})
+                "identity.notifications.email-enabled=true", "identity.notifications.poll-ms=3600000",
+                "identity.gateway-exchange-secret=p02-test-gateway-credential-32-bytes"})
 @ActiveProfiles("test")
 @EnabledIfEnvironmentVariable(named="IDENTITY_DB_TESTS", matches="true")
 class AuthDatabaseTests {
+    @Test void realSignedTokenExchangesAcrossSixServicesAndRevocationFailsClosed() throws Exception {
+        var owner=active(); var pair=login(owner);
+        String original=(String)pair.get("access_token");
+        var headers=new HttpHeaders(); headers.setBearerAuth(original);
+        headers.set("X-Gateway-Credential","p02-test-gateway-credential-32-bytes");
+        for(String target:java.util.List.of("identity","catalog","community","trip","ingestion","intelligence")) {
+            var response=http.exchange("/internal/v1/security/exchange",HttpMethod.POST,new HttpEntity<>(Map.of("audience",target),headers),Map.class);
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            String scoped=(String)response.getBody().get("access_token");
+            assertThat(scoped.length()).isLessThanOrEqualTo(1024);
+            var claims=decoder.decode(scoped);
+            assertThat(claims.getSubject()).isEqualTo(owner.user().toString());
+            assertThat(claims.getClaimAsString("sid")).isEqualTo(jwt(pair).getClaimAsString("sid"));
+            assertThat(claims.getClaimAsString("scope")).isEqualTo(target+":read "+target+":write");
+            var scopedHeaders=new HttpHeaders(); scopedHeaders.setBearerAuth(scoped);
+            assertThat(http.exchange("/internal/v1/security/session",HttpMethod.POST,new HttpEntity<>(null,scopedHeaders),Map.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+        }
+        var badHeaders=new HttpHeaders(); badHeaders.setBearerAuth(original);
+        assertThat(http.exchange("/internal/v1/security/exchange",HttpMethod.POST,new HttpEntity<>(Map.of("audience","trip"),badHeaders),Map.class).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        auth.logout(jwt(pair),(String)pair.get("refresh_token"));
+        assertThat(http.exchange("/internal/v1/security/session",HttpMethod.POST,new HttpEntity<>(null,headers),Map.class).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(http.exchange("/internal/v1/security/exchange",HttpMethod.POST,new HttpEntity<>(Map.of("audience","trip"),headers),Map.class).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
     @Test void snapshotCursorDetectsConcurrentChangesAndHumanCannotReadSnapshot() throws Exception {
         var owner=active(); active();
         var headers=new HttpHeaders(); headers.setBearerAuth(workloadToken());

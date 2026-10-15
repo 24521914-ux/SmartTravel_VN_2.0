@@ -43,3 +43,7 @@ Deletion concurrency: all human mutations acquire a per-user PostgreSQL transact
 V6 persists versioned destination availability. Destination changes invalidate affected parent versions and expose DESTINATION_UNAVAILABLE without rewriting saved itinerary content; new segments reject a known inactive destination. Registered Catalog place-upsert events update availability only, preserve locked/completed snapshot content and ignore stale versions. Both inputs have frozen-schema validation, inbox bindings and original-routing DLQ replay support; database and real broker regressions cover them.
 
 Audit runtime UPDATE/DELETE/TRUNCATE revoked by additive migration V7. Deletion uses a restricted SECURITY DEFINER function with fixed search_path and no PUBLIC EXECUTE. Disposable test fixture cleanup uses migrator credentials; normal domain operations retain runtime credentials.
+
+### P02 historical interaction bootstrap
+
+`GET /internal/v1/interactions/snapshot?limit=100&cursor=...` is workload-only (`trip:internal`). It exports original `trip.item.added.v1` envelopes retained for the last 90 days with stable event IDs, including recommendation request attribution. A fingerprint cursor rejects concurrent snapshot changes. Intelligence applies the exported envelopes through its ordinary inbox after loading consent profiles, so disabled/deleted users do not regain history and duplicate live deliveries do not create extra rows. Account deletion removes source outbox payloads as well as private trip data.

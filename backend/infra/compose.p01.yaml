@@ -10,6 +10,35 @@ x-pg: &pg
   volumes:
     - ./postgres/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro
 services:
+  identity-broker:
+    image: rabbitmq:4.1-management-alpine
+    environment:
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: '+S 2:2'
+      RABBITMQ_CTL_ERL_ARGS: '+S 2:2'
+      RABBITMQ_DEFAULT_USER: platform_admin
+      RABBITMQ_DEFAULT_PASS: ${BROKER_ADMIN_PASSWORD:?required}
+      IDENTITY_BROKER_PASSWORD: ${IDENTITY_BROKER_PASSWORD:?required}
+      BROKER_FIXTURE_PASSWORD: ${BROKER_FIXTURE_PASSWORD:?required}
+      BROKER_OPERATOR_PASSWORD: ${BROKER_OPERATOR_PASSWORD:-}
+      CATALOG_BROKER_PASSWORD: ${CATALOG_BROKER_PASSWORD:-}
+      COMMUNITY_BROKER_PASSWORD: ${COMMUNITY_BROKER_PASSWORD:-}
+      TRIP_BROKER_PASSWORD: ${TRIP_BROKER_PASSWORD:-}
+      INGESTION_BROKER_PASSWORD: ${INGESTION_BROKER_PASSWORD:-}
+      INTELLIGENCE_BROKER_PASSWORD: ${INTELLIGENCE_BROKER_PASSWORD:-}
+      CATALOG_BROKER_OPERATOR_PASSWORD: ${CATALOG_BROKER_OPERATOR_PASSWORD:-}
+      COMMUNITY_BROKER_OPERATOR_PASSWORD: ${COMMUNITY_BROKER_OPERATOR_PASSWORD:-}
+      TRIP_BROKER_OPERATOR_PASSWORD: ${TRIP_BROKER_OPERATOR_PASSWORD:-}
+      INGESTION_BROKER_OPERATOR_PASSWORD: ${INGESTION_BROKER_OPERATOR_PASSWORD:-}
+      INTELLIGENCE_BROKER_OPERATOR_PASSWORD: ${INTELLIGENCE_BROKER_OPERATOR_PASSWORD:-}
+    ports: ["127.0.0.1:55672:5672", "127.0.0.1:55673:15672"]
+    volumes:
+      - identity-broker-data:/var/lib/rabbitmq
+      - ./rabbit/bootstrap-broker.sh:/p01/bootstrap-broker.sh:ro
+    healthcheck:
+      test: [CMD-SHELL, 'su-exec rabbitmq rabbitmq-diagnostics -q check_running && su-exec rabbitmq rabbitmq-diagnostics -q check_port_connectivity']
+      interval: 3s
+      timeout: 5s
+      retries: 40
   identity-mail:
     image: axllent/mailpit:v1.27
     ports: ["127.0.0.1:51025:1025", "127.0.0.1:58025:8025"]
@@ -108,6 +137,7 @@ services:
       timeout: 5s
       retries: 40
 volumes:
+  identity-broker-data:
   identity-data:
   catalog-data:
   trip-data:

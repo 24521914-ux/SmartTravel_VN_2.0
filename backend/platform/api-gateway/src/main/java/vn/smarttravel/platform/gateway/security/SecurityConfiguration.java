@@ -30,7 +30,8 @@ import reactor.core.publisher.Mono;
 @EnableReactiveMethodSecurity
 public class SecurityConfiguration {
     @Bean
-    SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+    SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http,
+            @Value("${gateway.identity-exchange-uri:}") String exchangeUri) {
         return http.csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .securityContextRepository(org.springframework.security.web.server.context.NoOpServerSecurityContextRepository.getInstance())
                 .requestCache(cache -> cache.requestCache(org.springframework.security.web.server.savedrequest.NoOpServerRequestCache.getInstance()))
@@ -57,7 +58,8 @@ public class SecurityConfiguration {
                                     boolean allowed=principal.isAuthenticated() && principal instanceof JwtAuthenticationToken token
                                             && token.getToken().getAudience().contains(service);
                                     if(context.getExchange().getRequest().getPath().value().startsWith("/api/"+service+"/api/v1/admin/"))
-                                        allowed=allowed && principal.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("SCOPE_"+service+":admin"));
+                                        allowed=allowed && principal.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("SCOPE_"+service+":admin")
+                                                || (!exchangeUri.isBlank() && a.getAuthority().equals("ROLE_ADMIN")));
                                     return new org.springframework.security.authorization.AuthorizationDecision(allowed);
                                 }).defaultIfEmpty(new org.springframework.security.authorization.AuthorizationDecision(false)))
                         .anyExchange().denyAll())

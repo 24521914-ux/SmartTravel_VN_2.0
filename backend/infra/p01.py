@@ -28,6 +28,16 @@ def environment():
             file.write(content)
         if os.name != 'nt':
             ENV_FILE.chmod(0o600)
+    # Extend local setup without replacing existing database credentials.
+    existing = ENV_FILE.read_text(encoding='utf-8')
+    present = {line.split('=', 1)[0] for line in existing.splitlines() if line and not line.startswith('#')}
+    additions = ''.join(f'{key}={secrets.token_hex(24)}\n' for key in
+                        ['BROKER_ADMIN_PASSWORD', 'IDENTITY_BROKER_PASSWORD', 'BROKER_FIXTURE_PASSWORD',
+                         'BROKER_OPERATOR_PASSWORD'] + [s.upper()+'_BROKER_PASSWORD' for s in SERVICES if s!='identity'] +
+                        [s.upper()+'_BROKER_OPERATOR_PASSWORD' for s in SERVICES if s!='identity'] if key not in present)
+    if additions:
+        with ENV_FILE.open('a', encoding='utf-8') as file:
+            file.write(('' if existing.endswith('\n') else '\n') + additions)
     env = os.environ.copy()
     for line in ENV_FILE.read_text(encoding='utf-8').splitlines():
         if line and not line.startswith('#'):
@@ -119,9 +129,11 @@ def main():
     if args.action == 'up':
         compose(env, 'config', '--quiet')
         dependencies = [f'{s}-db' for s in ([args.service] if args.service else SERVICES)]
+        dependencies.append('identity-broker')  # Shared local transport, no partner service runtime/DB required.
         if not args.service or args.service == 'identity':
             dependencies.append('identity-mail')
         compose(env, 'up', '-d', '--wait', *dependencies)
+        compose(env, 'exec', '-T', '--user', 'rabbitmq', 'identity-broker', 'bash', '/p01/bootstrap-broker.sh')
         if not args.service or args.service == 'community':
             print(compose(env, 'exec', '-T', 'community-db', 'mongosh', '--quiet', '/p01/bootstrap.js').stdout.strip())
             print(compose(env, 'exec', '-T', 'community-db', 'mongosh', '--quiet', '/p01/migrate.js').stdout.strip())

@@ -66,14 +66,14 @@ def main():
                 assert response.status == 200 and json.load(response)['status'] == 'UP'
         migration_count = helper.run(['docker', 'exec', database, 'psql', '-U', 'postgres', '-d', 'intelligence_db',
                                      '-Atc', 'select count(*) from public.flyway_schema_history where success and version is not null'], env)
-        assert migration_count == '9', f'Expected V1-V9, applied {migration_count} migrations'
+        assert migration_count == '10', f'Expected V1-V10, applied {migration_count} migrations'
         request = Request(base + '/api/v1/recommendations', data=b'{"topN":5,"currency":"VND"}', headers={'Content-Type': 'application/json'}, method='POST')
         with urlopen(request, timeout=5) as response:
             body = json.load(response)
             assert response.status == 200 and set(body) == {'request_id', 'version', 'data_as_of', 'fallback', 'items'}
             assert body['version'] == 'basic-v1' and body['items'] == []
         assert helper.run(['docker', 'exec', app, 'sh', '-c', 'test -w /app/artifacts && id -u'], env) == '10001'
-        print('Intelligence image PASS: Flyway V1-V9, PostgreSQL/pgvector, UP health, guest frozen recommendation response, nonroot writable artifacts')
+        print('Intelligence image PASS: Flyway V1-V10, PostgreSQL/pgvector, UP health, guest frozen recommendation response, nonroot writable artifacts')
     finally:
         if app_started:
             helper.run(['docker', 'rm', '-f', app], env)

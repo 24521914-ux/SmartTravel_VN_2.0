@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
+import TravelApp from './TravelApp';
 
 function Icon({ name, size = 22 }: { name: string; size?: number }) {
   const paths: Record<string, string> = { pin: 'M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0ZM15 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0', arrow: 'M5 12h14m-6-6 6 6-6 6', heart: 'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z', sun: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5', compass: 'M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0ZM16 8l-3 5-5 3 3-5 5-3Z', check: 'm5 12 4 4L19 6', menu: 'M4 6h16M4 12h16M4 18h16', star: 'm12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2-5.5-2.9-5.5 2.9 1-6.2L3 9.6l6.2-.9L12 3Z', calendar: 'M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Z', leaf: 'M20 3C8 2 2 8 5 16s16 5 15-13ZM5 20 16 9', mountain: 'm2 20 7-14 5 9 3-6 5 11H2Zm4-8 3 2 2-2' };
@@ -39,4 +40,4 @@ function App() {
     </main><footer className="wrap footer"><a className="brand" href="#"><span className="brand-icon"><Icon name="compass" /></span>SmartTravel<span className="brand-vn">VN</span></a><p>Đi thông minh. Trải nghiệm trọn vẹn.</p><span>© {new Date().getFullYear()} SmartTravel VN · Giao diện demo</span></footer><div className="sr-only" role="status" aria-live="polite">{notice}</div>
   </>;
 }
-createRoot(document.getElementById('root')!).render(<App />);
+createRoot(document.getElementById('root')!).render(window.location.pathname.startsWith('/app') ? <TravelApp /> : <App />);

@@ -18,6 +18,7 @@ public class TripService {
     private final RoutingAdapter routing;
     public Map<String,Object> paginate(Map<String,Object>page,int limit,String cursor){return s.paginate(page,limit,cursor);}
     public TripService(TripStore s,CatalogAdapter catalog,RoutingAdapter routing) {this.s=s;this.catalog=catalog;this.routing=routing;}
+    public Object interactionsSnapshot(){return s.interactionsSnapshot();}
     public List<String> warnings(UUID trip,UUID user){s.owner(trip,user,false);return s.warnings(trip);}
     public Map<String,Object> list(UUID user,int limit,String cursor) {
         s.guardUser(user);require(limit>0&&limit<=100,400,"INVALID_LIMIT");UUID after=cursor==null?new UUID(0,0):id(cursor);

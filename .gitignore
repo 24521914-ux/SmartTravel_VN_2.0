@@ -1,0 +1,3 @@
+# Local verification evidence and process logs; retain them outside Git.
+/.local/
+/.pi-logs/

@@ -128,5 +128,14 @@ public class CatalogRepository {
         return db.queryForList("SELECT * FROM catalog."+kind+(kind.equals("categories")?" WHERE active":kind.equals("destinations")?" WHERE status='PUBLISHED'":""));
     }
     public List<Map<String,Object>> adminList(){return db.queryForList("SELECT place_id FROM catalog.places ORDER BY place_id").stream().map(row->place((UUID)row.get("place_id"),false)).toList();}
+    /** Internal ML lineage is read from this service's audited import versions, never another database. */
+    public List<Map<String,Object>> featureSnapshot(){
+        return adminList().stream().map(row->{
+            var feature=new LinkedHashMap<>(vn.smarttravel.catalog.shared.web.Representations.place(row));
+            var lineage=db.queryForList("SELECT source_id FROM catalog.place_versions WHERE place_id=? AND source_id IS NOT NULL ORDER BY version_no DESC LIMIT 1",row.get("place_id"));
+            if(!lineage.isEmpty())feature.put("source_id",lineage.getFirst().get("source_id"));
+            return (Map<String,Object>)feature;
+        }).toList();
+    }
     public List<Map<String,Object>> candidates(Map<String,Object> body){return db.queryForList("SELECT place_id FROM catalog.places WHERE status='PUBLISHED' AND (search_document @@ plainto_tsquery('simple',?) OR ST_DWithin(location,ST_SetSRID(ST_MakePoint(?,?),4326)::geography,1000)) ORDER BY place_id LIMIT 100",normalize(body.get("name").toString()),body.get("longitude"),body.get("latitude")).stream().map(row->place((UUID)row.get("place_id"),true)).toList();}
 }

@@ -163,3 +163,9 @@ hold no database locks: the outer response transaction holds source locks before
 lock through final visibility validation, so a revocation cannot commit before an in-flight
 model recommendation. Broker and HTTP events older30days or more than60seconds future reject
 before inbox mutation, preserving the dedup-retention boundary.
+
+### P02 connected projection bootstrap
+
+With durable broker consumers already subscribed, call `POST /internal/v1/features/rebuild` using a workload token with `intelligence:internal`. The rebuild reads Catalog's internal feature snapshot (including audited source lineage), Community's rating snapshot, Identity's active-user preference/consent snapshot, Trip's historical item events, and Ingestion's source policies. Each source has a separate watermark and aggregate versions; newer delivered deltas win over older snapshot rows. Original Trip event IDs pass through the same inbox so snapshot and live replay cannot double count attribution. Changed pagination snapshots fail and roll back the complete rebuild; retry after the upstream change settles. The response lists counts and watermarks for each source and the number of policies.
+
+Configure service URLs with `CATALOG_URL`, `COMMUNITY_URL`, `IDENTITY_URL`, `TRIP_URL`, `INGESTION_URL`. Use separate target audience credentials through `INTELLIGENCE_CATALOG_TOKEN`, `INTELLIGENCE_COMMUNITY_TOKEN`, `INTELLIGENCE_IDENTITY_TOKEN`, `INTELLIGENCE_TRIP_TOKEN`, and `INTELLIGENCE_INGESTION_TOKEN`. Never route a human token to internal bootstrap endpoints. Existing legacy workload-token configuration remains available for isolated P01 tests. Run bootstrap again after imports before preparing licensed training datasets; public Catalog delta schemas intentionally remain frozen and do not expose import lineage.

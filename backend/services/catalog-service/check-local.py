@@ -45,7 +45,7 @@ def main():
                 helper.run(['docker','run','-d','--name',database,'--network',name,'-e','POSTGRES_PASSWORD','-e','POSTGRES_DB=catalog_db','postgis/postgis:16-3.5'],env)
                 started.append(database)
                 for _ in range(90):
-                    if subprocess.run(['docker','exec',database,'pg_isready','-h','127.0.0.1','-U','postgres'],capture_output=True).returncode == 0: break
+                    if subprocess.run(['docker','exec',database,'pg_isready','-U','postgres'],capture_output=True).returncode == 0: break
                     time.sleep(1)
                 else: raise RuntimeError('Owned PostGIS readiness failed')
                 helper.run(['docker','exec','-i',database,'psql','-U','postgres','-d','catalog_db','-v','ON_ERROR_STOP=1'],env,

@@ -75,3 +75,5 @@ logging:
   structured:
     format:
       console: logstash
+
+# P02 exchange configuration is supplied via GATEWAY_IDENTITY_EXCHANGE_URI and GATEWAY_EXCHANGE_SECRET.

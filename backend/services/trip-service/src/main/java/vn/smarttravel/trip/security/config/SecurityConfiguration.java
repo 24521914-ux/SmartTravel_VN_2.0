@@ -24,6 +24,15 @@ public class SecurityConfiguration {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        .requestMatchers("/internal/v1/interactions/snapshot").access((authentication,context)->{
+                            var principal=authentication.get();
+                            boolean workload=principal instanceof org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken token
+                                && token.getToken().getClaimAsString("client_id")!=null
+                                && !token.getToken().getClaimAsString("client_id").isBlank()
+                                && !token.getToken().hasClaim("sid");
+                            return new org.springframework.security.authorization.AuthorizationDecision(workload
+                                && principal.getAuthorities().stream().anyMatch(a->a.getAuthority().equals("SCOPE_trip:internal")));
+                        })
                         .requestMatchers("/internal/**").denyAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors

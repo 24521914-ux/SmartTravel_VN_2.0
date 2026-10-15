@@ -68,3 +68,7 @@ replace P01 adapters in P02; no runtime dependency on partner services is needed
 Scanner adapter verification: POST /scan uses the same 1 MB/absolute two-second client.
 Real HTTP tests cover clean approve, oversized chunked body, stalled body after headers,
 HTTP 503 and clean=false; no failed scanner response can approve quarantined media.
+
+### P02 internal feature bootstrap
+
+`GET /internal/v1/places/features-snapshot?limit=100&cursor=...` requires a workload token with `catalog:places:read`. It adds optional `source_id` from the latest audited imported place version to the standard place snapshot. The frozen public API/events remain unchanged. Pagination returns `items`, `next_cursor`, `as_of`, and a source watermark; changing snapshots reject the cursor, so the caller retries the complete rebuild. Intelligence merges each row by Catalog version and separately loads license policies from Ingestion. Start durable consumers before rebuilding so in-flight deltas remain in the inbox. Repeat rebuild after imports when licensed dataset preparation needs current lineage.

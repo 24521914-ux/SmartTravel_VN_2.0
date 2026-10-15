@@ -60,6 +60,13 @@ class CatalogDatabaseTests {
         assertThat(db.queryForObject("SELECT count(*) FROM catalog.place_versions WHERE place_id=?",Integer.class,id)).isEqualTo(3);
         assertThat(db.queryForObject("SELECT source_version FROM catalog.place_rating_summary WHERE place_id=?",Long.class,id)).isEqualTo(3);
     }
+    @Test void internalFeatureSnapshotIncludesAuditedLineageWithoutChangingPublicPlace(){
+        UUID id=create("Lineage bootstrap fixture");
+        db.update("UPDATE catalog.place_versions SET source_id=? WHERE place_id=? AND version_no=1",source,id);
+        var feature=places.featureSnapshot().stream().filter(row->id.equals(row.get("place_id"))).findFirst().orElseThrow();
+        assertThat(feature.get("source_id")).isEqualTo(source);
+        assertThat(vn.smarttravel.catalog.shared.web.Representations.place(places.place(id,false))).doesNotContainKey("source_id");
+    }
     @Test void concurrentVersionAllowsOneCommit()throws Exception{
         UUID id=create("Concurrency fixture");var pool=Executors.newFixedThreadPool(2);var latch=new CountDownLatch(1);
         try{var tasks=new ArrayList<Future<Boolean>>();for(int n=0;n<2;n++){final int current=n;tasks.add(pool.submit(()->{latch.await();try{places.update(id,1,Map.of("description","writer "+current),USER);return true;}catch(org.springframework.web.server.ResponseStatusException e){return false;}}));}latch.countDown();int wins=0;for(var task:tasks)if(task.get())wins++;assertThat(wins).isEqualTo(1);assertThat(places.place(id,false).get("version")).isEqualTo(2L);}finally{pool.shutdownNow();}
