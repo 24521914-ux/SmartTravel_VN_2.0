@@ -63,8 +63,8 @@ public class IssuerKeys {
     }
 
     public static boolean local(Environment env) {
-        boolean local = Arrays.stream(env.getActiveProfiles()).anyMatch(p -> p.equals("p01-local") || p.equals("test"));
-        boolean production = Arrays.stream(env.getActiveProfiles()).anyMatch(p -> p.equals("prod") || p.equals("production"));
+        boolean local = Arrays.stream(env.getActiveProfiles()).anyMatch(p -> p.equals("p01-local") || p.equals("p02-local") || p.equals("test"));
+        boolean production = Arrays.stream(env.getActiveProfiles()).anyMatch(p -> p.equals("prod") || p.equals("production") || p.equals("staging"));
         if (local && production) throw new IllegalStateException("Local and production profiles cannot be combined");
         return local && !production;
     }
@@ -73,14 +73,31 @@ public class IssuerKeys {
     public RSAKey verificationKey() { return active.toPublicJWK(); }
 
     public String issue(UUID user, UUID session, List<String> roles) {
+        return sign(user, session, roles, audiences, roles.contains("ADMIN") ? "identity:read identity:write identity:admin" : "identity:read identity:write", Instant.now().plusSeconds(ACCESS_TTL_SECONDS));
+    }
+
+    /** A short, destination-bound token preserves the original principal and session. */
+    public String exchange(UUID user, UUID session, List<String> roles, String destination, Instant expires) {
+        if (!java.util.Set.of("identity", "catalog", "community", "trip", "ingestion", "intelligence").contains(destination))
+            throw new IllegalArgumentException("Unknown destination");
+        String scope = destination + ":read " + destination + ":write";
+        if (roles.contains("ADMIN")) scope += " " + destination + ":admin";
+        return sign(user, session, roles, destination.equals("identity") ? List.of("identity") : List.of("identity", destination), scope,
+                expires.isBefore(Instant.now().plusSeconds(60)) ? expires : Instant.now().plusSeconds(60));
+    }
+
+    private String sign(UUID user, UUID session, List<String> roles, List<String> targetAudiences, String scope, Instant expires) {
         var now = Instant.now();
-        var claims = new JWTClaimsSet.Builder().issuer(issuer).subject(user.toString()).audience(audiences)
-                .issueTime(Date.from(now)).expirationTime(Date.from(now.plusSeconds(ACCESS_TTL_SECONDS)))
+        var claims = new JWTClaimsSet.Builder().issuer(issuer).subject(user.toString()).audience(targetAudiences)
+                .issueTime(Date.from(now)).expirationTime(Date.from(expires))
                 .jwtID(UUID.randomUUID().toString()).claim("sid", session.toString()).claim("roles", roles)
-                .claim("scope", roles.contains("ADMIN") ? "identity:read identity:write identity:admin" : "identity:read identity:write")
+                .claim("scope", scope)
                 .build();
         var jwt = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(active.getKeyID()).build(), claims);
-        try { jwt.sign(new RSASSASigner(active)); return jwt.serialize(); }
+        try { jwt.sign(new RSASSASigner(active)); String serialized = jwt.serialize();
+            if (serialized.length() > 1024) throw new IllegalStateException("Access token exceeds frozen contract bound");
+            return serialized; }
         catch (Exception e) { throw new IllegalStateException("Cannot issue access token"); }
     }
+
 }

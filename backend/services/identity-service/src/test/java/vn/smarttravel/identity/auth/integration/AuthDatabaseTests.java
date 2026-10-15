@@ -38,10 +38,26 @@ import static org.mockito.Mockito.doAnswer;
 
 @SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties={"security.jwt.issuer=identity-test", "identity.mail.poll-ms=3600000", "management.health.mail.enabled=false",
-                "identity.fixtures.enabled=true", "identity.fixtures.password=synthetic-fixture-password-123"})
+                "identity.fixtures.enabled=true", "identity.fixtures.password=synthetic-fixture-password-123",
+                "identity.notifications.email-enabled=true", "identity.notifications.poll-ms=3600000"})
 @ActiveProfiles("test")
 @EnabledIfEnvironmentVariable(named="IDENTITY_DB_TESTS", matches="true")
 class AuthDatabaseTests {
+    @Test void snapshotCursorDetectsConcurrentChangesAndHumanCannotReadSnapshot() throws Exception {
+        var owner=active(); active();
+        var headers=new HttpHeaders(); headers.setBearerAuth(workloadToken());
+        var page=http.exchange("/internal/v1/users/preferences/snapshot?limit=1",HttpMethod.GET,new HttpEntity<>(null,headers),Map.class);
+        assertThat(page.getStatusCode()).isEqualTo(HttpStatus.OK);
+        String cursor=(String)page.getBody().get("next_cursor"); assertThat(cursor).isNotBlank();
+        String watermark=(String)page.getBody().get("watermark");
+        var next=http.exchange("/internal/v1/users/preferences/snapshot?limit=1&cursor="+cursor,HttpMethod.GET,new HttpEntity<>(null,headers),Map.class);
+        assertThat(next.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(next.getBody().get("watermark")).isEqualTo(watermark);
+        db.update("UPDATE identity.user_preferences SET version=version+1 WHERE user_id=?",owner.user());
+        assertThat(http.exchange("/internal/v1/users/preferences/snapshot?limit=1&cursor="+cursor,HttpMethod.GET,new HttpEntity<>(null,headers),Map.class).getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        headers.setBearerAuth((String)login(owner).get("access_token"));
+        assertThat(http.exchange("/internal/v1/users/preferences/snapshot",HttpMethod.GET,new HttpEntity<>(null,headers),Map.class).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
     @TestConfiguration
     static class LocalDecoder {
         @Bean @Primary JwtDecoder testDecoder(IssuerKeys keys) throws Exception {
@@ -56,9 +72,15 @@ class AuthDatabaseTests {
     @Autowired vn.smarttravel.identity.preferences.service.PreferenceService preferences;
     @Autowired com.fasterxml.jackson.databind.ObjectMapper json;
     @MockitoBean vn.smarttravel.identity.preferences.client.CategoryClient categories;
+    @Autowired vn.smarttravel.identity.preferences.service.CategoryInvalidationConsumer categoryInvalidations;
+    @Autowired vn.smarttravel.identity.notifications.service.NotificationEmailWorker notificationEmail;
+    @Autowired vn.smarttravel.identity.deletion.service.DeletionService deletions;
+    @Autowired vn.smarttravel.identity.deletion.service.DeletionAckConsumer deletionAcks;
     @Autowired vn.smarttravel.identity.notifications.service.NotificationConsumer notificationConsumer;
     @Autowired vn.smarttravel.identity.notifications.service.NotificationService notifications;
     @Autowired org.springframework.transaction.support.TransactionTemplate transactions;
+    @Autowired IssuerKeys issuer;
+    @Autowired vn.smarttravel.identity.infrastructure.persistence.service.IdentityRetentionWorker retention;
     @Autowired AuthService auth;
     @Autowired ProfileService profiles;
     @Autowired SessionService sessions;
@@ -105,6 +127,93 @@ class AuthDatabaseTests {
         var factory=com.networknt.schema.JsonSchemaFactory.getInstance(com.networknt.schema.SpecVersion.VersionFlag.V202012);
         assertThat(factory.getSchema(schema).validate(value)).isEmpty();
     }
+    ResponseEntity<Map> provider(java.util.Set<String> covered, String route, HttpMethod method, String actualPath,
+                                 Object body, String token, int expected, String... headers) throws Exception {
+        var response=api(method,actualPath,body,token,headers);
+        assertThat(response.getStatusCode().value()).as(method+" "+actualPath).isEqualTo(expected);
+        var operation=json.readTree(findContract("openapi/identity.yaml").toFile()).path("paths").path(route).path(method.name().toLowerCase());
+        assertThat(operation.isMissingNode()).isFalse();
+        var schema=operation.path("responses").path(Integer.toString(expected)).path("content").path("application/json").path("schema");
+        if(!schema.isMissingNode()) {
+            var factory=com.networknt.schema.JsonSchemaFactory.getInstance(com.networknt.schema.SpecVersion.VersionFlag.V202012);
+            assertThat(factory.getSchema(schema).validate(json.valueToTree(response.getBody()))).as(route).isEmpty();
+        } else assertThat(response.getBody()).isNull();
+        covered.add(method.name()+" "+route); return response;
+    }
+    String workloadToken() throws Exception {
+        var key=(com.nimbusds.jose.jwk.RSAKey)org.springframework.test.util.ReflectionTestUtils.getField(issuer,"active");
+        var now=java.time.Instant.now();
+        var claims=new com.nimbusds.jwt.JWTClaimsSet.Builder().issuer("identity-test").subject("provider-fixture").audience("identity")
+                .issueTime(java.util.Date.from(now)).expirationTime(java.util.Date.from(now.plusSeconds(120)))
+                .claim("client_id","provider-fixture").claim("scope","identity:status:read identity:preferences:read identity:deletion:read").build();
+        var value=new com.nimbusds.jwt.SignedJWT(new com.nimbusds.jose.JWSHeader.Builder(com.nimbusds.jose.JWSAlgorithm.RS256).keyID(key.getKeyID()).build(),claims);
+        value.sign(new com.nimbusds.jose.crypto.RSASSASigner(key)); return value.serialize();
+    }
+    @Test void all25FrozenOperationsHaveRealHttpProviderResponses() throws Exception {
+        var covered=new java.util.HashSet<String>(); String email=email();
+        provider(covered,"/api/v1/auth/register",HttpMethod.POST,"/api/v1/auth/register",Map.of("email",email,"password",PASSWORD,"display_name","Provider test"),null,202,"Idempotency-Key",UUID.randomUUID().toString());
+        mail.deliver();
+        provider(covered,"/api/v1/auth/verify-email",HttpMethod.POST,"/api/v1/auth/verify-email",Map.of("token",delivered.get(email).split("\n")[1]),null,202);
+        var pair=provider(covered,"/api/v1/auth/login",HttpMethod.POST,"/api/v1/auth/login",Map.of("email",email,"password",PASSWORD),null,200).getBody();
+        String token=(String)pair.get("access_token");
+        provider(covered,"/.well-known/jwks.json",HttpMethod.GET,"/.well-known/jwks.json",null,null,200);
+        var profile=provider(covered,"/api/v1/me",HttpMethod.GET,"/api/v1/me",null,token,200).getBody(); UUID user=UUID.fromString((String)profile.get("user_id"));
+        provider(covered,"/api/v1/me",HttpMethod.PATCH,"/api/v1/me",Map.of("display_name","Updated provider"),token,200,"If-Match","\"2\"");
+        String changed=PASSWORD+"-changed";
+        provider(covered,"/api/v1/me/password",HttpMethod.PUT,"/api/v1/me/password",Map.of("current_password",PASSWORD,"new_password",changed),token,204);
+        provider(covered,"/api/v1/auth/forgot-password",HttpMethod.POST,"/api/v1/auth/forgot-password",Map.of("email",email),null,202); mail.deliver();
+        provider(covered,"/api/v1/auth/reset-password",HttpMethod.POST,"/api/v1/auth/reset-password",Map.of("token",delivered.get(email).split("\n")[1],"password",PASSWORD),null,202);
+        pair=provider(covered,"/api/v1/auth/login",HttpMethod.POST,"/api/v1/auth/login",Map.of("email",email,"password",PASSWORD),null,200).getBody(); token=(String)pair.get("access_token");
+        provider(covered,"/api/v1/me/sessions",HttpMethod.GET,"/api/v1/me/sessions",null,token,200);
+        var spare=auth.login(email,PASSWORD); UUID session=UUID.fromString(jwt(spare).getClaimAsString("sid"));
+        provider(covered,"/api/v1/me/sessions/{session_id}",HttpMethod.DELETE,"/api/v1/me/sessions/"+session,null,token,204);
+        pair=provider(covered,"/api/v1/auth/refresh",HttpMethod.POST,"/api/v1/auth/refresh",Map.of("refresh_token",pair.get("refresh_token")),null,200).getBody();
+        provider(covered,"/api/v1/auth/logout",HttpMethod.POST,"/api/v1/auth/logout",Map.of("refresh_token",pair.get("refresh_token")),(String)pair.get("access_token"),204);
+        pair=auth.login(email,PASSWORD); token=(String)pair.get("access_token");
+        provider(covered,"/api/v1/preference-options",HttpMethod.GET,"/api/v1/preference-options",null,null,200);
+        provider(covered,"/api/v1/me/preferences",HttpMethod.GET,"/api/v1/me/preferences",null,token,200);
+        provider(covered,"/api/v1/me/preferences",HttpMethod.PUT,"/api/v1/me/preferences",Map.of("personalization_enabled",true,"consent_version",1),token,200,"If-Match","\"1\"","Idempotency-Key","consent");
+        notificationConsumer.accept(tripEvent(user,UUID.randomUUID(),1));
+        provider(covered,"/api/v1/me/notifications",HttpMethod.GET,"/api/v1/me/notifications",null,token,200);
+        UUID notification=db.queryForObject("SELECT notification_id FROM identity.notifications WHERE user_id=?",UUID.class,user);
+        provider(covered,"/api/v1/me/notifications/{notification_id}/read",HttpMethod.PATCH,"/api/v1/me/notifications/"+notification+"/read",null,token,200,"Idempotency-Key","read");
+        var admin=active(); db.update("INSERT INTO identity.user_roles(user_id,role_code) VALUES (?,'ADMIN')",admin.user()); String adminToken=(String)login(admin).get("access_token");
+        var target=active();
+        provider(covered,"/api/v1/admin/users",HttpMethod.GET,"/api/v1/admin/users",null,adminToken,200);
+        provider(covered,"/api/v1/admin/users/{user_id}/roles",HttpMethod.PUT,"/api/v1/admin/users/"+target.user()+"/roles",Map.of("roles",java.util.List.of("USER","BUSINESS")),adminToken,200,"If-Match","\"2\"");
+        provider(covered,"/api/v1/admin/users/{user_id}/status",HttpMethod.PATCH,"/api/v1/admin/users/"+target.user()+"/status",Map.of("status","DISABLED"),adminToken,200,"If-Match","\"3\"");
+        String workload=workloadToken();
+        provider(covered,"/internal/v1/users/status/batch",HttpMethod.POST,"/internal/v1/users/status/batch",Map.of("ids",java.util.List.of(user)),workload,200);
+        provider(covered,"/internal/v1/users/preferences/batch",HttpMethod.POST,"/internal/v1/users/preferences/batch",Map.of("ids",java.util.List.of(user)),workload,200);
+        var deletion=provider(covered,"/api/v1/me/deletion-requests",HttpMethod.POST,"/api/v1/me/deletion-requests",Map.of("policy_version",1),token,202,"Idempotency-Key","delete").getBody();
+        provider(covered,"/internal/v1/deletion-requests/{request_id}",HttpMethod.GET,"/internal/v1/deletion-requests/"+deletion.get("request_id"),null,workload,200);
+        assertThat(covered).hasSize(25);
+        var expected=new java.util.HashSet<String>(); var paths=json.readTree(findContract("openapi/identity.yaml").toFile()).path("paths");
+        paths.fields().forEachRemaining(entry -> entry.getValue().fields().forEachRemaining(method -> expected.add(method.getKey().toUpperCase()+" "+entry.getKey())));
+        assertThat(covered).containsExactlyInAnyOrderElementsOf(expected);
+    }
+    @Test void retentionKeepsPendingEventsAndFailedDeliveryEvidence() {
+        var owner=active(); UUID pending=UUID.randomUUID(),published=UUID.randomUUID(),inbox=UUID.randomUUID();
+        for(UUID event:java.util.List.of(pending,published)) db.update("INSERT INTO identity.outbox_events(event_id,aggregate_type,aggregate_id,aggregate_version,event_type,payload,occurred_at) VALUES (?,'user',?,1,'identity.user.status-changed.v1','{}','2000-01-01')",event,owner.user().toString());
+        db.update("UPDATE identity.outbox_events SET published_at='2000-01-01' WHERE event_id=?",published);
+        db.update("INSERT INTO identity.inbox_events(consumer_name,event_id,processed_at) VALUES ('retention-probe',?,'2000-01-01')",inbox);
+        retention.cleanup();
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.outbox_events WHERE event_id=?",Integer.class,pending)).isEqualTo(1);
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.outbox_events WHERE event_id=?",Integer.class,published)).isZero();
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.inbox_events WHERE event_id=?",Integer.class,inbox)).isZero();
+        assertThat(profiles.profile(jwt(login(owner))).get("status")).isEqualTo("ACTIVE");
+        db.update("DELETE FROM identity.outbox_events WHERE event_id=?",pending);
+    }
+    @Test void retentionPreservesOldFailedNotificationForOperationalReview() {
+        var owner=active();
+        notificationConsumer.accept(tripEvent(owner.user(),UUID.randomUUID(),1));
+        UUID notification=db.queryForObject("SELECT notification_id FROM identity.notifications WHERE user_id=?",UUID.class,owner.user());
+        db.update("UPDATE identity.notifications SET created_at='2000-01-01' WHERE notification_id=?",notification);
+        db.update("UPDATE identity.notification_deliveries SET status='FAILED' WHERE notification_id=?",notification);
+        retention.cleanup();
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.notifications WHERE notification_id=?",Integer.class,notification)).isEqualTo(1);
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.notification_deliveries WHERE notification_id=? AND status='FAILED'",Integer.class,notification)).isGreaterThan(0);
+    }
     com.fasterxml.jackson.databind.node.ObjectNode tripEvent(UUID user, UUID trip, long version) {
         var event=json.createObjectNode();
         event.put("event_id",UUID.randomUUID().toString()); event.put("event_type","trip.changed.v1");
@@ -114,6 +223,122 @@ class AuthDatabaseTests {
         event.put("traceparent","00-0123456789abcdef0123456789abcdef-0123456789abcdef-01");
         event.putObject("payload").put("trip_id",trip.toString()).put("user_id",user.toString()).put("change_kind","UPDATED").put("version",version);
         return event;
+    }
+    com.fasterxml.jackson.databind.node.ObjectNode deletionAck(UUID request, String service, String state, long version) {
+        var event=tripEvent(UUID.randomUUID(),request,version);
+        event.put("event_type","domain.user-data-deleted.v1"); event.put("aggregate_type","deletion"); event.put("producer",service);
+        var payload=event.putObject("payload"); payload.put("deletion_request_id",request.toString());
+        payload.put("service",service); payload.put("status",state); payload.put("artifact_handling","synthetic test artifacts erased");
+        return event;
+    }
+    @Test void deletionRevokesAndTombstonesAtomicallyButRequiresAllSixAcknowledgements() throws Exception {
+        var owner=active(); var pair=login(owner); login(owner);
+        notificationConsumer.accept(tripEvent(owner.user(),UUID.randomUUID(),1));
+        var token=(String)pair.get("access_token"); var principal=jwt(pair); var body=Map.of("policy_version",1);
+        var response=api(HttpMethod.POST,"/api/v1/me/deletion-requests",body,token,"Idempotency-Key","delete");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        UUID request=UUID.fromString((String)response.getBody().get("request_id"));
+        assertThat(response.getBody().get("status")).isEqualTo("ACCEPTED");
+        assertThat(api(HttpMethod.POST,"/api/v1/me/deletion-requests",body,token,"Idempotency-Key","delete").getBody()).isEqualTo(response.getBody());
+        assertThat(api(HttpMethod.POST,"/api/v1/me/deletion-requests",body,token,"Idempotency-Key","new-delete").getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThatThrownBy(() -> profiles.profile(principal)).isInstanceOf(IdentityException.class);
+        assertThatThrownBy(() -> auth.refresh((String)pair.get("refresh_token"))).isInstanceOf(IdentityException.class);
+        var account=db.queryForMap("SELECT email,password_hash,status,deleted_at FROM identity.users WHERE user_id=?",owner.user());
+        assertThat(account.get("status")).isEqualTo("DELETED"); assertThat(account.get("email")).isNotEqualTo(owner.email());
+        assertThat(account.get("password_hash")).isEqualTo("!"); assertThat(account.get("deleted_at")).isNotNull();
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.auth_sessions WHERE user_id=? AND revoked_at IS NULL",Integer.class,owner.user())).isZero();
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.notifications WHERE user_id=?",Integer.class,owner.user())).isZero();
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.account_mail_jobs WHERE user_id=?",Integer.class,owner.user())).isZero();
+        assertThat(db.queryForObject("SELECT personalization_enabled FROM identity.user_preferences WHERE user_id=?",Boolean.class,owner.user())).isFalse();
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.data_deletion_acks WHERE deletion_request_id=?",Integer.class,request)).isEqualTo(6);
+        var event=json.readTree(db.queryForObject("SELECT payload::text FROM identity.outbox_events WHERE aggregate_id=? AND event_type='identity.user.deletion-requested.v1'",String.class,request.toString()));
+        assertFrozenSchema("events/identity.user.deletion-requested.v1.schema.json",event);
+        assertFrozenSchema("events/identity.preferences.changed.v1.schema.json",json.readTree(db.queryForObject("SELECT payload::text FROM identity.outbox_events WHERE aggregate_id=? AND event_type='identity.preferences.changed.v1' ORDER BY aggregate_version DESC LIMIT 1",String.class,owner.user().toString())));
+        Jwt workload=Jwt.withTokenValue("workload").header("alg","RS256").subject("fixture").claim("client_id","fixture").build();
+        assertThatThrownBy(() -> deletions.status(principal,request)).isInstanceOf(IdentityException.class);
+        for(String service:java.util.List.of("catalog","community","trip","ingestion")) {
+            var ack=deletionAck(request,service,"COMPLETED",1); deletionAcks.accept(ack); deletionAcks.accept(ack);
+        }
+        assertThat(deletions.status(workload,request).get("status")).isEqualTo("PENDING");
+        assertThat(db.queryForObject("SELECT completed_at FROM identity.data_deletion_requests WHERE deletion_request_id=?",java.sql.Timestamp.class,request)).isNull();
+        deletionAcks.accept(deletionAck(request,"intelligence","FAILED",2));
+        deletionAcks.accept(deletionAck(request,"intelligence","COMPLETED",1)); // stale success cannot overwrite a newer failure
+        assertThat(db.queryForObject("SELECT status FROM identity.data_deletion_requests WHERE deletion_request_id=?",String.class,request)).isEqualTo("FAILED");
+        deletionAcks.accept(deletionAck(request,"intelligence","COMPLETED",3));
+        assertThat(deletions.status(workload,request).get("status")).isEqualTo("COMPLETED");
+        assertThat(db.queryForObject("SELECT completed_at FROM identity.data_deletion_requests WHERE deletion_request_id=?",java.sql.Timestamp.class,request)).isNotNull();
+        deletionAcks.accept(deletionAck(request,"trip","FAILED",4)); // completion is terminal
+        assertThat(deletions.status(workload,request).get("status")).isEqualTo("COMPLETED");
+        var schema=json.readTree(findContract("openapi/identity.yaml").toFile()).path("paths").path("/internal/v1/deletion-requests/{request_id}").path("get").path("responses").path("200").path("content").path("application/json").path("schema");
+        assertThat(com.networknt.schema.JsonSchemaFactory.getInstance(com.networknt.schema.SpecVersion.VersionFlag.V202012).getSchema(schema).validate(json.valueToTree(deletions.status(workload,request)))).isEmpty();
+    }
+    @Test void deletionConsumerRollbackUnknownRequestAndForgedProducerDoNotSaveInbox() {
+        var owner=active(); var pair=login(owner);
+        var response=deletions.request(jwt(pair),json.valueToTree(Map.of("policy_version",1)),"delete");
+        UUID request=(UUID)response.get("request_id"); var ack=deletionAck(request,"catalog","COMPLETED",1);
+        assertThatThrownBy(() -> transactions.executeWithoutResult(status -> {
+            deletionAcks.accept(ack); throw new IllegalStateException("simulated crash");
+        })).isInstanceOf(IllegalStateException.class);
+        assertThat(db.queryForObject("SELECT status FROM identity.data_deletion_acks WHERE deletion_request_id=? AND service_name='catalog'",String.class,request)).isEqualTo("PENDING");
+        UUID event=UUID.fromString(ack.get("event_id").asText());
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.inbox_events WHERE event_id=?",Integer.class,event)).isZero();
+        ack.put("producer","trip");
+        assertThatThrownBy(() -> deletionAcks.accept(ack)).isInstanceOf(IllegalArgumentException.class);
+        var unknown=deletionAck(UUID.randomUUID(),"trip","COMPLETED",1);
+        assertThatThrownBy(() -> deletionAcks.accept(unknown)).isInstanceOf(IllegalArgumentException.class);
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.inbox_events WHERE event_id=?",Integer.class,UUID.fromString(unknown.get("event_id").asText()))).isZero();
+    }
+    @Test void deletionInvalidPolicyOrCrashDoesNotRevokeOrEraseAccount() {
+        var owner=active(); var pair=login(owner); var principal=jwt(pair);
+        for(Object body:java.util.List.of(Map.of("policy_version",2),Map.of("policy_version",1.5),Map.of("policy_version",1,"roles",java.util.List.of("ADMIN"))))
+            assertThatThrownBy(() -> deletions.request(principal,json.valueToTree(body),"delete")).isInstanceOf(IdentityException.class);
+        assertThatThrownBy(() -> transactions.executeWithoutResult(status -> {
+            deletions.request(principal,json.valueToTree(Map.of("policy_version",1)),"delete"); throw new IllegalStateException("simulated failure");
+        })).isInstanceOf(IllegalStateException.class);
+        assertThat(profiles.profile(principal).get("status")).isEqualTo("ACTIVE");
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.data_deletion_requests WHERE user_id=?",Integer.class,owner.user())).isZero();
+        assertThat(db.queryForObject("SELECT email FROM identity.users WHERE user_id=?",String.class,owner.user())).isEqualTo(owner.email());
+    }
+    @Test void notificationEmailDedupRetryExhaustionAndInactiveRecipientArePersisted() {
+        var owner=active(); var event=tripEvent(owner.user(),UUID.randomUUID(),1);
+        org.mockito.Mockito.clearInvocations(sender);
+        notificationConsumer.accept(event); notificationConsumer.accept(event); notificationEmail.deliver(); notificationEmail.deliver();
+        org.mockito.Mockito.verify(sender,org.mockito.Mockito.times(1)).send(org.mockito.ArgumentMatchers.argThat((SimpleMailMessage message) -> owner.email().equals(message.getTo()[0])));
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.notification_deliveries d JOIN identity.notifications n USING(notification_id) WHERE n.user_id=? AND channel='EMAIL' AND d.status='SENT'",Integer.class,owner.user())).isEqualTo(1);
+        notificationConsumer.accept(tripEvent(owner.user(),UUID.randomUUID(),1));
+        org.mockito.Mockito.doThrow(new org.springframework.mail.MailSendException("synthetic provider failure")).when(sender).send(any(SimpleMailMessage.class));
+        for(int i=0;i<5;i++) {
+            db.update("UPDATE identity.notification_deliveries d SET next_attempt_at=now() FROM identity.notifications n WHERE n.notification_id=d.notification_id AND n.user_id=? AND channel='EMAIL' AND d.status='PENDING'",owner.user());
+            notificationEmail.deliver();
+        }
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.notification_deliveries d JOIN identity.notifications n USING(notification_id) WHERE n.user_id=? AND channel='EMAIL' AND d.status='FAILED' AND attempts=5",Integer.class,owner.user())).isEqualTo(1);
+        notificationConsumer.accept(tripEvent(owner.user(),UUID.randomUUID(),1));
+        db.update("UPDATE identity.users SET status='SUSPENDED' WHERE user_id=?",owner.user());
+        org.mockito.Mockito.clearInvocations(sender); notificationEmail.deliver();
+        org.mockito.Mockito.verify(sender,org.mockito.Mockito.never()).send(org.mockito.ArgumentMatchers.argThat((SimpleMailMessage message) -> owner.email().equals(message.getTo()[0])));
+    }
+    @Test void categoryInvalidationIsAtomicVersionedAndDoesNotResurrectSelection() throws Exception {
+        var owner=active(); UUID category=UUID.randomUUID(); var principal=jwt(login(owner));
+        db.update("INSERT INTO identity.user_category_preferences(user_id,category_id) VALUES (?,?)",owner.user(),category);
+        var event=(com.fasterxml.jackson.databind.node.ObjectNode)json.readTree(findContract("fixtures/events/catalog.category.changed.v1.json").toFile());
+        event.put("event_id",UUID.randomUUID().toString()); event.put("aggregate_id",category.toString()); event.put("aggregate_version",2);
+        var payload=(com.fasterxml.jackson.databind.node.ObjectNode)event.get("payload"); payload.put("category_id",category.toString()).put("version",2).put("active",false);
+        assertThatThrownBy(() -> transactions.executeWithoutResult(status -> {
+            categoryInvalidations.accept(event); throw new IllegalStateException("crash");
+        })).isInstanceOf(IllegalStateException.class);
+        assertThat(preferences.get(principal).get("category_ids")).isEqualTo(java.util.List.of(category));
+        categoryInvalidations.accept(event); categoryInvalidations.accept(event);
+        assertThat(preferences.get(principal).get("category_ids")).isEqualTo(java.util.List.of());
+        assertThat(preferences.get(principal).get("version")).isEqualTo(2L);
+        assertThat(preferences.get(principal).get("consent_version")).isEqualTo(1L);
+        assertThatThrownBy(() -> preferences.update(principal,json.valueToTree(Map.of("category_ids",java.util.List.of(category))),2,"reselect")).isInstanceOf(IdentityException.class);
+        var stale=event.deepCopy(); stale.put("event_id",UUID.randomUUID().toString()).put("aggregate_version",1);
+        stale.withObject("/payload").put("version",1).put("active",true); categoryInvalidations.accept(stale);
+        assertThat(db.queryForObject("SELECT active FROM identity.category_states WHERE category_id=?",Boolean.class,category)).isFalse();
+        var fresh=stale.deepCopy(); fresh.put("event_id",UUID.randomUUID().toString()).put("aggregate_version",3);
+        fresh.withObject("/payload").put("version",3); categoryInvalidations.accept(fresh);
+        assertThat(preferences.get(principal).get("category_ids")).isEqualTo(java.util.List.of());
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.outbox_events WHERE aggregate_id=? AND event_type='identity.preferences.changed.v1'",Integer.class,owner.user().toString())).isEqualTo(1);
     }
     @Test void notificationFrozenCatalogAndCommunityFixturesUseAllowlistedTemplates() throws Exception {
         var owner=active();
@@ -129,6 +354,25 @@ class AuthDatabaseTests {
         assertThat(db.queryForObject("SELECT count(*) FROM identity.notifications WHERE user_id=?",Integer.class,owner.user())).isEqualTo(2);
         var payloads=db.queryForList("SELECT payload::text FROM identity.notifications WHERE user_id=?",String.class,owner.user());
         for(var value:payloads) assertThat(json.readTree(value).size()).isEqualTo(2); // title + object reference only
+    }
+    @Test void concurrentNotificationDeliveryAndDeletionAcknowledgementsAreSerialized() throws Exception {
+        var owner=active(); var pair=login(owner);
+        var event=tripEvent(owner.user(),UUID.randomUUID(),1);
+        try(var pool=Executors.newFixedThreadPool(2)) {
+            var first=pool.submit(() -> notificationConsumer.accept(event));
+            var second=pool.submit(() -> notificationConsumer.accept(event)); first.get(); second.get();
+        }
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.notifications WHERE user_id=?",Integer.class,owner.user())).isEqualTo(1);
+        var response=deletions.request(jwt(pair),json.valueToTree(Map.of("policy_version",1)),"delete");
+        UUID request=(UUID)response.get("request_id");
+        try(var pool=Executors.newFixedThreadPool(5)) {
+            var futures=new java.util.ArrayList<java.util.concurrent.Future<?>>();
+            for(String service:java.util.List.of("catalog","community","trip","ingestion","intelligence"))
+                futures.add(pool.submit(() -> deletionAcks.accept(deletionAck(request,service,"COMPLETED",1))));
+            for(var future:futures) future.get();
+        }
+        assertThat(db.queryForObject("SELECT status FROM identity.data_deletion_requests WHERE deletion_request_id=?",String.class,request)).isEqualTo("COMPLETED");
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.data_deletion_acks WHERE deletion_request_id=? AND status='COMPLETED'",Integer.class,request)).isEqualTo(6);
     }
     @Test void notificationInboxAndInAppDeliveryDedupAndRollbackAreAtomic() {
         var account=active(); UUID trip=UUID.randomUUID(); var event=tripEvent(account.user(),trip,2);

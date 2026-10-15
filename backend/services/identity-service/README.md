@@ -1,6 +1,6 @@
-# Identity — P01 M1 + auth/session/preferences/admin
+# Identity — P01 independent service
 
-Owner N1; reviewer N2. **IN_PROGRESS**, chưa READY_FOR_INTEGRATION.
+Owner N1; reviewer N2. **Kiểm chứng kỹ thuật local hoàn tất; chờ review và xác nhận bàn giao N2**.
 Tiến độ/evidence chung: [checklist](../../../progress/PHASE_TASK_CHECKLIST.md).
 Contract candidate giữ nguyên: [OpenAPI](../../contracts/openapi/identity.yaml), revision `1.0.0-candidate`.
 
@@ -13,9 +13,10 @@ API, claims, schema và transaction semantics giữ nguyên sau refactor.
 
 ## Đã triển khai
 
-21/25 operation: auth/profile/password/sessions/JWKS, GET/PUT preferences, public options,
-admin users/status/roles và hai internal batches. Không trả token verify/reset trong API.
-- PostgreSQL thật, Flyway V1–V6, runtime/migrator riêng. 22 bảng: 14 domain + 4 baseline technical + 2 auth/mail operational + 2 workflow projections. V1–V5 không sửa checksum.
+25/25 operation: auth/profile/password/sessions/JWKS, GET/PUT preferences, public options,
+admin users/status/roles, internal batches, notification list/read và deletion request/status.
+Không trả token verify/reset trong API.
+- PostgreSQL thật, Flyway V1–V7, runtime/migrator riêng. 22 bảng: 14 domain + 4 baseline technical + 2 auth/mail operational + 2 workflow projections. V1–V6 giữ checksum; V7 thêm ack version.
 - Register atomic user/USER/preferences/verify-token/mail-job/outbox/audit; consent mặc định false. Duplicate email trả cùng cấu trúc 202; idempotency 24h, khác body 409. Request hash dùng HMAC để không làm giảm độ an toàn password hashing.
 - PBKDF2 SHA-256 Spring Security v5.8 defaults (salt 16 bytes, 310.000 iterations); refresh/account token random 256 bit, chỉ lưu SHA-256 hash.
 - RS256, issuer/audience/exp/iat/sub validation. Access 600s, session absolute 30 ngày, mỗi refresh idle 7 ngày, reset 30 phút, verify 24 giờ. JWT có UUID sub/jti/sid, roles và scopes. User issuer không cấp internal workload scopes.
@@ -24,9 +25,9 @@ admin users/status/roles và hai internal batches. Không trả token verify/res
 - Strong ETag/If-Match cho profile: thiếu 428, malformed 400, stale 409. Sessions cursor opaque, default20/max100, lọc owner tại DB.
 - Durable account/client rate limits: 10 attempts/account/action/minute, 60/client/action/minute; retry-after 60s. Không tin X-Forwarded-For do client tự gửi. Cấu hình trusted proxy trước triển khai.
 - Mail queue AES-256-GCM, poll5s, SELECT FOR UPDATE SKIP LOCKED, bounded exponential retry tối đa 8 lần. Không gửi token expired/consumed/superseded; không ghi log provider error chứa PII/credential. SMTP có thể gửi lặp nếu crash sau send trước commit; không tuyên bố exactly-once.
-- Outbox full envelope `user.registered`, `user.status-changed` (verify/admin status), `preferences.changed` full snapshot; chưa dispatch broker. Audit không chứa email/password/token.
+- Outbox full envelope `user.registered`, `user.status-changed` (verify/admin status), `preferences.changed` full snapshot và deletion-requested; broker confirms/retry như runbook bên dưới. Audit không chứa email/password/token.
 - Preferences PUT partial theo frozen contract: absent giữ nguyên, explicit null chỉ cho budget bounds; CUSTOM cần cả min/max, VND, tối đa 100 ID mỗi danh sách; duplicate/wrong-kind/inactive option bị 400. Strong ETag/If-Match + Idempotency-Key bắt buộc; replay 24h không phát lại event. Server quản lý consent_version, chỉ tăng khi opt-in/out thay đổi; client cung cấp version cũ để chống stale consent.
-- Category validation gọi public Catalog `/api/v1/categories?limit=100` qua HTTP, theo cursor, kiểm active cho toàn bộ selection; inactive/missing 400, timeout/malformed/outage 503 và rollback toàn bộ. Không có fallback fixture trong runtime. Cấu hình `CATALOG_BASE_URL` tới stub P00 trong local/test hoặc Catalog thật khi integration; bỏ trống vẫn dùng preferences không category, nhưng category mới fail closed. Deadline tổng 5s, mỗi request tối đa 2s, tối đa 50 pages. Category invalidation event handler vẫn thuộc P01-ID-06 còn thiếu.
+- Category validation gọi public Catalog `/api/v1/categories?limit=100` qua HTTP, theo cursor, kiểm active cho toàn bộ selection; inactive/missing 400, timeout/malformed/outage 503 và rollback toàn bộ. Không có fallback fixture trong runtime. Cấu hình `CATALOG_BASE_URL` tới stub P00 trong local/test hoặc Catalog thật khi integration; bỏ trống vẫn dùng preferences không category, nhưng category mới fail closed. Deadline tổng 5s, mỗi request tối đa 2s, tối đa 50 pages. Category invalidation handler dùng frozen event/inbox/version như mô tả bên dưới.
 - Admin recheck role ADMIN + live session ở DB, không chỉ tin claim; lock actor/target theo UUID trước session. Status/roles cập nhật version/audit atomic và revoke mọi session family; không tự sửa quyền/status, không revive unverified/deleted/deleting account. Role change không có event type riêng trong candidate; tác vụ nhạy cảm dùng trạng thái hiện hành.
 - Internal batches yêu cầu workload `client_id`, không `sid`, và route scope tương ứng; giới hạn 1–100 unique IDs. Read-only repeatable-read trả items/missing_ids tường minh; preference của account không ACTIVE vào missing_ids, không lộ tombstone preferences. User issuer không cấp workload token; HTTP workload issuer integration vẫn cần P02.
 
@@ -84,7 +85,7 @@ python backend/services/identity-service/check-local.py --image smarttravel-iden
 ```
 
 `test-local.py` tự stop container test, không gắn P00/P01 volumes. Maven thường chạy 12 unit/security/client
-tests và **skip 19 DB tests** khi chưa inject `IDENTITY_DB_TESTS=true`; không coi skip là DB PASS.
+tests và **skip 28 DB tests** khi chưa inject `IDENTITY_DB_TESTS=true`; không coi skip là DB PASS.
 Live smoke tạo synthetic account/audit/mail trong DB/Mailpit P01 và dừng đúng process/container của mình.
 CI source chạy DB tests + live image smoke; chưa có evidence GitHub Actions remote.
 
@@ -107,30 +108,111 @@ CI source chạy DB tests + live image smoke; chưa có evidence GitHub Actions 
   IDENTITY_MAIL_FROM được provider xác minh. Không bật fixture hoặc mount `.local` lên production.
 - Mail retry hết hạn ghi failed_at; vận hành kiểm backlog bằng count pending/failed trên DB (không xuất ciphertext/token).
   Requeue failed job chỉ sau kiểm token còn valid; expired token cần phát mới, không gia hạn token cũ.
-- Rollback dùng image tương thích V6; không chạy Flyway down/drop, không rollback session revocation.
+- Rollback dùng image tương thích V7; không chạy Flyway down/drop, không rollback session revocation.
   Image M1 cũ không có auth nghiệp vụ nên không phải rollback functional auth hợp lệ.
 
-## Còn thiếu để hoàn thành Identity P01
+## Notification và deletion handlers P01
 
-Notification inbox/delivery consumers; deletion request/6-ack state machine/tombstone;
-category invalidation consumer; outbox dispatch/inbox handlers/retry/DLQ/retention và idempotency các mutation còn lại.
-AMQP dependency hiện mới chuẩn bị; broker health mặc định tắt (`IDENTITY_TRANSPORT_ENABLED=false`), chưa có worker/transport. Không bật cờ để tuyên bố đã kết nối.
-Cần provider tests đủ 25 operation/events, security/fault regression toàn scope và handoff reviewer N2.
-Không mở P02 hoặc đóng gate dựa trên auth smoke. Frontend/provider production chưa triển khai trong lượt này.
+- Notification GET/list + PATCH/read kiểm current session/owner, cursor có chữ ký/cutoff,
+  idempotency và version/ETag. `NotificationConsumer.accept(JsonNode)` kiểm ba frozen schemas:
+  Catalog claim reviewed, Community review changed, Trip changed; title allowlist và object UUID,
+  không sao chép arbitrary text/profile. Inbox + stream watermark + notification + IN_APP delivery
+  commit cùng transaction; duplicate/stale events không lặp side effect. Missing/inactive recipients bỏ qua.
+- Deletion POST kiểm `policy_version` (mặc định 1), khóa user, revoke mọi session,
+  xóa account mail/tokens/notifications/selections, reset consent và tombstone account trong cùng transaction.
+  Phát ba event preferences/status/deletion-requested; giữ audit và lịch sử auth đã revoke theo policy baseline.
+  Request có sáu ack, Identity complete local; request chưa complete cho tới đủ năm ack đối tác.
+- Replay POST cùng key chỉ trả response đã lưu cho JWT còn hợp lệ của session yêu cầu;
+  session revoked không được tạo mutation mới. JWT hết hạn vẫn 401.
+- `DeletionAckConsumer.accept(JsonNode)` kiểm schema/producer-service/aggregate, transaction inbox,
+  version mỗi service, duplicate/stale/FAILED/recovery. Completion terminal; unknown request bị reject
+  để caller retry/DLQ, không lưu inbox thành công giả. Internal status chỉ nhận workload principal + scope.
+  Frozen HTTP enum không có FAILED nên HTTP trả PENDING; kiểm DB state/error_summary khi vận hành.
+- Handler dùng chung giữa harness local và broker listener bên dưới.
+  Không đưa handler ra public HTTP. Producer authorization do broker ACL đảm nhiệm.
+  Thay đổi code không tự cập nhật JAR/app localhost đang chạy.
+- Kiểm chứng: 40 tests (28 DB/API/domain + 12 unit/security/client) PASS trên PostgreSQL disposable,
+  V1–V7; đây là evidence lịch sử trước transport. Evidence hiện hành ở mục gate bên dưới.
 
-## P01 notification inbox group
+## Transport, email và category invalidation
 
-This group adds the authenticated notification list and mark-as-read endpoints:
-`GET /api/v1/me/notifications` and `PATCH /api/v1/me/notifications/{notification_id}/read`.
-Cursors are bound to the owner and insertion cutoff. Mark-as-read requires an
-`Idempotency-Key`, checks ownership, and returns the current version as an ETag.
+`python backend/services/identity-service/test-local.py --transport` tạo PostgreSQL16 và RabbitMQ4.1
+riêng, random credential/port, không dùng volume P01. Test run 10/10/2026: **52 tests PASS, 0 skip**,
+gồm 32 DB/API/domain, 5 DB+broker fault tests và 15 unit/security/client tests.
+Provider suite gọi HTTP thật và validate response schemas của **25/25 frozen operations**.
 
-The fixture consumer validates the frozen Catalog claim, Community review, and
-Trip event schemas, deduplicates deliveries, ignores stale aggregate versions,
-and stores only an allowlisted title and object reference. Inbox bookkeeping and
-in-app delivery are committed in one PostgreSQL transaction.
+- `IDENTITY_NOTIFICATION_EMAIL_ENABLED=true` bật notification EMAIL worker; mặc định opt-out.
+  Queue EMAIL cùng transaction IN_APP; max5 attempts, backoff 1/2/4/8 phút, FAILED giữ evidence.
+  Khóa user trước delivery chống race với deletion. SMTP send trước commit là at-least-once khi crash;
+  không hứa exactly-once mail. Duplicate event không tạo thêm delivery.
+- Category invalidation kiểm frozen schema, inbox/version và advisory selection lock trước user lock.
+  Inactive category bị xóa khỏi selections, tăng preferences version + full snapshot outbox + system audit.
+  Stale event không đảo trạng thái; reactivation không tự khôi phục lựa chọn đã xóa.
+- `IDENTITY_TRANSPORT_ENABLED=true` bật listener/dispatcher; inject BROKER_HOST/PORT/USERNAME/PASSWORD/VHOST.
+  Runtime broker user `identity_runtime`, vhost `smarttravel`; không có DB credential của service khác.
+  Durable `identity.events`, `identity.inbound`, `identity.inbox`, `identity.deadletters`, `identity.dlq`.
+  Local/test-only `identity.p01.capture` không được tạo ở production.
+- Dispatcher SKIP LOCKED, persistent publish + publisher confirms + mandatory-return validation;
+  đánh published sau confirm trong transaction DB. Crash sau publish trước commit có thể gửi lặp,
+  inbox dedup ngăn side effect lặp. Max8 failures chuyển failed_at, metric outbox.retry.
+- Listener retry3 lần, poison/unknown request -> DLQ + metric `identity.inbox.dlq`.
+  Routing key phải khớp event_type; event quá30 ngày hoặc lệch tương lai5 phút bị reject để reconciliation.
+  Producer identity phải được platform xác minh bằng broker ACL; payload producer không phải chứng thực.
+  Local fixture publisher là tài khoản riêng không có DB credential, không deploy nó ở production.
+- Bootstrap `backend/infra/rabbit/bootstrap-broker.sh`: runtime không publish vào inbound;
+  fixture không publish outbound. Admin bootstrap chỉ dùng setup, không inject vào Java runtime.
+- `DeadLetterReplay` là operator Java entrypoint, không public route: dùng operator RabbitTemplate,
+  `replayOne()` publish-confirm trước ack DLQ, giữ original event ID và append system audit.
+  Poison không được sửa ngầm: replay vẫn quay DLQ; sửa dependency/handler trước replay.
+  `replayFailedOutbox(UUID)` chỉ requeue failed unpublished event, không đổi ID/payload.
+- Runtime retention giữ pending/failed outbox, xóa published/inbox sau90 ngày, mail/token hết hạn sau7 ngày,
+  notification hơn90 ngày chỉ khi không còn pending hoặc failed delivery. Session reuse evidence giữ đến expiry+7 ngày.
+  Audit/deletion requests không xóa bởi runtime. Replay ngoài cửa sổ30 ngày cần reconciliation.
+- JSON structured logs/correlation; bounded request body256KiB kể cả chunked; DB pool acquisition2s.
+  Liveness không gắn mail/broker; readiness kiểm DB. Catalog HTTP stub/credential-bearing origins
+  bị chặn ngoài explicit test/local profiles; production endpoint HTTPS.
 
-Verify this group with `python backend/services/identity-service/test-local.py`.
-The harness runs the notification integration tests against a disposable real
-PostgreSQL database. Broker wiring, email notification delivery, and account
-deletion are separate groups; this group does not claim those gates complete.
+## CLI vận hành và live transport probe
+
+`python backend/services/identity-service/check-local.py --transport --image <image>`
+chạy image non-root với DB/broker/SMTP riêng của Identity, gửi synthetic partner events qua broker,
+kiểm notification/read/EMAIL và request deletion chỉ complete khi đủ sáu ack.
+Chạy `python backend/infra/p01.py up --service identity` trước probe.
+
+Operator CLI (một thao tác rồi đóng context) dùng DB runtime credentials và signing/mail secrets
+được inject như app; không chạy migration, fixtures, scheduled workers hoặc listener:
+
+```text
+python backend/services/identity-service/identity-ops.py replay-outbox --event-id <uuid>
+python backend/services/identity-service/identity-ops.py replay-dlq
+```
+
+`replay-outbox` chỉ requeue event failed và chưa published, giữ ID/payload, audit cùng transaction.
+`replay-dlq` yêu cầu thêm `BROKER_OPERATOR_PASSWORD` và mặc định user `identity_operator`.
+Bootstrap tạo user này với read chỉ `identity.dlq`, write chỉ `identity.inbound`; normal runtime
+không nhận operator password. Cấu hình host/port/vhost của broker giống app, inject password
+qua secret environment, không truyền password trên command line. CLI bind HTTP loopback/port tạm
+trong lúc khởi động; không có maintenance route. Message thiếu original x-death/routing metadata
+giữ trong DLQ để operator điều tra, không publish ngầm sang routing key khác.
+
+Audit và deletion state chỉ giữ bởi runtime; legal/operational retention của chúng cần job có
+quyền riêng và phê duyệt policy trước production. Chạy lại probe sau thay image/config;
+không gọi fixture producer hoặc synthetic dataset là dữ liệu production.
+
+## Gate Identity P01
+
+Ngày 11/10/2026, source trên `feature/backend-phase01-finish`:
+
+```text
+python backend/services/identity-service/test-local.py --transport --isolated-source
+python backend/platform/build_service_image.py identity --tag smarttravel-identity:p01-finish-local --jar backend/services/identity-service/.local/verified-build/identity-service-0.0.1-SNAPSHOT.jar
+python backend/services/identity-service/check-local.py --transport --image smarttravel-identity:p01-finish-local --jar backend/services/identity-service/.local/verified-build/identity-service-0.0.1-SNAPSHOT.jar
+```
+
+58/58 tests PASS, 0 failure/error/skip; image build và live non-root SMTP/broker probe PASS.
+Provider tests kiểm đủ25 frozen operations; image kiểm notification EMAIL SENT/read,
+tombstone/revocation, thiếu ack còn pending và đủ6 ack mới complete; sáu outbound envelopes
+được validate. Verified JAR/reports ở `.local/verified-build` ignored; không thay JAR đang chạy.
+Category client chặn response trên1MB khi streaming và giới hạn toàn request/body2s, tổng pagination5s; hai regression chunked/slow-body PASS. Key rotation, replay, retention và limits được mô tả trong runbook này.
+Chờ independent code review và N2 xác nhận nhận gói; DB/broker tests không thay chữ ký con người.
+Remote CI revision mới và P02 real partner integration chưa chạy.

@@ -48,7 +48,7 @@ def local_files():
     return keys, json.loads(config.read_text(encoding='utf-8'))
 
 
-def app_environment(port=8101, fixtures=False):
+def app_environment(port=8101, fixtures=False, transport=False, notification_email=False):
     source = environment()
     env = {key:value for key,value in os.environ.items() if not any(marker in key for marker in
            ['PASSWORD','DB_','MONGODB_URI','IDENTITY_','JWT_','SECRET','TOKEN','MAIL_'])}
@@ -62,15 +62,22 @@ def app_environment(port=8101, fixtures=False):
                IDENTITY_KEYS_FILE=str(keys), IDENTITY_ACTIVE_KID='p01-local-1', IDENTITY_MAIL_KEY=config['mail_key'],
                MAIL_HOST='127.0.0.1', MAIL_PORT='51025', IDENTITY_FIXTURE_PASSWORD=config['fixture_password'])
     env['IDENTITY_FIXTURES_ENABLED'] = str(fixtures).lower()
+    env['IDENTITY_TRANSPORT_ENABLED'] = str(transport).lower()
+    env['IDENTITY_NOTIFICATION_EMAIL_ENABLED'] = str(notification_email).lower()
+    if transport:
+        env.update(BROKER_HOST='127.0.0.1', BROKER_PORT='55672', BROKER_USERNAME='identity_runtime',
+                   BROKER_PASSWORD=source['IDENTITY_BROKER_PASSWORD'], BROKER_VHOST='smarttravel')
     return env
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--fixtures', action='store_true', help='Opt-in U1/U2/admin/business synthetic accounts')
+    parser.add_argument('--transport', action='store_true', help='Enable the independently credentialed local broker worker')
+    parser.add_argument('--notification-email', action='store_true', help='Opt-in notification email through the local SMTP sink')
     args = parser.parse_args()
     port = int(os.environ.get('PORT', '8101'))
-    env = app_environment(port, args.fixtures)
+    env = app_environment(port, args.fixtures, args.transport, args.notification_email)
     jar = SERVICE / 'target/identity-service-0.0.1-SNAPSHOT.jar'
     if not jar.exists():
         raise RuntimeError('Build Identity first; see README.md')

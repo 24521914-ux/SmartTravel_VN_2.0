@@ -27,10 +27,40 @@ public class NotificationRepository {
             INSERT INTO identity.notifications(notification_id,user_id,source_event_id,notification_type,payload)
             VALUES (?,?,?,?,?::jsonb) ON CONFLICT(user_id,source_event_id,notification_type) DO NOTHING
             """,id,user,event,type,payload);
-        if(inserted==1) db.update("""
-            INSERT INTO identity.notification_deliveries(delivery_id,notification_id,channel,status,sent_at)
-            VALUES (?,?,'IN_APP','SENT',now())
-            """,UUID.randomUUID(),id);
+        if(inserted==1) {
+            db.update("""
+                INSERT INTO identity.notification_deliveries(delivery_id,notification_id,channel,status,sent_at)
+                VALUES (?,?,'IN_APP','SENT',now())
+                """,UUID.randomUUID(),id);
+            db.update("INSERT INTO identity.notification_deliveries(delivery_id,notification_id,channel) VALUES (?,?,'EMAIL')",UUID.randomUUID(),id);
+        }
+    }
+    public List<UUID> pendingRecipients() {
+        return db.queryForList("""
+            SELECT DISTINCT n.user_id FROM identity.notification_deliveries d JOIN identity.notifications n USING(notification_id)
+            WHERE d.channel='EMAIL' AND d.status='PENDING' AND d.next_attempt_at<=now() ORDER BY n.user_id LIMIT 20
+            """,UUID.class);
+    }
+    public List<Map<String,Object>> pendingEmail(UUID user) {
+        return db.queryForList("""
+            SELECT d.delivery_id,n.payload->>'title' AS title FROM identity.notification_deliveries d
+            JOIN identity.notifications n USING(notification_id) WHERE n.user_id=? AND d.channel='EMAIL'
+            AND d.status='PENDING' AND d.next_attempt_at<=now() ORDER BY d.next_attempt_at,d.delivery_id
+            LIMIT 10 FOR UPDATE OF d SKIP LOCKED
+            """,user);
+    }
+    public void emailSent(UUID id) {
+        db.update("UPDATE identity.notification_deliveries SET status='SENT',attempts=attempts+1,sent_at=now(),provider_message_id=? WHERE delivery_id=?",id.toString(),id);
+    }
+    public void emailFailed(UUID id) {
+        db.update("UPDATE identity.notification_deliveries SET status='FAILED' WHERE delivery_id=?",id);
+    }
+    public void emailRetry(UUID id) {
+        db.update("""
+            UPDATE identity.notification_deliveries SET attempts=attempts+1,
+            status=CASE WHEN attempts>=4 THEN 'FAILED' ELSE 'PENDING' END,
+            next_attempt_at=now()+interval '1 minute'*power(2,least(attempts,6)) WHERE delivery_id=?
+            """,id);
     }
     public List<Map<String,Object>> list(UUID user, UUID after, Instant cutoff, int limit) {
         return db.queryForList("""
