@@ -16,12 +16,13 @@ if (!community.getUser('community_migrator')) community.createUser({user:'commun
   pwd:process.env.COMMUNITY_MIGRATION_PASSWORD, roles:[{role:'dbAdmin',db:'community_db'},{role:'readWrite',db:'community_db'}]});
 const collections = ['reviews','rating_summaries','favorites','collections','collection_items','contributions',
   'contribution_media','review_media','moderation_actions','review_reports','collection_visibility_events',
-  'place_visibility_projections','outbox_events','inbox_events','idempotency_keys','audit_logs'];
+  'place_visibility_projections','outbox_events','inbox_events','idempotency_keys','audit_logs','user_mutation_fences'];
 const privileges = collections.map(name => ({resource:{db:'community_db',collection:name},
   actions:['find','insert', ...(name === 'audit_logs' || name === 'moderation_actions' ? [] : ['update','remove'])]}));
 privileges.push({resource:{db:'community_db',collection:''},actions:['listCollections','listIndexes']});
 privileges.push({resource:{db:'community_db',collection:'schema_migrations'},actions:['find']});
 if (!community.getRole('communityRuntime')) community.createRole({role:'communityRuntime',privileges,roles:[]});
+else community.updateRole('communityRuntime',{privileges,roles:[]});
 if (!community.getUser('community_runtime')) community.createUser({user:'community_runtime',
   pwd:process.env.COMMUNITY_RUNTIME_PASSWORD,roles:[{role:'communityRuntime',db:'community_db'}]});
 print('PASS community authenticated replica set and least-privilege users provisioned');

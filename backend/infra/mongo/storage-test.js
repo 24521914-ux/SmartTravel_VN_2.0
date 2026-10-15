@@ -28,6 +28,12 @@ function rejects(code, action) {
 }
 try {
   transaction(() => {
+    tx.user_mutation_fences.insertOne({_id:user,user_id:user,version:Long(1),updated_at:new Date()});
+    tx.user_mutation_fences.updateOne({_id:user},{$inc:{version:Long(1)}});
+    assert(tx.user_mutation_fences.findOne({_id:user}).version.toString() === '2','runtime fence update failed');
+  });
+  assert(community.user_mutation_fences.countDocuments({_id:user}) === 0,'fence rollback failed');
+  transaction(() => {
     tx.reviews.insertOne(document);
     tx.rating_summaries.insertOne({_id:place,count:Long(1),sum:Long(5),version:Long(1),as_of:new Date()});
     tx.outbox_events.insertOne({_id:review,envelope:{fixture:true},attempts:Int32(0),available_at:new Date()});
