@@ -10,6 +10,8 @@ permissions:
   contents: read
 jobs:
   service:
+    env:
+      P01_CATALOG_DB_PORT: '0'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -72,6 +74,7 @@ jobs:
       - name: Shared contract change checks all six provider/consumer fixtures
         run: |
           python backend/platform/test_service_layout.py
+          python backend/infra/test_p01_ports.py
           python backend/platform/test_identity_runner.py
           python backend/platform/test_identity_image.py
           python backend/platform/validate_contracts.py

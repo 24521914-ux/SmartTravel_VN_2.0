@@ -65,7 +65,7 @@ services:
       POSTGRES_PASSWORD: ${CATALOG_ADMIN_PASSWORD:?required}
       MIGRATION_PASSWORD: ${CATALOG_MIGRATION_PASSWORD:?required}
       RUNTIME_PASSWORD: ${CATALOG_RUNTIME_PASSWORD:?required}
-    ports: ["127.0.0.1:56432:5432"]
+    ports: ["127.0.0.1:${P01_CATALOG_DB_PORT:-56432}:5432"]
     volumes:
       - catalog-data:/var/lib/postgresql/data
       - ./postgres/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro

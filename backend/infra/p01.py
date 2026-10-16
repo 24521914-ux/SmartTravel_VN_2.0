@@ -64,6 +64,16 @@ def compose(env, *args, text=None, expected=True):
                 str(INFRA / 'compose.p01.yaml'), *args], env, text, expected)
 
 
+def published_port(env, service, container_port):
+    address = compose(env, 'port', service, str(container_port)).stdout.strip().splitlines()
+    if len(address) != 1 or not address[0].startswith('127.0.0.1:'):
+        raise RuntimeError('Expected one loopback Docker port for '+service)
+    port = int(address[0].rsplit(':', 1)[1])
+    if not 1 <= port <= 65535:
+        raise RuntimeError('Invalid Docker published port for '+service)
+    return str(port)
+
+
 def sql(env, service, statement, host=None, database=None, expected=True, login_as=None):
     # docker exec inherits only this password, not all services' secrets.
     child_env = dict(env, PGPASSWORD=env[f'{service.upper()}_RUNTIME_PASSWORD'])
@@ -144,6 +154,8 @@ def main():
         previous = os.environ.copy()
         try:
             os.environ.update(env)
+            if not args.service or args.service == 'catalog':
+                os.environ['P01_CATALOG_DB_PORT'] = published_port(env, 'catalog-db', 5432)
             for service in [args.service] if args.service else SERVICES:
                 check(service, p01=True)
         finally:

@@ -144,10 +144,13 @@ class BrokerDatabaseTests {
         assertThatThrownBy(() -> operatorPublisher.publish("identity.inbound","unbound.v1","{}".getBytes(StandardCharsets.UTF_8),UUID.randomUUID().toString())).isInstanceOf(RuntimeException.class);
     }
     @Test void malformedDlqMetadataIsRetainedAndOperatorCredentialIsRestricted() {
-        operator.convertAndSend("", "identity.dlq", "synthetic manual poison");
+        byte[] poison="synthetic manual poison".getBytes(StandardCharsets.UTF_8);
+        operatorPublisher.publish("", "identity.dlq", poison, UUID.randomUUID().toString());
+        await().atMost(Duration.ofSeconds(15)).untilAsserted(() -> assertThat(queueCount("identity.dlq")).isEqualTo(1));
         var replay=new DeadLetterReplay(operator,operatorPublisher,outbox,tx);
-        assertThatThrownBy(replay::replayOne).isInstanceOf(RuntimeException.class);
-        assertThat(queueCount("identity.dlq")).isEqualTo(1);
+        assertThatThrownBy(replay::replayOne).hasRootCauseInstanceOf(IllegalArgumentException.class)
+                .hasRootCauseMessage("DLQ event has no original routing metadata");
+        await().atMost(Duration.ofSeconds(15)).untilAsserted(() -> assertThat(queueCount("identity.dlq")).isEqualTo(1));
         var connection=new CachingConnectionFactory(host,port);
         connection.setUsername("identity_operator"); connection.setPassword(System.getenv("BROKER_OPERATOR_PASSWORD"));
         connection.setVirtualHost(vhost); connection.setConnectionTimeout(2000);
@@ -155,7 +158,9 @@ class BrokerDatabaseTests {
         try {
             var template=new RabbitTemplate(connection); template.setMandatory(true);
             var publisher=new ConfirmedPublisher(template);
-            assertThat(template.receive("identity.dlq",1000)).isNotNull();
+            var retained=template.receive("identity.dlq",1000);
+            assertThat(retained).isNotNull();
+            assertThat(retained.getBody()).isEqualTo(poison);
             assertThatThrownBy(() -> publisher.publish("identity.events","identity.user.status-changed.v1",new byte[0],UUID.randomUUID().toString()))
                     .isInstanceOf(RuntimeException.class);
         } finally { connection.destroy(); }

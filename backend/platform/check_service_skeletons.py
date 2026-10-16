@@ -19,6 +19,14 @@ BACKEND=Path(__file__).resolve().parents[1]
 SERVICES=['identity','catalog','community','trip','ingestion','intelligence']
 PORTS={'identity':55434,'catalog':55432,'trip':55435,'ingestion':55436,'intelligence':55437}
 
+def database_port(service, p01=False):
+    default = PORTS[service] + (1000 if p01 else 0)
+    port = int(os.environ.get('P01_CATALOG_DB_PORT', str(default))) if p01 and service == 'catalog' else default
+    if not 1 <= port <= 65535:
+        raise ValueError('Resolve the Docker-assigned database port before running the probe')
+    return port
+
+
 def check(service, p01=False):
     # Never pass another service's database/admin/migration secrets to an app.
     env={key:value for key,value in os.environ.items() if not any(marker in key for marker in ['PASSWORD','MONGODB_URI','DB_URL','DB_USER','DB_MIGRATION'])}
@@ -30,7 +38,8 @@ def check(service, p01=False):
         else:
             env['MONGODB_URI']='mongodb://localhost:57017/community_db?replicaSet=rs0&directConnection=true'
     elif p01:
-        env.update(DB_URL=f'jdbc:postgresql://localhost:{PORTS[service]+1000}/{service}_db',
+        port = database_port(service, p01=True)
+        env.update(DB_URL=f'jdbc:postgresql://localhost:{port}/{service}_db',
                    DB_USER=f'{service}_runtime',DB_PASSWORD=os.environ[f'{service.upper()}_RUNTIME_PASSWORD'],
                    DB_MIGRATION_USER=f'{service}_migrator',DB_MIGRATION_PASSWORD=os.environ[f'{service.upper()}_MIGRATION_PASSWORD'])
     else:

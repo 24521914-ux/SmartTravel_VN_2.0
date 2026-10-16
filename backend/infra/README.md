@@ -147,3 +147,15 @@ Không đổi secret file để chữa authentication lỗi và không xóa pers
 Sau khi build JAR cuối, `p01.py smoke` áp dụng/validate migrations với migrator;
 `p01.py verify` chạy storage/permission/cross-DB rollback checks trên runtime accounts.
 Migration count/image digest/test count của từng gói được ghi tại checklist chung.
+
+## Catalog CI port isolation
+
+Normal local P01 keeps Catalog PostgreSQL on loopback port 56432. CI sets
+`P01_CATALOG_DB_PORT=0`, so Docker allocates an available published port atomically.
+`p01.py smoke` queries `docker compose port catalog-db 5432` and passes the actual
+port to the Java probe. `verify` runs SQL inside the container and needs no host
+port. Catalog disposable tests/image probes already allocate ephemeral ports or
+use an internal Docker network. This does not change P02 default port 57432.
+
+A zero port is only a Docker allocation request; calling the low-level probe
+directly with zero is rejected. Use `p01.py smoke` to resolve the actual binding.
