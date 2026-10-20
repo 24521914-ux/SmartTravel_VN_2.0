@@ -2,7 +2,7 @@
 
 > **Thứ tự đã chốt tại P00:** owner N2, reviewer N1. Hoàn thiện/kiểm thử interaction/history/features/Basic trước; sau nghiệm thu Basic mới triển khai dataset/training/model/pgvector. Release cuối có ML; gate P01 cuối yêu cầu pipeline fixture đạt, quality production kiểm ở P03. Không thực hiện Basic và ML đồng thời theo hướng dẫn cũ. Storage: PostgreSQL + pgvector, Redis chỉ cache. Xem [P00-DECISIONS.md](../../P00-DECISIONS.md).
 
-Trạng thái: **IN_PROGRESS — M1 baseline storage/runtime**. Evidence và phần còn thiếu tại [progress](../../../progress/PHASE_TASK_CHECKLIST.md). Chưa hoàn tất P01-IN-01/02 hoặc gate. Dependency: P00, không chờ năm service còn lại. Scope F05/F08 và toàn bộ cơ chế dataset/training/model. Reviewer: A.
+Trạng thái (20/10/2026): **11/12 task LOCAL_VERIFIED (Basic + ML pipeline trên fixture); IN-12 (handoff/reviewer N1) còn PARTIAL; chất lượng model thật thuộc P03**. Code đã merge vào `main` (PR #14, merge `61f6c2e`); người dùng chấp nhận P01 ngày 11/10/2026, chưa có chữ ký reviewer. Evidence chính thức tại [progress](../../../progress/PHASE_TASK_CHECKLIST.md); checkbox trong file này là yêu cầu, không phải trạng thái. Dependency: P00, không chờ năm service còn lại. Scope F05/F08 và toàn bộ cơ chế dataset/training/model. Reviewer: A.
 
 [Database Intelligence](../../database/intelligence.md) · [DDL](../../database/sql/intelligence.sql) · [Contract](../../04-api-events.md) · [Gate](README.md). Owner: `backend/services/intelligence-service/**`, gồm worker Python nếu cần; vẫn một service nghiệp vụ.
 

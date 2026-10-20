@@ -167,6 +167,10 @@ The test restores ACL in `finally`; durable ack retry then reaches job SUCCEEDED
 This is recorded in `import-ack-report.json`. All P02 tasks and the final gate are
 COMPLETE, with six business services CONNECTED. P03/P04 have not started; P00
 candidate freeze and remote CI for the latest source remain pending.
+This paragraph is the historical 11 October 2026 local claim on the original
+checkout. The 20 October 2026 source scan reclassified the P02 gate as PARTIAL
+(P02-01, P02-08 and P02-14 remain open); the authoritative status is in
+[progress](../../progress/PHASE_TASK_CHECKLIST.md#p02--kết-nối-thật).
 Fault tests temporarily stop only P02-owned apps and restore them
 in `finally` blocks. Run them after core smoke has created the connected fixtures.
 

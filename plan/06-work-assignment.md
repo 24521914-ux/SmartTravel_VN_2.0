@@ -1,15 +1,15 @@
 # Phân công nhiều người và bàn giao service
 
-Điều chỉnh ngày 08/10/2026. Đã chốt **hai người**: N1 phụ trách Identity/Catalog/Ingestion, N2 phụ trách Community/Trip/Intelligence; review chéo. A–F là mã gói service, không phải sáu nhân sự. P00 hoàn tất triển khai kỹ thuật và READY_FOR_REVIEW, sáu gói P01 vẫn NOT_STARTED. Theo xác nhận người dùng, N1/N2 đủ để phân công, không cần GitHub username để tiếp tục P00. Mỗi owner chịu trách nhiệm database/API/rule/adapter/test/local run. Các gói độc lập nhưng thực hiện theo capacity hai người; xem [quyết định P00](P00-DECISIONS.md).
+Điều chỉnh ngày 08/10/2026. Đã chốt **hai người**: N1 phụ trách Identity/Catalog/Ingestion, N2 phụ trách Community/Trip/Intelligence; review chéo. A–F là mã gói service, không phải sáu nhân sự. P00 hoàn tất triển khai kỹ thuật và READY_FOR_REVIEW. Trạng thái sáu gói ở bảng dưới cập nhật 20/10/2026 theo [progress](../progress/PHASE_TASK_CHECKLIST.md). Theo xác nhận người dùng, N1/N2 đủ để phân công, không cần GitHub username để tiếp tục P00. Mỗi owner chịu trách nhiệm database/API/rule/adapter/test/local run. Các gói độc lập nhưng thực hiện theo capacity hai người; xem [quyết định P00](P00-DECISIONS.md).
 
 | Gói | Service | Owner | Reviewer | Checklist | Trạng thái |
 |---|---|---|---|---|---|
-| A | Identity | N1 | N2 | [P01-ID](phases/P01-services/identity.md) | NOT_STARTED |
-| B | Catalog | N1 | N2 | [P01-CA](phases/P01-services/catalog.md) | NOT_STARTED |
-| C | Community | N2 | N1 | [P01-CO](phases/P01-services/community.md) | NOT_STARTED |
-| D | Trip | N2 | N1 | [P01-TR](phases/P01-services/trip.md) | NOT_STARTED |
-| E | Ingestion | N1 | N2 | [P01-IG](phases/P01-services/ingestion.md) | NOT_STARTED |
-| F | Intelligence | N2 | N1 | [P01-IN](phases/P01-services/intelligence.md) | NOT_STARTED |
+| A | Identity | N1 | N2 | [P01-ID](phases/P01-services/identity.md) | P01 LOCAL_VERIFIED 9/10 (PR #5–#9), chờ ký N2 |
+| B | Catalog | N1 | N2 | [P01-CA](phases/P01-services/catalog.md) | P01 LOCAL_VERIFIED 11/12 (PR #10), chờ ký N2 |
+| C | Community | N2 | N1 | [P01-CO](phases/P01-services/community.md) | P01 LOCAL_VERIFIED 10/11 (PR #11), chờ ký N1 |
+| D | Trip | N2 | N1 | [P01-TR](phases/P01-services/trip.md) | P01 LOCAL_VERIFIED 10/11 (PR #12), chờ ký N1 |
+| E | Ingestion | N1 | N2 | [P01-IG](phases/P01-services/ingestion.md) | P01 LOCAL_VERIFIED 10/11 (PR #13), chờ ký N2 |
+| F | Intelligence | N2 | N1 | [P01-IN](phases/P01-services/intelligence.md) | P01 LOCAL_VERIFIED 11/12 (PR #14), chờ ký N1 |
 
 N1 quản lý Maven/BOM/CI/Gateway/platform và review cấu hình frontend; N2 quản lý frontend shell và review platform. UI được chia theo service tại [quyết định P00](P00-DECISIONS.md). N2 hoàn thiện và nghiệm thu recommendation Basic trước khi triển khai ML; release cuối vẫn bao gồm ML.
 
@@ -41,7 +41,7 @@ Frontend chia theo nhóm màn: auth/profile/admin user; catalog/search/business;
 | `backend/contracts/events/**`, fixture chung | Producer đề xuất, consumer review, điều phối chốt revision |
 | Root Maven/BOM/CI template, `backend/infra/**`, Gateway | Một người điều phối/platform được chỉ định tại P00 |
 | `frontend/**` | Chia người theo màn/route từ P00; phát triển với stub trong P01, kết nối P02 |
-| `progress/PHASE_TASK_CHECKLIST.md`, `progress/COMPLETED_WORK_CHECKLIST.md` | Owner cập nhật task/phạm vi của mình; điều phối review thay đổi tổng quan |
+| `progress/PHASE_TASK_CHECKLIST.md`, `progress/COMPLETED_WORK_CHECKLIST.md`, `progress/evidence/**` | Owner cập nhật task/phạm vi của mình; điều phối review thay đổi tổng quan |
 
 Điều phối/platform có thể kiêm một trong A–F; không yêu cầu service hay nhân sự thứ bảy. Root framework thay đổi qua PR riêng; không mỗi người tự nâng stack. Gói frontend có thể làm với stub từ P00 nhưng không là điều kiện bàn giao backend.
 
@@ -77,7 +77,7 @@ Nếu task bị chặn, ghi rõ input thiếu, người xử lý và các task k
 
 ## Mẫu ghi tiến độ và xác nhận hoàn tất
 
-Dùng duy nhất hai file trong `progress/`: [PHASE_TASK_CHECKLIST.md](../progress/PHASE_TASK_CHECKLIST.md) theo dõi task nhỏ của P00–P04 (bao gồm sáu nhóm P01), và [COMPLETED_WORK_CHECKLIST.md](../progress/COMPLETED_WORK_CHECKLIST.md) ghi nhận artifact/chức năng đã làm được. Không tạo báo cáo riêng theo phase/service. Khi cập nhật task, ghi các trường dưới đây ngay dưới task hoặc liên kết tới artifact/manifest kiểm chứng; chưa đánh dấu pass nếu thiếu evidence.
+Trạng thái chỉ ghi trong hai file của `progress/`: [PHASE_TASK_CHECKLIST.md](../progress/PHASE_TASK_CHECKLIST.md) theo dõi task nhỏ của P00–P04 (bao gồm sáu nhóm P01), và [COMPLETED_WORK_CHECKLIST.md](../progress/COMPLETED_WORK_CHECKLIST.md) ghi nhận artifact/chức năng đã làm được. Evidence chi tiết đặt trong `progress/evidence/YYYY-MM-DD-<scope>-<topic>.md`, không chứa trạng thái riêng. Quy tắc đầy đủ: [AGENTS.md mục 10](../AGENTS.md#10-quy-tắc-ghi-progress). Khi cập nhật task, ghi các trường dưới đây ngay dưới task hoặc liên kết tới artifact/manifest kiểm chứng; chưa đánh dấu pass nếu thiếu evidence.
 
 | Trường | Nội dung phải ghi |
 |---|---|
