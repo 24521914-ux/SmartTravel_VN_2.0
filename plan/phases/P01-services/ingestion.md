@@ -1,6 +1,6 @@
 # P01-IG Ingestion Service — nhóm E
 
-Trạng thái: **IN_PROGRESS — M1 baseline storage/runtime**. Evidence và phần còn thiếu tại [progress](../../../progress/PHASE_TASK_CHECKLIST.md). Chưa hoàn tất P01-IG-01/02 hoặc gate. Dependency: P00, không chờ Catalog/Identity/Intelligence. Scope source/job/raw/normalize/dedup/provenance. Reviewer: F.
+Trạng thái (20/10/2026): **10/11 task LOCAL_VERIFIED; IG-11 (handoff/reviewer N2) còn PARTIAL**. Code đã merge vào `main` (PR #13, merge `7e4f8ce`); người dùng chấp nhận P01 ngày 11/10/2026, chưa có chữ ký reviewer. Evidence chính thức tại [progress](../../../progress/PHASE_TASK_CHECKLIST.md); checkbox trong file này là yêu cầu, không phải trạng thái. Dependency: P00, không chờ Catalog/Identity/Intelligence. Scope source/job/raw/normalize/dedup/provenance. Reviewer: F.
 
 [Database Ingestion](../../database/ingestion.md) · [DDL](../../database/sql/ingestion.sql) · [Contract](../../04-api-events.md) · [Gate](README.md). Owner: `backend/services/ingestion-service/**`.
 

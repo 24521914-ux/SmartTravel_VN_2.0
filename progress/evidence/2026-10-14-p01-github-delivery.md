@@ -1,51 +1,48 @@
-# Phase01 GitHub delivery — 14 October 2026
+# Bàn giao P01 lên GitHub — 14/10/2026
 
-The remaining Phase01 groups are pushed sequentially to independent feature
-branches based on `main` at `cb44518`. Each branch is self-contained and targets
-`main`; no automatic merge is performed. Auth/preferences/admin and notification
-inbox were already merged before this delivery.
+| Trường | Nội dung |
+|---|---|
+| Ngày ghi | 14/10/2026; cập nhật trạng thái merge ngày 20/10/2026 |
+| Revision nền | `main` tại `cb44518` (sau PR #8) |
+| Commit ghi nhận | `b9bc25e docs(progress): record sequential Phase01 GitHub delivery` |
+| Người merge | To Quang Truong (theo Git log); merge **không** thay chữ ký reviewer READY_FOR_INTEGRATION |
+| Tên file cũ | `progress/PHASE01_GITHUB_DELIVERY.md`, chuyển và dịch ngày 20/10/2026 |
 
-The original working checkout contains later Phase02/03 changes and is preserved.
-The delivery branches exclude live session exchange, connected orchestration,
-business frontend screens and Phase03 tooling. Shared fixtures appear in each
-service branch so every proposed change can be built independently.
+Các nhóm P01 còn lại được push tuần tự lên các nhánh feature độc lập, mỗi nhánh tách từ `main` tại `cb44518` và target `main`. Không tự động merge. Phần auth/preferences/admin (PR #6, #7) và notification inbox (PR #8) đã merge trước đợt này.
 
-| Group | Branch | Pull request | Local verification | Remote CI |
-|---|---|---|---|---|
-| Identity lifecycle | `feature/identity-phase01-lifecycle` | [#9](https://github.com/24521914-ux/SmartTravel_VN/pull/9) | 60 tests; PostgreSQL/RabbitMQ; zero failures/errors/skips | 9/9 PASS |
-| Catalog | `feature/catalog-phase01-business` | [#10](https://github.com/24521914-ux/SmartTravel_VN/pull/10) | 26 tests; PostGIS/RabbitMQ; zero failures/errors/skips | 9/9 PASS after smoke/readiness fixes |
-| Community | `feature/community-phase01-business` | [#11](https://github.com/24521914-ux/SmartTravel_VN/pull/11) | 30 tests; MongoDB/RabbitMQ; zero failures/errors/skips | 9/9 PASS |
-| Trip | `feature/trip-phase01-planning` | [#12](https://github.com/24521914-ux/SmartTravel_VN/pull/12) | 40 tests; PostgreSQL/RabbitMQ; zero failures/errors/skips | 9/9 PASS after retrying baseline Mongo startup |
-| Ingestion | `feature/ingestion-phase01-pipeline` | [#13](https://github.com/24521914-ux/SmartTravel_VN/pull/13) | 38 tests; PostgreSQL/RabbitMQ; zero failures/errors/skips | 9/9 PASS |
-| Intelligence | `feature/intelligence-phase01-recommendations` | [#14](https://github.com/24521914-ux/SmartTravel_VN/pull/14) | 35 tests; PostgreSQL/RabbitMQ; zero failures/errors/skips | See PR checks |
-| Gateway and API/auth client | `feature/platform-phase01-gateway-client` | [Delivery branch](https://github.com/24521914-ux/SmartTravel_VN/tree/feature/platform-phase01-gateway-client) | Gateway 12 tests, client 7 tests, frontend build and Gateway image build PASS; npm audit zero vulnerabilities | See the draft PR attached to this branch |
+Checkout làm việc gốc còn chứa thay đổi P02/P03 và được giữ nguyên. Các nhánh bàn giao **không** gồm live session exchange, orchestration đã kết nối, màn hình frontend nghiệp vụ và tooling P03. Fixture dùng chung được đưa vào từng nhánh service để mỗi nhánh build độc lập được.
 
-Identity validation uses `test-local.py --transport --isolated-source` to avoid
-the Windows Maven launcher issue with an absolute Unicode project path. The
-remaining service suites use disposable owned databases and brokers. Private
-credentials, generated keys, local evidence and build artifacts are excluded
-from commits.
+| Nhóm | Nhánh | PR | Merge commit (15/10/2026) | Kiểm thử local | CI remote lúc bàn giao |
+|---|---|---|---|---|---|
+| Identity lifecycle | `feature/identity-phase01-lifecycle` | [#9](https://github.com/24521914-ux/SmartTravel_VN/pull/9) | `a9ab23a` | 60 tests; PostgreSQL/RabbitMQ; 0 failure/error/skip | 9/9 PASS |
+| Catalog | `feature/catalog-phase01-business` | [#10](https://github.com/24521914-ux/SmartTravel_VN/pull/10) | `d799fa2` | 26 tests; PostGIS/RabbitMQ; 0 failure/error/skip | 9/9 PASS sau khi sửa smoke/readiness |
+| Community | `feature/community-phase01-business` | [#11](https://github.com/24521914-ux/SmartTravel_VN/pull/11) | `0d46262` | 30 tests; MongoDB/RabbitMQ; 0 failure/error/skip | 9/9 PASS |
+| Trip | `feature/trip-phase01-planning` | [#12](https://github.com/24521914-ux/SmartTravel_VN/pull/12) | `33b2627` | 40 tests; PostgreSQL/RabbitMQ; 0 failure/error/skip | 9/9 PASS sau khi retry Mongo baseline startup |
+| Ingestion | `feature/ingestion-phase01-pipeline` | [#13](https://github.com/24521914-ux/SmartTravel_VN/pull/13) | `7e4f8ce` | 38 tests; PostgreSQL/RabbitMQ; 0 failure/error/skip | 9/9 PASS |
+| Intelligence | `feature/intelligence-phase01-recommendations` | [#14](https://github.com/24521914-ux/SmartTravel_VN/pull/14) | `61f6c2e` | 35 tests; PostgreSQL/RabbitMQ; 0 failure/error/skip | **Chưa ghi** (lúc bàn giao ghi "xem PR checks") |
+| Gateway + API/auth client | `feature/platform-phase01-gateway-client` | [#15](https://github.com/24521914-ux/SmartTravel_VN/pull/15) | `42eac23` | Gateway 12 tests, client 7 tests, build frontend và image Gateway PASS; npm audit 0 vulnerabilities | **Chưa ghi** (lúc bàn giao là draft PR) |
 
-Service function clusters share transactional services, event listeners and
-provider suites. They are delivered as independently buildable business groups
-with their required dependencies.
+**Lưu ý về độ tin cậy:**
 
-These pushes publish source and enable review. They do not establish that every
-group has merged into `main`, change the historical Phase01 user acceptance, or
-certify Phase02/03 system acceptance.
+- Cột "CI remote" là snapshot lúc bàn giao. Kết quả CI cuối cùng trước merge của từng PR chưa được ghi run ID.
+- Lần CI fail của PR #10 và #12 được giải thích ở [2026-10-16-ci-historical-failure-fixes.md](2026-10-16-ci-historical-failure-fixes.md).
+- Số test ở bảng là số trên nhánh bàn giao. Lượt quét 20/10/2026 trên `main` đếm được nhiều hơn (Identity 61, Catalog 27, Trip 41, Intelligence 38) do PR #16/#17 thêm test.
 
-Local service total: **229 tests** across the six scoped business branches, with
-zero failures/errors/skips in the full disposable dependency suites. The Gateway
-and frontend client add **19 tests**. These counts apply to the delivery sources;
-they do not replace historical acceptance counts for the original dirty checkout.
+**Phương pháp kiểm thử:**
 
-Follow-up fixes preserve the configuration guards: local storage smoke selects
-explicit fixture profiles, Catalog runners wait for the final PostgreSQL TCP
-listener, and Community's synthetic Catalog validate fixture supplies the
-required `public` flag. Shared CI selects each available service runner and
-requires transport mode whenever that runner supports it.
+- Identity chạy `test-local.py --transport --isolated-source` để tránh lỗi Maven launcher trên Windows khi đường dẫn tuyệt đối có ký tự Unicode.
+- Các service khác dùng database và broker disposable do runner sở hữu.
+- Credential, key sinh ra, evidence local và build artifact không được commit.
 
-Merge the reviewed service PRs individually and the platform PR afterward. Their
-shared source changes are identical where they overlap; the platform PR adds its
-own independent Gateway/frontend CI job. CI snapshots above were observed during
-delivery; use each PR's current checks before merging.
+Tổng local: **229 tests** trên sáu nhánh service, 0 failure/error/skip trong full suite có dependency disposable. Gateway và frontend client thêm **19 tests**. Số liệu này áp dụng cho source bàn giao, không thay số liệu nghiệm thu lịch sử của checkout gốc.
+
+**Các sửa đổi kèm theo, vẫn giữ nguyên guard cấu hình:**
+
+- Storage smoke local chọn fixture profile tường minh.
+- Runner Catalog chờ listener TCP cuối của PostgreSQL.
+- Fixture Catalog validate tổng hợp của Community bổ sung trường `public` bắt buộc.
+- CI dùng chung chọn runner của từng service và bắt buộc transport mode khi runner hỗ trợ.
+
+Thứ tự merge khuyến nghị lúc bàn giao: merge từng PR service sau review, PR platform merge cuối. Thực tế ngày 15/10/2026 cả bảy PR đã merge theo thứ tự #9 → #15.
+
+Đợt push này công bố source để review. Nó **không** thay đổi việc người dùng chấp nhận P01 trên checkout gốc ngày 11/10/2026, và không chứng nhận P02/P03.
