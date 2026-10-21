@@ -9,7 +9,8 @@
     "test:contracts": "node --test scripts/mock-contract-test.mjs",
     "test:gateway": "node scripts/gateway-smoke.mjs",
     "preview": "vite preview --host 127.0.0.1",
-    "test:browser": "node scripts/browser-smoke.mjs"
+    "test:browser": "node scripts/browser-nonai.mjs",
+    "test:browser:ai": "node scripts/browser-smoke.mjs"
   },
   "dependencies": {
     "react": "19.2.0",

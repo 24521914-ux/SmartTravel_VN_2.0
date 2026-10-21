@@ -1,0 +1,2 @@
+--Đây là file tóm tắt
+Cửa vào chung, chuyển HTTP request đến service phù hợp

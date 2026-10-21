@@ -59,6 +59,7 @@ class GatewayRoutingTests {
     }
 
     @DynamicPropertySource static void settings(DynamicPropertyRegistry registry) {
+        registry.add("smarttravel.gateway.ai-enabled", () -> "true");
         String origin="http://127.0.0.1:"+PARTNER.getAddress().getPort();
         registry.add("security.jwt.issuer",() -> "gateway-test");
         registry.add("security.jwt.jwk-set-uri",() -> origin+"/jwks");

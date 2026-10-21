@@ -1,3 +1,4 @@
+//quy định API nào được chuyển tới service nào
 package vn.smarttravel.platform.gateway.config;
 
 import java.util.Map;

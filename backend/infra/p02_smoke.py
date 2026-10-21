@@ -26,6 +26,8 @@ def call(service, path, method='GET', body=None, token=None, expected=200, versi
         headers['Idempotency-Key'] = key
     code, data, response_headers = request(GATEWAY, '/api/'+service+path, method, body, token, headers)
     assert code == expected, f'{service} {method} {path}: expected {expected}, got {code}, code={(data or {}).get("code")}'
+    correlation = {key.lower(): value for key, value in response_headers.items()}.get('x-correlation-id')
+    assert correlation == TRACE, 'Gateway/service correlation header changed or missing'
     contract = json.loads((ROOT / f'backend/contracts/openapi/{service}.yaml').read_text(encoding='utf-8'))
     matching = [v for p, v in contract['paths'].items()
                 if re.fullmatch(re.sub(r'\{[^}]+\}', '[^/]+', p), path.split('?')[0])]
@@ -33,7 +35,7 @@ def call(service, path, method='GET', body=None, token=None, expected=200, versi
         schema = matching[0][method.lower()]['responses'].get(str(code), {}).get('content', {}).get('application/json', {}).get('schema')
         if schema:
             Draft202012Validator(schema, format_checker=FormatChecker()).validate(data)
-    EVIDENCE.append({'service': service, 'method': method, 'path': path, 'status': code})
+    EVIDENCE.append({'service': service, 'method': method, 'path': path, 'status': code, 'correlation_id': correlation})
     return data
 
 

@@ -39,6 +39,7 @@ security:
     jwk-set-uri: ${JWT_JWKS_URI:http://localhost:8081/.well-known/jwks.json}
 smarttravel:
   gateway:
+    ai-enabled: ${AI_ENABLED:false}
     response-timeout: ${GATEWAY_RESPONSE_TIMEOUT:2s}
     limits:
       max-body-bytes: ${GATEWAY_MAX_BODY_BYTES:1048576}

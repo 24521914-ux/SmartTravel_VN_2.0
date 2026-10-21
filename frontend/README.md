@@ -63,3 +63,8 @@ file ignored `backend/infra/.local/p02/secrets.json`. Có thể override bằng
 và `P02_FRONTEND_URL`. Không in token/password. Browser smoke tạo tài nguyên được
 đặt tên `Browser smoke`/`Browser journey` trên dữ liệu kiểm thử, lưu ảnh trong
 `backend/infra/.local/p02/frontend-browser/`. Các smoke không kiểm production provider.
+
+
+## P03 non-AI acceptance — 20 October 2026
+
+AI is disabled unless `VITE_AI_ENABLED=true`; Gateway also requires its independent `AI_ENABLED=true` flag. Recommendation, model admin and AI consent opt-in are hidden while deferred. Existing consent revocation remains available. `npm run test:browser` runs the non-AI real-Gateway browser suite; the older AI suite is retained as `test:browser:ai` for later work. Browser output is now `backend/infra/.local/p03/frontend-browser/`. Current acceptance: 8 groups, 36 responsive cases, zero AI HTTP requests/page errors. See [P03 non-AI handoff](../docs/P03_NON_AI_ACCEPTANCE.md); older browser checkpoints below/above remain historical.

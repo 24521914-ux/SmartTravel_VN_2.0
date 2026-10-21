@@ -108,7 +108,10 @@ def main():
                             BROKER_USERNAME='identity_runtime', BROKER_PASSWORD=broker_runtime, BROKER_VHOST='smarttravel',
                             BROKER_FIXTURE_PASSWORD=fixture, BROKER_ADMIN_PASSWORD=broker_admin,
                             BROKER_OPERATOR_PASSWORD=operator_password)
-        result = subprocess.run(maven_command() + ['-B', '-f', str(build_root / 'backend/services/identity-service/pom.xml'), 'clean', 'verify'],
+        # Keep the normal checkout path relative: Maven's Windows launcher can
+        # misdecode an absolute -f argument when the checkout contains Unicode.
+        pom = 'backend/services/identity-service/pom.xml' if build_root == ROOT else str(build_root / 'backend/services/identity-service/pom.xml')
+        result = subprocess.run(maven_command() + ['-B', '-f', pom, 'clean', 'verify'],
                                 cwd=build_root, env=test_env)
         if result.returncode:
             raise RuntimeError('Identity test build failed; see test output')

@@ -44,10 +44,7 @@ def main():
             if SERVICE == 'catalog':
                 helper.run(['docker','run','-d','--name',database,'--network',name,'-e','POSTGRES_PASSWORD','-e','POSTGRES_DB=catalog_db','postgis/postgis:16-3.5'],env)
                 started.append(database)
-                for _ in range(90):
-                    if subprocess.run(['docker','exec',database,'pg_isready','-U','postgres'],capture_output=True).returncode == 0: break
-                    time.sleep(1)
-                else: raise RuntimeError('Owned PostGIS readiness failed')
+                helper.wait_for_database(database, env)
                 helper.run(['docker','exec','-i',database,'psql','-U','postgres','-d','catalog_db','-v','ON_ERROR_STOP=1'],env,
                            f"CREATE ROLE catalog_migrator LOGIN PASSWORD '{migrator}';\nCREATE ROLE catalog_runtime LOGIN PASSWORD '{runtime}';\nALTER DATABASE catalog_db OWNER TO catalog_migrator;\nGRANT CREATE ON SCHEMA public TO catalog_migrator;\n")
             else:

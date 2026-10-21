@@ -27,7 +27,12 @@ class CommunityProviderTests {
     static final String USER="10000000-0000-0000-0000-000000000001",OTHER="10000000-0000-0000-0000-000000000002",PLACE="20000000-0000-0000-0000-000000000001";
     static HttpServer stub=start();
     @Autowired MockMvc mvc;@Autowired MongoTemplate mongo;
-    static HttpServer start(){try{var s=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);s.createContext("/",e->{Map<String,Object> place=new HashMap<>(Map.of("place_id",PLACE,"status","PUBLISHED","version",1));if(e.getRequestURI().getPath().equals("/internal/v1/places/validate"))place.put("public",true);byte[] bytes=JSON.writeValueAsBytes(Map.of("items",List.of(place),"missing_ids",List.of()));e.getResponseHeaders().set("Content-Type","application/json");e.sendResponseHeaders(200,bytes.length);e.getResponseBody().write(bytes);e.close();});s.start();return s;}catch(Exception e){throw new ExceptionInInitializerError(e);}}
+    static HttpServer start(){try{var s=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);s.createContext("/",e->{
+        // Validation and enrichment have distinct frozen response contracts.
+        Map<String,Object> place=e.getRequestURI().getPath().equals("/internal/v1/places/validate")
+            ?Map.of("place_id",PLACE,"public",true,"version",1)
+            :Map.of("place_id",PLACE,"status","PUBLISHED","version",1);
+        byte[] bytes=JSON.writeValueAsBytes(Map.of("items",List.of(place),"missing_ids",List.of()));e.getResponseHeaders().set("Content-Type","application/json");e.sendResponseHeaders(200,bytes.length);e.getResponseBody().write(bytes);e.close();});s.start();return s;}catch(Exception e){throw new ExceptionInInitializerError(e);}}
     @DynamicPropertySource static void properties(DynamicPropertyRegistry r){String base="http://127.0.0.1:"+stub.getAddress().getPort();r.add("catalog.base-url",()->base);r.add("security.jwt.jwk-set-uri",()->base+"/jwks");r.add("security.jwt.issuer",()->"fixture");r.add("community.transport.enabled",()->"false");}
     @BeforeEach void clear(){for(String name:List.of("reviews","rating_summaries","favorites","collections","collection_items","collection_visibility_events","outbox_events","moderation_actions","contributions","inbox_events","audit_logs","idempotency_keys","review_reports"))mongo.remove(new Query(),name);}
     @AfterAll static void stop(){stub.stop(0);}

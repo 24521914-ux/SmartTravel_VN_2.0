@@ -27208,6 +27208,15 @@
                     "enum": [
                       "VND"
                     ]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "DRAFT",
+                      "PUBLISHED",
+                      "HIDDEN",
+                      "ARCHIVED"
+                    ]
                   }
                 },
                 "required": [],
@@ -27216,7 +27225,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Additive P03 revision: optional status controls publication. Existing PATCH fields and clients remain compatible; publication validates anchor visibility and event schedules."
       },
       "delete": {
         "operationId": "catalog_api_v1_admin_offerings_delete",

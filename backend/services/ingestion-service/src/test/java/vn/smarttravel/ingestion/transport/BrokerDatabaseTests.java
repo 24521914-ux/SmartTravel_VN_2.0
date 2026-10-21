@@ -43,7 +43,19 @@ class BrokerDatabaseTests {
  @Test void replayRejectsMissingOriginalRoutingWithoutDroppingMessage()throws Exception{fixture.send("ingestion.deadletters","rejected",new Message("{}".getBytes(),new MessageProperties()));await(()->admin.getQueueInfo("ingestion.dlq").getMessageCount()==1);assertThatThrownBy(()->new DeadLetterReplay(replay).replayOne()).hasMessageContaining("metadata");await(()->admin.getQueueInfo("ingestion.dlq").getMessageCount()==1);}
 
  @Test void crashAfterPublishBeforeCommitRedeliversSameEventId()throws Exception{outbound();var row=db.queryForList("SELECT * FROM ingestion.outbox_events").getFirst();UUID id=(UUID)row.get("event_id");assertThatThrownBy(()->new org.springframework.transaction.support.TransactionTemplate(new org.springframework.jdbc.datasource.DataSourceTransactionManager(db.getDataSource())).executeWithoutResult(status->{try{dispatcher.publish(row.get("event_type").toString(),row.get("payload").toString(),id);db.update("UPDATE ingestion.outbox_events SET published_at=now() WHERE event_id=?",id);throw new IllegalStateException("Simulated crash after broker confirmation");}catch(Exception failure){throw new IllegalStateException(failure);}})).isInstanceOf(IllegalStateException.class);assertThat(db.queryForObject("SELECT count(*) FROM ingestion.outbox_events WHERE published_at IS NULL",Long.class)).isEqualTo(1);dispatcher.tick();var first=fixture.receive("ingestion.p01.capture",5000);var second=fixture.receive("ingestion.p01.capture",5000);assertThat(first.getMessageProperties().getMessageId()).isEqualTo(id.toString());assertThat(second.getMessageProperties().getMessageId()).isEqualTo(id.toString());}
- @Test void operatorCannotPublishServiceEvents()throws Exception{try(var connection=replay.createConnection()){var channel=connection.createChannel(false);assertThatThrownBy(()->{channel.basicPublish("ingestion.events","ingestion.changed.v1",null,"{}".getBytes());channel.queueDeclarePassive("ingestion.dlq");}).isInstanceOf(Exception.class);}}
+ @Test void operatorCannotPublishServiceEvents()throws Exception{
+  try(var connection=replay.createConnection()){
+   var channel=connection.createChannel(false);
+   var denied=new java.util.concurrent.CompletableFuture<com.rabbitmq.client.ShutdownSignalException>();
+   channel.addShutdownListener(denied::complete);
+   channel.basicPublish("ingestion.events","ingestion.changed.v1",null,"{}".getBytes());
+   // Publish is asynchronous; assert the broker's actual permission refusal.
+   var signal=denied.get(10,java.util.concurrent.TimeUnit.SECONDS);
+   assertThat(signal.isInitiatedByApplication()).isFalse();
+   assertThat(signal.getReason()).isInstanceOf(com.rabbitmq.client.AMQP.Channel.Close.class);
+   assertThat(((com.rabbitmq.client.AMQP.Channel.Close)signal.getReason()).getReplyCode()).isEqualTo(403);
+  }
+ }
 
  @Test void aggregateMismatchDeadLettersWithoutMutation()throws Exception{var e=event("identity.user.deletion-requested.v1");e.put("aggregate_id",UUID.randomUUID().toString());publish("ingestion.inbound","identity.user.deletion-requested.v1",e);await(()->admin.getQueueInfo("ingestion.dlq").getMessageCount()==1);assertThat(db.queryForObject("SELECT count(*) FROM ingestion.inbox_events",Long.class)).isZero();}
  @Test void registeredOperatorStatusReachesDomainConsumer()throws Exception{

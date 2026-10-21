@@ -1,3 +1,4 @@
+//Cấu hình bảo mật
 package vn.smarttravel.platform;
 
 import org.springframework.beans.factory.annotation.Value;

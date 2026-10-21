@@ -1,0 +1,6 @@
+//File tóm tắt
+Các file .js
+-Khai báo container
+-Chạy các db
+Các file py
+-Kiểm thử các luồng nghiệp vụ, chất lg AI,...

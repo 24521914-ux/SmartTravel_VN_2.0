@@ -7,9 +7,12 @@ permissions:
   contents: read
 jobs:
   connected:
-    runs-on: ubuntu-latest
+    # MongoDB 8 rejects kernels >=6.19 (SERVER-121912); Ubuntu22.04 uses6.8.
+    runs-on: ubuntu-22.04
     timeout-minutes: 45
     steps:
+      - name: Record database host kernel
+        run: uname -sr
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
@@ -33,7 +36,9 @@ jobs:
       - name: Validate frozen contracts and build final source
         run: |
           python backend/platform/validate_contracts.py
-          bash backend/mvnw -B -f backend/services/pom.xml clean verify
+          bash backend/mvnw -B -f backend/services/pom.xml -pl identity-service,catalog-service,community-service,trip-service,ingestion-service -am clean verify
+          # Keep the existing container for deletion ACKs; do not run AI suites.
+          bash backend/mvnw -B -f backend/services/pom.xml -pl intelligence-service -am -DskipTests package
           bash backend/mvnw -B -f backend/platform/api-gateway/pom.xml clean verify
           npm --prefix frontend run test:contracts
           npm --prefix frontend run build
@@ -43,15 +48,14 @@ jobs:
           python backend/infra/p02.py up
       - name: Real gateway domain transport and deletion flows
         run: |
-          python backend/infra/p02.py smoke
-          python backend/infra/p02_faults.py
-          python backend/infra/p02_privacy_test.py
-          python backend/infra/p02_transport_test.py
+          python backend/infra/p03_nonai_e2e.py --release-id p03-non-ai-${{ github.sha }}
+          python backend/infra/p03_nonai_resilience.py --release-id p03-non-ai-${{ github.sha }} --allow-p02-outages
           python backend/infra/p02_import_ack_test.py
           npm --prefix frontend run test:gateway
       - name: Actual browser UI smoke
         run: |
           npm --prefix frontend run dev > /tmp/smarttravel-p02-vite.log 2>&1 &
+          export P03_RELEASE_ID=p03-non-ai-${{ github.sha }}
           npm --prefix frontend run test:browser
       - name: Record exact images and runtime alerts
         run: |
@@ -60,13 +64,15 @@ jobs:
       - name: Archive sanitized integration evidence
         if: always()
         uses: actions/upload-artifact@v4
+        # Diagnostic archive is best-effort when GitHub storage quota is exhausted.
+        # Mandatory build/test steps above still fail normally; release gates require retained evidence.
+        continue-on-error: true
         with:
           name: p02-connected-${{ github.sha }}
           path: |
-            backend/infra/.local/p02/smoke-report.json
-            backend/infra/.local/p02/fault-report.json
-            backend/infra/.local/p02/privacy-report.json
-            backend/infra/.local/p02/transport-report.json
+            backend/infra/.local/p03/e2e-report.json
+            backend/infra/.local/p03/resilience-report.json
+            backend/infra/.local/p03/frontend-browser/
             backend/infra/.local/p02/import-ack-report.json
             backend/infra/.local/p02/manifest.json
             backend/infra/.local/p02/monitor.json

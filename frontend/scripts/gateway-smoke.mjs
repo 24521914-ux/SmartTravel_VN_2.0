@@ -40,9 +40,11 @@ try {
   for (const [service, path] of [['community','/me/collections'], ['trip','/me/trips'], ['identity','/me/notifications']]) {
     assert.ok(Array.isArray((await travel.read(service, path)).items));
   }
-  assert.ok(Array.isArray((await travel.recommend()).items));
+  if (process.env.P03_AI_ENABLED === 'true') {
+    assert.ok(Array.isArray((await travel.recommend()).items));
+  }
   await identity.refresh(); await identity.logout(); assert.equal(store.get(), null);
-  console.log('PASS real Gateway frontend clients: login, profile, preferences, catalog, reviews, collections, trips, notifications, recommendations, refresh, logout');
+  console.log('PASS real Gateway frontend clients: login, profile, preferences, catalog, reviews, collections, trips, notifications, refresh, logout; AI ' + (process.env.P03_AI_ENABLED === 'true' ? 'included' : 'deferred'));
 } catch (error) {
   // Never print request headers, credentials, or token responses.
   console.error(`FAIL Gateway smoke: ${error.name}: ${error.message}`);

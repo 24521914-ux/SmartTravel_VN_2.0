@@ -1,3 +1,4 @@
+#Tạo API giả lập phục vụ kiểm thử
 """Schema-driven SYNTHETIC loopback stub for any one service contract.
 Never issue real tokens or use this server in production.
 python backend/platform/contract_stub.py --service catalog --port 18082

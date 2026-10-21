@@ -1,6 +1,9 @@
 # Checklist tiến độ các phase
 
-Cập nhật lần cuối: **20/10/2026** · Revision đối chiếu: `main` `9f4beca` · Người cập nhật: coding agent theo yêu cầu người dùng (không phải chữ ký N1/N2) · Evidence lượt này: [2026-10-20-source-scan.md](evidence/2026-10-20-source-scan.md)
+
+Cập nhật giao code **21/10/2026**: toàn bộ checkpoint local gốc được giữ trong [lịch sử](evidence/2026-10-20-local-checklist-history.md). P03 **PARTIAL**, chờ CI revision cuối; không thay chữ ký owner/reviewer hoặc mở P04.
+
+Cập nhật lần cuối: **21/10/2026** · Revision: `0bcdca4` · Người cập nhật: coding agent theo yêu cầu người dùng · Evidence giao code/CI: [2026-10-21-github-delivery-ci.md](evidence/2026-10-21-github-delivery-ci.md).
 
 ## Cách cập nhật
 
@@ -271,5 +274,7 @@ Chi tiết và cách phát hiện: [2026-10-20-source-scan.md](evidence/2026-10-
 | F-09 | Trung bình | Thiếu run ID CI cho PR #14–#17 | Người merge | OPEN |
 | F-10 | Thấp | PR #3/#4 chưa có trong progress | Người làm PR | PARTIAL: đã ghi mục, chờ owner xác nhận evidence |
 | F-11 | Thông tin | Scan 20/10 dùng Java 25, thiếu Docker/Python | — | OPEN đến khi chạy lại đủ |
+| F-12 | Trung bình | CI MongoDB8 bị chặn bởi kernel runner>=6.19 (SERVER-121912); đã pin job DB Ubuntu22.04, chờ CI revision cuối | Điều phối/CI | CLOSED 21/10/2026 - CI source `0bcdca4`, PR #20; reviewer: coordinating agent · `3b699bd`, [evidence](evidence/2026-10-21-github-delivery-ci.md) |
+| F-13 | Trung bình | Health Catalog chưa chứng minh đường đọc Community→Catalog phục hồi sau outage; final CI107fed9 fail503, đã bổ sung GET probe hữu hạn, chờ CI mới | Điều phối/CI | PARTIAL · `d8cf51c`, [evidence](evidence/2026-10-21-github-delivery-ci.md) |
 
 Task không áp dụng phải ghi `N/A` kèm lý do và quyết định scope, không tự tích hoàn thành.

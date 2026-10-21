@@ -1,6 +1,9 @@
 # Checklist những gì đã làm được
 
-Cập nhật lần cuối: **20/10/2026** · Revision `main` `9f4beca` · Trạng thái từng task và gate xem [PHASE_TASK_CHECKLIST.md](PHASE_TASK_CHECKLIST.md); quy tắc ghi xem [AGENTS.md mục 10](../AGENTS.md#10-quy-tắc-ghi-progress).
+
+Cập nhật giao code **21/10/2026**: toàn bộ checkpoint local gốc được giữ trong [lịch sử](evidence/2026-10-20-local-checklist-history.md). P03 **PARTIAL**, chờ CI revision cuối; không thay chữ ký owner/reviewer hoặc mở P04.
+
+Cập nhật lần cuối: **21/10/2026** · Revision: `0bcdca4` · Người cập nhật: coding agent theo yêu cầu người dùng · Evidence giao code/CI: [2026-10-21-github-delivery-ci.md](evidence/2026-10-21-github-delivery-ci.md).
 
 File này tóm tắt **artifact và chức năng đã làm được** theo mốc thời gian. `[x]` nghĩa là artifact có thật và có evidence ghi kèm; không có nghĩa phase đã nghiệm thu. Mục mới nhất ở trên. Mục cũ giữ nguyên trạng thái tại ngày ghi.
 

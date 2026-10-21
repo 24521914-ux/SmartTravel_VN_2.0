@@ -19,6 +19,28 @@ def run(args, env, text=None):
         raise RuntimeError(output[-12000:])
     return result.stdout.decode('utf-8', errors='replace').strip()
 
+def wait_for_database(container, env, timeout=90):
+    """The final server must authenticate over TCP and query the actual app DB."""
+    probe_env = dict(env, PGPASSWORD=env['POSTGRES_PASSWORD'], PGCONNECT_TIMEOUT='2')
+    command = ['docker', 'exec', '-e', 'PGPASSWORD', '-e', 'PGCONNECT_TIMEOUT', container,
+               'psql', '-h', '127.0.0.1', '-p', '5432', '-U', 'postgres',
+               '-d', 'catalog_db', '-v', 'ON_ERROR_STOP=1', '-Atc', 'SELECT 1']
+    deadline = time.monotonic() + timeout
+    while (remaining := deadline - time.monotonic()) > 0:
+        try:
+            result = subprocess.run(command, env=probe_env, capture_output=True,
+                                    timeout=min(5, remaining))
+            if result.returncode == 0 and result.stdout.strip() == b'1':
+                return
+        except subprocess.TimeoutExpired:
+            pass
+        remaining = deadline - time.monotonic()
+        if remaining > 0:
+            time.sleep(min(0.5, remaining))
+    # Do not expose authentication values or raw client errors.
+    raise RuntimeError('Catalog PostGIS did not accept an authenticated TCP query to catalog_db before the deadline')
+
+
 def main():
     if hasattr(sys.stdout,'reconfigure'):sys.stdout.reconfigure(encoding='utf-8',errors='replace')
     parser=argparse.ArgumentParser()
@@ -35,12 +57,7 @@ def main():
     try:
         run(['docker','run','--rm','-d','--name',name,'-e','POSTGRES_PASSWORD','-e','POSTGRES_DB=catalog_db','-p','127.0.0.1::5432','postgis/postgis:16-3.5'], env)
         started = True
-        for _ in range(60):
-            if subprocess.run(['docker','exec',name,'pg_isready','-U','postgres'], capture_output=True).returncode == 0:
-                break
-            time.sleep(1)
-        else:
-            raise RuntimeError('PostGIS unavailable')
+        wait_for_database(name, env)
         run(['docker','exec','-i',name,'psql','-U','postgres','-d','catalog_db','-v','ON_ERROR_STOP=1'],env,
             f"CREATE ROLE catalog_migrator LOGIN PASSWORD '{migrator}';\nCREATE ROLE catalog_runtime LOGIN PASSWORD '{runtime}';\nALTER DATABASE catalog_db OWNER TO catalog_migrator;\nGRANT CREATE ON SCHEMA public TO catalog_migrator;\n")
         port = run(['docker','port',name,'5432'],env).split(':')[-1]

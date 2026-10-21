@@ -1,3 +1,4 @@
+//Quy định FE nào được phép gọi API nào
 package vn.smarttravel.platform.gateway.config;
 
 import org.springframework.context.annotation.Bean;

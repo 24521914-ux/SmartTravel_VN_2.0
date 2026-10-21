@@ -56,7 +56,7 @@
   "fixtures/shared.json": "abe201b132a335818aa60c5878bfbc120e789f11fb55f6e104de174a511e08f7",
   "fixtures/text.txt": "827163499c6359af89a3d3caa69a76129bfef059d3fa17d2381af565d7776d9f",
   "fixtures/trip.http.json": "360e5db549a2d4ea7ea6d91cc13a8ba06179613f47fbe8225b7cb8572724c532",
-  "openapi/catalog.yaml": "2ac2958fdcba3033ee6a69f8f96f176b91dad08fa3ea0824f2838cde41be6ed7",
+  "openapi/catalog.yaml": "62e15ef59283a383216755a026210cb38b2c09b7c8f249a111d6104720cabdb5",
   "openapi/community.yaml": "eb67ad41b22149459d7c4327468a863840566ab388ead2026da6f0e3992b4b51",
   "openapi/identity.yaml": "2a7afcdd73b5bed5e01ade14742d9fd6c14a23d82d2ede839f8cf4bf855a37c1",
   "openapi/ingestion.yaml": "cde899a6352a9a70816f441e44c88b7896159a0d27dc93b7afaa7a8df10df445",

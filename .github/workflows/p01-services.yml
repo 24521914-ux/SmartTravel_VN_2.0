@@ -12,13 +12,17 @@ jobs:
   service:
     env:
       P01_CATALOG_DB_PORT: '0'
-    runs-on: ubuntu-latest
+    # MongoDB 8 rejects kernels >=6.19 (SERVER-121912); Ubuntu22.04 uses6.8.
+    runs-on: ubuntu-22.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        service: [identity, catalog, community, trip, ingestion, intelligence]
+        # AI suites stay deferred until the user resumes that scope.
+        service: [identity, catalog, community, trip, ingestion]
     steps:
+      - name: Record database host kernel
+        run: uname -sr
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
@@ -53,6 +57,9 @@ jobs:
         run: python backend/services/${{ matrix.service }}-service/check-local.py --image smarttravel-${{ matrix.service }}:${{ github.sha }}
       - name: Archive test evidence and revision image (no credentials)
         uses: actions/upload-artifact@v4
+        # Diagnostic archive is best-effort when GitHub storage quota is exhausted.
+        # Mandatory build/test steps above still fail normally; release gates require retained evidence.
+        continue-on-error: true
         with:
           name: ${{ matrix.service }}-${{ github.sha }}
           path: |
@@ -75,6 +82,7 @@ jobs:
         run: |
           python backend/platform/test_service_layout.py
           python backend/infra/test_p01_ports.py
+          python backend/platform/test_catalog_readiness.py
           python backend/platform/test_identity_runner.py
           python backend/platform/test_identity_image.py
           python backend/platform/validate_contracts.py
@@ -109,6 +117,8 @@ jobs:
       - name: Build Gateway revision image
         run: docker build -t smarttravel-api-gateway:${{ github.sha }} backend/platform/api-gateway
       - uses: actions/upload-artifact@v4
+        # Keep completed test gates usable during an external artifact-storage outage.
+        continue-on-error: true
         with:
           name: platform-${{ github.sha }}
           path: backend/platform/api-gateway/target/surefire-reports/

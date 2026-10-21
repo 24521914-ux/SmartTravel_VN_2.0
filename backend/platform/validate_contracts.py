@@ -1,3 +1,4 @@
+#Kiểm tra các đặc tả API và sự kiện
 """Validate all contract candidate schemas/examples and verify revision hashes.
 Use --refresh-checksums only after an intentional reviewed artifact change.
 """

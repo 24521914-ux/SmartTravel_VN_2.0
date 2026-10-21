@@ -1,6 +1,6 @@
 # P03 Tích hợp sáu service và kiểm nhận chất lượng
 
-Trạng thái: **Chưa triển khai**. Dependency: P02 kết nối hoàn tất sau gate 6/6 READY_FOR_INTEGRATION của P01. Các service thật đã chạy cùng nhau; không còn stub giữa sáu service. Mục tiêu: chứng minh nghiệp vụ, resilience, security, hiệu năng và phục hồi trước release.
+Trạng thái: **PARTIAL** · 21/10/2026 · Evidence và giới hạn theo [progress](../../progress/PHASE_TASK_CHECKLIST.md). Chưa đủ toàn bộ tiêu chí hoặc chữ ký owner/reviewer; không cấp SYSTEM_VERIFIED/mở P04. [Lịch sử local](../../progress/evidence/2026-10-21-plan-p03-history.md).
 
 ## Công việc
 

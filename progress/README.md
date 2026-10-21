@@ -19,3 +19,10 @@ Nơi ghi **trạng thái thực tế** của dự án. Kế hoạch và tiêu ch
 | 20/10/2026 | [2026-10-20-source-scan.md](evidence/2026-10-20-source-scan.md) | Quét source đối chiếu tiến độ, findings F-01…F-11 |
 
 Evidence runtime do runner sinh ra (`smoke-report.json`, `manifest.json`, `.local/`, …) bị Git ignore. Muốn dùng làm bằng chứng thì phải chép **kết quả đã lọc secret** (lệnh, số test, PASS/FAIL, revision) vào file evidence ở đây.
+
+- [Lịch sử checklist local — 20/10/2026](evidence/2026-10-20-local-checklist-history.md): giữ nguyên nguồn, chưa xác nhận tuyên bố nghiệm thu.
+
+- [Giao code P03 qua GitHub — 20/10/2026](evidence/2026-10-20-phase03-github-delivery.md): tổng hợp lỗi mã hóa, thay thế bởi evidence21/10.
+
+- [Giao code và xử lý CI — 21/10/2026](evidence/2026-10-21-github-delivery-ci.md): revision, số test/skip, lịch sử lỗi và giới hạn artifact; thay thế phần tổng hợp lỗi mã hóa ngày20/10.
+- [Lịch sử nội dung P03 local — 21/10/2026](evidence/2026-10-21-plan-p03-history.md): bảo toàn nguyên văn khi trả plan về yêu cầu và trạng thái PARTIAL.

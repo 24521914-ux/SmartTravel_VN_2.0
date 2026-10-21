@@ -1,3 +1,4 @@
+//Xử lý và chuẩn hóa lỗi
 package vn.smarttravel.platform.gateway.web;
 
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;

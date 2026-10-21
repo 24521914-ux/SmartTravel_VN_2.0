@@ -1,6 +1,6 @@
 # P04 Migration cutover và phát hành
 
-Trạng thái: **Chưa triển khai**. Dependency: P03; nếu DB monolith thật tồn tại, hoàn tất M01–M04 trong [migration-cutover](../05-migration-cutover.md).
+Trạng thái: **NOT_STARTED**, bị chặn bởi P03 **IN_PROGRESS / NO_GO**; chưa có SYSTEM_VERIFIED. Dependency: P03; nếu DB monolith thật tồn tại, hoàn tất M01–M04 trong [migration-cutover](../05-migration-cutover.md).
 
 ## Công việc
 
@@ -25,3 +25,9 @@ Migrate qua Flyway từng service, không chạy trực tiếp file SQL đặc t
 - [ ] Không còn caller/job dùng schema monolith đã đóng; backup/archive/audit còn truy được.
 
 Đầu ra: release/cutover log, checkpoint/reconciliation evidence, deployment versions và runbooks. Rollback tuân M06; không DROP dữ liệu hoặc xóa bản backup để giải phóng dung lượng trong ngày đầu.
+
+## Release checkpoint — 11 October 2026
+
+P00 chọn **nhánh A: triển khai mới**. Nhánh B/CDC/backfill monolith là **N/A** do không có nguồn monolith trong release scope; đây là quyết định phạm vi, không phải evidence migration PASS. P04-01 giữ chưa hoàn thành vì rehearsal/deployment decision thuộc P04 chưa diễn ra. Không cutover, production deploy, stability-window acceptance hoặc bàn giao RELEASED khi P03 chưa qua gate.
+
+Local storage restore nếu PASS chỉ chứng minh checkpoint trong môi trường cô lập; không thay thế application recovery/projection watermark, production RPO/RTO hoặc rollback có write mới. Release cần deployment target/domain, provider credentials và quyền dữ liệu hợp lệ, người vận hành/nhận cảnh báo, version pinning và reviewed release linkage. Xem [P03 runbook](../../backend/infra/P03_README.md) và [execution record](P03-P04-execution.md).

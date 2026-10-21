@@ -1,0 +1,40 @@
+name: P03 verification tooling
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'backend/infra/p03_*.py'
+      - 'backend/infra/test_p03_*.py'
+      - 'backend/platform/validate_contracts.py'
+      - 'backend/contracts/**'
+      - 'frontend/**'
+      - '.github/workflows/p03-tooling.yml'
+permissions:
+  contents: read
+jobs:
+  tooling:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: |
+          python -m pip install -r backend/platform/requirements-validation.txt PyYAML
+          npm --prefix frontend ci
+      - name: Validate tooling and frozen contracts
+        run: |
+          python backend/infra/p03_nonai_tests.py
+          python -m unittest discover -s backend/platform -p test_contract_checksums.py
+          python backend/platform/validate_contracts.py
+      - name: Validate frontend
+        run: |
+          npm --prefix frontend run test:contracts
+          npm --prefix frontend run build

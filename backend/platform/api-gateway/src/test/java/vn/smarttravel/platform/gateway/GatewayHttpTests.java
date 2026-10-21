@@ -18,6 +18,20 @@ class GatewayHttpTests {
     @Autowired WebTestClient client;
 
     @Test
+    void deferredAiIsRejectedBeforeAuthenticationOrUpstreamAccess() {
+        client.post().uri("/api/intelligence/api/v1/recommendations")
+                .header("X-Correlation-Id", "ai-deferred-test")
+                .bodyValue("{}")
+                .exchange().expectStatus().isEqualTo(503)
+                .expectBody().jsonPath("$.code").isEqualTo("FEATURE_DEFERRED")
+                .jsonPath("$.traceId").isEqualTo("ai-deferred-test");
+        client.get().uri("/api/intelligence/api/v1/admin/models")
+                .header("Authorization", "Bearer malformed")
+                .exchange().expectStatus().isEqualTo(503)
+                .expectBody().jsonPath("$.code").isEqualTo("FEATURE_DEFERRED");
+    }
+
+    @Test
     void healthIsPublic() {
         client.get().uri("/actuator/health").exchange().expectStatus().isOk();
     }

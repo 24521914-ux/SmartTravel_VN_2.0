@@ -33,15 +33,21 @@ def main():
     env['SPRING_APPLICATION_JSON']='{"debug":false,"logging":{"level":{"root":"WARN","org.springframework":"WARN"}}}'
     started=False
     try:
-        run(['docker','run','--rm','-d','--name',name,'-p','127.0.0.1::27017','mongo:8.0','--replSet','p01','--bind_ip_all'],env)
+        run(['docker','run','-d','--name',name,'-p','127.0.0.1::27017','mongo:8.0','--replSet','p01','--bind_ip_all'],env)
         started=True
         for _ in range(60):
             ready=subprocess.run(['docker','exec',name,'mongosh','--quiet','--eval','db.adminCommand({ping:1})'],capture_output=True)
             if ready.returncode==0:
                 break
+            state=run(['docker','inspect','--format','{{.State.Status}}',name],env)
+            if state in {'exited','dead'}:
+                diagnostics=run(['docker','logs','--tail','60',name],env)
+                details=run(['docker','inspect','--format','{{json .State}}',name],env)
+                raise RuntimeError('Mongo exited before readiness: '+details+' '+diagnostics)
             time.sleep(1)
         else:
-            raise RuntimeError('Mongo startup timeout')
+            diagnostics=run(['docker','logs','--tail','60',name],env)
+            raise RuntimeError('Mongo startup timeout: '+diagnostics)
         run(['docker','exec',name,'mongosh','--quiet','--eval',"rs.initiate({_id:'p01',members:[{_id:0,host:'localhost:27017'}]})"],env)
         for _ in range(60):
             ready=subprocess.run(['docker','exec',name,'mongosh','--quiet','--eval',"if(!db.hello().isWritablePrimary)quit(1)"],capture_output=True)
@@ -72,7 +78,9 @@ def main():
     finally:
         broker.close()
         if started:
-            run(['docker','stop',name],env)
+            # Remove only this runner's randomly named disposable container.
+            # Cleanup must not mask the startup/test failure.
+            subprocess.run(['docker','rm','-f',name],env=env,capture_output=True)
 
 if __name__=='__main__':
     main()

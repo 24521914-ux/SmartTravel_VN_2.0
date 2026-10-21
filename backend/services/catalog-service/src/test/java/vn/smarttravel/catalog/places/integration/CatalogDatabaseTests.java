@@ -97,6 +97,25 @@ class CatalogDatabaseTests {
         assertThatThrownBy(()->offerings.update(event,1,Map.of("status","PUBLISHED"))).isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
         offerings.update(event,1,Map.of("schedules",List.of(Map.of("starts_at","2026-10-11T01:00:00Z","ends_at","2026-10-11T02:00:00Z"))));offerings.update(event,2,Map.of("status","PUBLISHED"));assertThat(offerings.list(place,true)).hasSize(1);
     }
+    @Test void offeringPublicationPreservesDraftEditsAndRejectsHiddenAnchors(){
+        UUID place=create("Non-AI offering publication");
+        var offerings=context.getBean(OfferingRepository.class);
+        UUID offering=(UUID)offerings.create(Map.of("place_id",place,"type","ACTIVITY","name","Guided walk","price",10000),USER).get("offering_id");
+        assertThat(offerings.list(place,true)).isEmpty();
+        assertThatThrownBy(()->offerings.update(offering,1,Map.of("status","PUBLISHED")))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        assertThat(offerings.get(offering,false).get("version")).isEqualTo(1L);
+        places.update(place,1,Map.of("status","PUBLISHED"),USER);
+        offerings.update(offering,1,Map.of("price",12000)); // Existing clients omit status.
+        assertThat(offerings.list(place,true)).isEmpty();
+        offerings.update(offering,2,Map.of("status","PUBLISHED"));
+        assertThat(offerings.list(place,true)).extracting(row->row.get("offering_id")).containsExactly(offering);
+        places.update(place,2,Map.of("status","HIDDEN"),USER);
+        assertThat(offerings.list(place,true)).isEmpty();
+        assertThatThrownBy(()->offerings.update(offering,3,Map.of("status","PUBLISHED")))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        assertThat(offerings.get(offering,false).get("version")).isEqualTo(3L);
+    }
     @Test void idempotencyReplayReturnsOriginalAndPayloadConflictDoesNotMutate(){
         var idempotency=context.getBean(IdempotencyRepository.class);var body=input("Idempotent fixture");String key=UUID.randomUUID().toString();
         @SuppressWarnings("unchecked")var first=(Map<String,Object>)idempotency.execute(USER.toString(),"create",key,body,()->places.create(body,USER));
