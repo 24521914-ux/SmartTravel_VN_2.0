@@ -1,6 +1,44 @@
 @import './tokens.css';
 
 /* ==========================================================================
+   Liquid Glass (Kính Lỏng) Keyframe Animations
+   ========================================================================== */
+@keyframes liquidGlassSweep {
+  0% {
+    transform: translateX(-160%) skewX(-20deg);
+  }
+  40%, 100% {
+    transform: translateX(260%) skewX(-20deg);
+  }
+}
+
+@keyframes liquidFloatGlow {
+  0%, 100% {
+    box-shadow: 0 4px 16px rgba(234, 88, 12, 0.16),
+                inset 0 1.5px 2px rgba(255, 255, 255, 0.95),
+                inset 0 -1px 2px rgba(234, 88, 12, 0.08);
+  }
+  50% {
+    box-shadow: 0 6px 22px rgba(234, 88, 12, 0.28),
+                inset 0 2px 3px rgba(255, 255, 255, 1),
+                inset 0 -1.5px 3px rgba(234, 88, 12, 0.15);
+  }
+}
+
+@keyframes liquidPrimaryPulse {
+  0%, 100% {
+    box-shadow: 0 5px 18px rgba(234, 88, 12, 0.32),
+                inset 0 1.5px 2px rgba(255, 255, 255, 0.45),
+                inset 0 -2px 4px rgba(0, 0, 0, 0.18);
+  }
+  50% {
+    box-shadow: 0 8px 26px rgba(234, 88, 12, 0.48),
+                inset 0 2px 3px rgba(255, 255, 255, 0.6),
+                inset 0 -2px 4px rgba(0, 0, 0, 0.24);
+  }
+}
+
+/* ==========================================================================
    Base & Reset for TravelApp
    ========================================================================== */
 .travel-app {
@@ -63,14 +101,15 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
-  padding: var(--space-md) 4%;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--color-border);
+  padding: 14px 4%;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border-bottom: 1px solid rgba(234, 88, 12, 0.14);
   position: sticky;
   top: 0;
   z-index: 30;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
 }
 
 .travel-brand-group {
@@ -95,13 +134,19 @@
   font-weight: 800;
 }
 
+.brand-compass-icon {
+  color: var(--color-primary);
+  filter: drop-shadow(0 2px 6px rgba(234, 88, 12, 0.3));
+}
+
 .travel-tagline {
   font-size: 13px;
   color: var(--color-foreground-muted);
-  background: var(--color-surface-subtle);
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
+  background: rgba(253, 244, 235, 0.7);
+  backdrop-filter: blur(10px);
+  padding: 5px 12px;
+  border-radius: 9999px;
+  border: 1px solid rgba(234, 88, 12, 0.12);
 }
 
 .travel-user-actions {
@@ -112,41 +157,71 @@
 }
 
 /* ==========================================================================
-   Workspace / Zone Switcher
+   Workspace / Zone Switcher (Liquid Glass Capsule)
    ========================================================================== */
 .zone-switcher {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  background: var(--color-surface-subtle);
-  padding: 4px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
-  gap: 2px;
+  background: rgba(254, 248, 240, 0.72);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  padding: 5px;
+  border-radius: 9999px; /* Bo tròn hoàn toàn */
+  border: 1px solid rgba(234, 88, 12, 0.18);
+  gap: 4px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04), 0 3px 12px rgba(234, 88, 12, 0.07);
+  position: relative;
+  overflow: hidden;
 }
 
 .zone-btn {
-  padding: 6px 12px;
-  border: none;
+  padding: 8px 18px;
+  border: 1px solid transparent;
   background: transparent;
   color: var(--color-foreground-muted);
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 600;
-  border-radius: var(--radius-full);
+  border-radius: 9999px; /* Bo tròn hoàn toàn */
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  min-height: 38px;
 }
 
-.zone-btn:hover {
+.zone-btn:hover:not(.active) {
   color: var(--color-foreground);
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(8px);
+  transform: translateY(-1px);
 }
 
 .zone-btn.active {
-  background: white;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 247, 237, 0.92) 100%);
   color: var(--color-primary);
-  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 16px rgba(234, 88, 12, 0.18),
+              inset 0 1.5px 2px rgba(255, 255, 255, 0.95),
+              inset 0 -1px 2px rgba(234, 88, 12, 0.08);
+  transform: scale(1.02);
+  animation: liquidFloatGlow 3.5s infinite ease-in-out;
+}
+
+.zone-btn.active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  transform: translateX(-160%) skewX(-20deg);
+  animation: liquidGlassSweep 4.5s infinite ease-in-out;
+  pointer-events: none;
 }
 
 /* ==========================================================================
@@ -183,30 +258,50 @@
 .travel-layout nav button {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: 12px;
+  padding: 11px 18px;
   background: transparent;
   color: var(--color-foreground);
   border: 1px solid transparent;
-  border-radius: var(--radius-md);
+  border-radius: 9999px; /* Bo tròn hoàn toàn */
   text-align: left;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   width: 100%;
+  position: relative;
+  overflow: hidden;
 }
 
 .travel-layout nav button:hover {
-  background: var(--color-surface-subtle);
+  background: rgba(255, 237, 213, 0.45);
+  backdrop-filter: blur(8px);
   color: var(--color-primary);
+  transform: translateX(3px);
 }
 
 .travel-layout nav button[aria-current='page'] {
-  background: var(--color-primary-light);
+  background: linear-gradient(135deg, rgba(255, 237, 213, 0.95) 0%, rgba(254, 243, 199, 0.8) 100%);
+  backdrop-filter: blur(14px);
   color: var(--color-primary);
   font-weight: 700;
-  border-color: rgba(234, 88, 12, 0.2);
+  border: 1px solid rgba(234, 88, 12, 0.28);
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.14),
+              inset 0 1.5px 2px rgba(255, 255, 255, 0.95);
+}
+
+.travel-layout nav button[aria-current='page']::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  transform: translateX(-160%) skewX(-20deg);
+  animation: liquidGlassSweep 5s infinite ease-in-out;
+  pointer-events: none;
 }
 
 .travel-layout main {
@@ -215,77 +310,149 @@
   max-width: 100%;
 }
 
+.main-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
 /* ==========================================================================
-   Buttons & Interactive Elements
+   Buttons & Interactive Elements (Liquid Glass Specular)
    ========================================================================== */
 .travel-app button {
-  padding: 10px 18px;
-  border-radius: var(--radius-sm);
+  padding: 10px 22px;
+  border-radius: 9999px; /* Bo tròn hoàn toàn */
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   border: 1px solid transparent;
-  min-height: 40px;
+  min-height: 42px;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
 }
 
 .travel-app button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+  animation: none !important;
 }
 
+/* Primary Liquid Glass Button (Đăng nhập, Tạo mới, Gửi...) */
 .btn-primary,
-.travel-app button:not(.btn-secondary):not(.btn-outline):not(.btn-subtle):not(.travel-subtle):not(.zone-btn):not(.nav-item):not(.day-chip):not(.sub-tab) {
-  background: var(--color-primary);
+.travel-app button:not(.btn-secondary):not(.btn-outline):not(.btn-subtle):not(.travel-subtle):not(.zone-btn):not(.nav-item):not(.day-chip):not(.sub-tab):not(.btn-destructive) {
+  background: linear-gradient(135deg, #FF6B1A 0%, #EA580C 50%, #C2410C 100%);
   color: white;
-  border-color: var(--color-primary);
-  box-shadow: 0 1px 2px rgba(234, 88, 12, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 9999px;
+  box-shadow: 0 5px 18px rgba(234, 88, 12, 0.32),
+              inset 0 1.5px 2px rgba(255, 255, 255, 0.45),
+              inset 0 -2px 4px rgba(0, 0, 0, 0.18);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  animation: liquidPrimaryPulse 4s infinite ease-in-out;
 }
 
-.btn-primary:hover,
-.travel-app button:not(.btn-secondary):not(.btn-outline):not(.btn-subtle):not(.travel-subtle):not(.zone-btn):not(.nav-item):not(.day-chip):not(.sub-tab):hover:not(:disabled) {
-  background: var(--color-primary-hover);
-  border-color: var(--color-primary-hover);
-  transform: translateY(-1px);
+.btn-primary:hover:not(:disabled),
+.travel-app button:not(.btn-secondary):not(.btn-outline):not(.btn-subtle):not(.travel-subtle):not(.zone-btn):not(.nav-item):not(.day-chip):not(.sub-tab):not(.btn-destructive):hover:not(:disabled) {
+  background: linear-gradient(135deg, #FB923C 0%, #EA580C 50%, #B43A08 100%);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(234, 88, 12, 0.45),
+              inset 0 2px 3px rgba(255, 255, 255, 0.55),
+              inset 0 -2px 4px rgba(0, 0, 0, 0.22);
 }
 
+.btn-primary::after,
+.travel-app button:not(.btn-secondary):not(.btn-outline):not(.btn-subtle):not(.travel-subtle):not(.zone-btn):not(.nav-item):not(.day-chip):not(.sub-tab):not(.btn-destructive)::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transform: translateX(-160%) skewX(-20deg);
+  animation: liquidGlassSweep 4s infinite ease-in-out;
+  pointer-events: none;
+}
+
+/* Secondary Button (Xanh ngọc lỏng) */
 .btn-secondary {
-  background: var(--color-secondary);
+  background: linear-gradient(135deg, #06B6D4 0%, #0891B2 50%, #0E7490 100%);
   color: white;
-  border-color: var(--color-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 9999px;
+  box-shadow: 0 4px 16px rgba(8, 145, 178, 0.28),
+              inset 0 1.5px 2px rgba(255, 255, 255, 0.4);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: var(--color-secondary-hover);
-  border-color: var(--color-secondary-hover);
+  background: linear-gradient(135deg, #22D3EE 0%, #0891B2 50%, #155E75 100%);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 7px 22px rgba(8, 145, 178, 0.4),
+              inset 0 2px 3px rgba(255, 255, 255, 0.5);
 }
 
+/* Outline Glass Button */
 .btn-outline {
-  background: white;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: var(--color-primary);
-  border: 1px solid var(--color-primary);
+  border: 1.5px solid rgba(234, 88, 12, 0.32);
+  border-radius: 9999px;
+  box-shadow: 0 3px 10px rgba(234, 88, 12, 0.08),
+              inset 0 1px 1.5px rgba(255, 255, 255, 0.95);
 }
 
 .btn-outline:hover:not(:disabled) {
   background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 5px 16px rgba(234, 88, 12, 0.18);
 }
 
+/* Subtle Glass Button */
 .travel-app .travel-subtle,
 .btn-subtle {
-  background: white;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: var(--color-foreground-muted);
   border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  padding: 8px 18px;
 }
 
 .travel-app .travel-subtle:hover:not(:disabled),
 .btn-subtle:hover:not(:disabled) {
-  background: var(--color-surface-subtle);
+  background: white;
   color: var(--color-foreground);
   border-color: var(--color-border-hover);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+/* Destructive Button */
+.btn-destructive {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 9999px;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.3);
+}
+
+.btn-destructive:hover:not(:disabled) {
+  background: linear-gradient(135deg, #F87171 0%, #B91C1C 100%);
+  transform: translateY(-1px);
 }
 
 /* ==========================================================================
@@ -293,17 +460,20 @@
    ========================================================================== */
 .travel-panel {
   padding: var(--space-lg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
+  border: 1px solid rgba(234, 88, 12, 0.12);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   margin: var(--space-md) 0;
   box-shadow: var(--shadow-sm);
-  transition: box-shadow var(--transition-fast);
+  transition: all var(--transition-fast);
   min-width: 0;
 }
 
 .travel-panel:hover {
   box-shadow: var(--shadow-md);
+  border-color: rgba(234, 88, 12, 0.2);
 }
 
 .travel-grid {
@@ -321,7 +491,7 @@
 }
 
 /* ==========================================================================
-   Forms, Inputs, Controls
+   Forms, Inputs, Controls (Bo góc mềm mại & Kính lỏng nhẹ)
    ========================================================================== */
 .travel-app form {
   display: flex;
@@ -345,12 +515,13 @@
 .travel-app input:not([type=checkbox]),
 .travel-app select,
 .travel-app textarea {
-  padding: 10px 14px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  padding: 11px 16px;
+  border: 1px solid rgba(234, 88, 12, 0.18);
+  border-radius: var(--radius-md); /* Bo góc mềm mại */
   font: inherit;
   font-size: 14px;
-  background: white;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
   color: var(--color-foreground);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
   width: 100%;
@@ -362,6 +533,7 @@
   border-color: var(--color-primary);
   outline: none;
   box-shadow: var(--focus-ring);
+  background: white;
 }
 
 .travel-app input[type=checkbox] {
@@ -369,6 +541,7 @@
   height: 18px;
   accent-color: var(--color-primary);
   cursor: pointer;
+  border-radius: 4px;
 }
 
 .travel-app textarea {
@@ -383,13 +556,15 @@
   cursor: pointer;
 }
 
-/* Search bar special */
+/* Search bar special (Kính lỏng) */
 .travel-search {
-  background: white;
-  padding: var(--space-md);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: 9999px; /* Bo tròn hoàn toàn */
+  border: 1px solid rgba(234, 88, 12, 0.2);
+  box-shadow: 0 6px 20px rgba(234, 88, 12, 0.08);
   margin-bottom: var(--space-lg);
 }
 
@@ -405,16 +580,13 @@
   margin-bottom: var(--space-sm);
 }
 
-.travel-status.alert-success {
-  color: var(--color-success);
-}
-
 .travel-error {
   padding: 14px 18px;
-  background: var(--color-destructive-bg);
+  background: rgba(254, 226, 226, 0.9);
+  backdrop-filter: blur(10px);
   border: 1px solid rgba(220, 38, 38, 0.3);
   color: var(--color-destructive);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   margin: var(--space-md) 0;
   font-size: 14px;
   font-weight: 500;
@@ -431,22 +603,24 @@
   gap: 6px;
   font-size: 12px;
   font-weight: 600;
-  padding: 3px 10px;
-  border-radius: var(--radius-full);
+  padding: 4px 12px;
+  border-radius: 9999px; /* Bo tròn hoàn toàn */
   background: var(--color-surface-subtle);
   color: var(--color-foreground-muted);
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .status-pill.status-active {
   background: var(--color-success-bg);
   color: var(--color-success);
+  border-color: rgba(21, 128, 61, 0.2);
 }
 
 /* Data List (DL) */
 .travel-app dl {
   margin: var(--space-md) 0;
   border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 
@@ -510,14 +684,14 @@
   background: white;
   padding: 12px 18px;
   border: 2px solid var(--color-primary);
-  border-radius: var(--radius-sm);
+  border-radius: 9999px;
   z-index: 100;
   color: var(--color-primary);
   font-weight: 700;
 }
 
 /* ==========================================================================
-   Trip Studio & Timeline Styles
+   Trip Studio & Timeline Styles (Liquid Glass Chips & Nodes)
    ========================================================================== */
 .trip-studio {
   display: flex;
@@ -533,10 +707,11 @@
 }
 
 .day-chip {
-  padding: 8px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  background: white;
+  padding: 8px 18px;
+  border: 1px solid rgba(234, 88, 12, 0.2);
+  border-radius: 9999px; /* Bo tròn hoàn toàn */
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
   font-size: 13px;
   font-weight: 600;
   color: var(--color-foreground);
@@ -544,19 +719,37 @@
   align-items: center;
   gap: 6px;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
 }
 
 .day-chip:hover {
   border-color: var(--color-primary);
   color: var(--color-primary);
+  transform: translateY(-1px);
 }
 
 .day-chip.is-active {
-  background: var(--color-primary);
+  background: linear-gradient(135deg, #FF6B1A 0%, #EA580C 100%);
   color: white;
-  border-color: var(--color-primary);
-  box-shadow: 0 2px 4px rgba(234, 88, 12, 0.25);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 16px rgba(234, 88, 12, 0.35),
+              inset 0 1.5px 1px rgba(255, 255, 255, 0.45);
+  transform: scale(1.03);
+}
+
+.day-chip.is-active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  transform: translateX(-160%) skewX(-20deg);
+  animation: liquidGlassSweep 4s infinite ease-in-out;
+  pointer-events: none;
 }
 
 .day-timeline {
@@ -570,10 +763,12 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 14px;
-  background: var(--color-secondary-light);
+  padding: 6px 16px;
+  background: rgba(207, 250, 254, 0.8);
+  backdrop-filter: blur(8px);
   color: var(--color-secondary-hover);
-  border-radius: var(--radius-full);
+  border-radius: 9999px; /* Bo tròn hoàn toàn */
+  border: 1px solid rgba(8, 145, 178, 0.2);
   font-size: 12px;
   font-weight: 600;
   margin: 6px 0 6px 20px;
@@ -602,9 +797,9 @@
 }
 
 .step-badge {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%; /* Bo tròn hoàn toàn */
   background: var(--color-primary-light);
   color: var(--color-primary);
   display: flex;
@@ -612,6 +807,7 @@
   justify-content: center;
   font-weight: 700;
   font-size: 13px;
+  border: 1px solid rgba(234, 88, 12, 0.2);
 }
 
 .item-meta {
@@ -622,8 +818,8 @@
 
 .meta-pill {
   font-size: 12px;
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
+  padding: 3px 10px;
+  border-radius: 9999px; /* Bo tròn hoàn toàn */
   background: var(--color-surface-subtle);
   color: var(--color-foreground-muted);
   display: inline-flex;
@@ -637,11 +833,6 @@
   font-weight: 600;
 }
 
-.meta-pill.pill-unlocked {
-  background: var(--color-surface-subtle);
-  color: var(--color-foreground-muted);
-}
-
 .item-note {
   font-style: italic;
   font-size: 13px;
@@ -653,39 +844,71 @@
   text-align: center;
   padding: var(--space-xl);
   color: var(--color-foreground-muted);
-  background: var(--color-surface-subtle);
-  border-radius: var(--radius-md);
+  background: rgba(248, 245, 238, 0.7);
+  backdrop-filter: blur(8px);
+  border-radius: var(--radius-lg);
   border: 1px dashed var(--color-border);
   margin: var(--space-md) 0;
 }
 
 /* ==========================================================================
-   Sub-tabs for Business & Moderation
+   Sub-tabs for Business & Moderation (Liquid Glass Pills)
    ========================================================================== */
 .sub-tab-bar {
-  display: flex;
-  gap: 4px;
-  border-bottom: 2px solid var(--color-border);
+  display: inline-flex;
+  gap: 6px;
+  background: rgba(254, 248, 240, 0.7);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 5px;
+  border-radius: 9999px; /* Bo tròn hoàn toàn */
+  border: 1px solid rgba(234, 88, 12, 0.16);
   margin-bottom: var(--space-md);
   overflow-x: auto;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
 .sub-tab {
-  padding: 8px 16px;
+  padding: 8px 18px;
   background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
+  border: 1px solid transparent;
+  border-radius: 9999px; /* Bo tròn hoàn toàn */
   color: var(--color-foreground-muted);
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13.5px;
   cursor: pointer;
   white-space: nowrap;
+  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+}
+
+.sub-tab:hover {
+  color: var(--color-foreground);
+  background: rgba(255, 255, 255, 0.55);
 }
 
 .sub-tab.active {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 247, 237, 0.92) 100%);
   color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
+  border-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.16),
+              inset 0 1.5px 1.5px rgba(255, 255, 255, 1);
+  transform: scale(1.02);
+}
+
+.sub-tab.active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  transform: translateX(-160%) skewX(-20deg);
+  animation: liquidGlassSweep 4s infinite ease-in-out;
+  pointer-events: none;
 }
 
 /* ==========================================================================
@@ -750,6 +973,13 @@
 
   .zone-btn {
     font-size: 12px;
-    padding: 6px 10px;
+    padding: 6px 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
   }
 }
