@@ -131,11 +131,17 @@ export default function TravelApp() {
     try {
       await action();
     } catch (e) {
-      setError(
-        e instanceof ApiError
-          ? `${e.message} (${e.body.code}). Mã hỗ trợ: ${e.body.traceId}${e.body.fieldErrors.map(f => `; ${f.field ?? ''}: ${f.message}`).join('')}`
-          : (e as Error).message
-      );
+      if (e instanceof ApiError && e.body.code === 'CLIENT_ERROR' && e.body.traceId === 'unavailable') {
+        setError(
+          `Không thể kết nối đến máy chủ Gateway (127.0.0.1:58080). Hãy đảm bảo Backend hoặc Contract Stub đã được khởi động. (${e.message} [${e.body.code}], status ${e.status})`
+        );
+      } else {
+        setError(
+          e instanceof ApiError
+            ? `${e.message} (${e.body.code}). Mã hỗ trợ: ${e.body.traceId}${e.body.fieldErrors.map(f => `; ${f.field ?? ''}: ${f.message}`).join('')}`
+            : (e as Error).message
+        );
+      }
       if (e instanceof ApiError && e.status === 401) {
         setMessage('Phiên đã hết hạn. Gia hạn phiên hoặc đăng nhập lại.');
       }
