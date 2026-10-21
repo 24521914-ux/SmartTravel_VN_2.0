@@ -1,3 +1,755 @@
-.travel-app{font-family:system-ui,sans-serif;color:#19332b;background:#f6f8f4;min-height:100vh}.travel-app *{box-sizing:border-box}.travel-app header{display:flex;align-items:center;gap:24px;padding:22px 5%;background:white;border-bottom:1px solid #dce5dc}.travel-app header>a{font-size:23px;text-decoration:none;color:#19332b;font-weight:700}.travel-app header>button{margin-left:auto}.travel-layout{display:grid;grid-template-columns:190px 1fr;max-width:1400px;margin:auto}.travel-layout nav{display:flex;flex-direction:column;gap:8px;padding:28px 12px}.travel-layout main{padding:28px;min-width:0}.travel-app button{padding:10px 16px;border:1px solid #275f49;border-radius:8px;background:#275f49;color:white;cursor:pointer;font:inherit}.travel-app button:disabled{opacity:.55;cursor:wait}.travel-app nav button{background:transparent;color:#19332b;border-color:transparent;text-align:left}.travel-app nav button[aria-current]{background:#dcebdd;font-weight:700}.travel-app h1{font-size:34px;margin:0 0 18px}.travel-app h2{font-size:21px}.travel-panel{padding:24px;border:1px solid #dce5dc;border-radius:12px;background:white;margin:18px 0}.travel-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}.travel-grid .travel-panel{margin:0}.travel-app form{display:flex;flex-wrap:wrap;align-items:end;gap:14px;margin:18px 0}.travel-app label{display:flex;flex-direction:column;gap:7px;font-size:14px}.travel-app input:not([type=checkbox]),.travel-app select,.travel-app textarea{padding:11px;border:1px solid #9eb6a7;border-radius:6px;font:inherit;max-width:100%;background:white;color:#19332b}.travel-app input[type=checkbox]{width:20px;height:20px}.travel-app textarea{min-width:240px;min-height:85px}.travel-status{min-height:26px;color:#275f49}.travel-error{padding:16px;background:#ffebe6;color:#8d2717;overflow-wrap:anywhere}.travel-app .travel-subtle{background:white;color:#275f49}.travel-app dl>div{display:grid;grid-template-columns:150px 1fr;gap:12px;padding:8px;border-bottom:1px solid #edf1ed}.travel-app dd{margin:0;overflow-wrap:anywhere}.travel-app summary{cursor:pointer;padding:14px 0}.travel-app :focus-visible{outline:3px solid #dd8a3f;outline-offset:3px}.travel-skip{position:absolute;left:-9999px}.travel-skip:focus{left:12px;top:12px;background:white;padding:12px;z-index:20}@media(max-width:700px){.travel-layout{display:block}.travel-layout nav{flex-direction:row;overflow:auto;padding:12px}.travel-layout nav button{white-space:nowrap}.travel-layout main{padding:18px}.travel-app header>span{display:none}.travel-app form{align-items:stretch;flex-direction:column}.travel-app dl>div{grid-template-columns:1fr}.travel-app button{min-height:44px}}
+@import './tokens.css';
 
-.travel-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr))}.travel-grid .travel-panel{min-width:0;overflow-wrap:anywhere}.travel-app h1,.travel-app h2,.travel-app p,.travel-app blockquote{overflow-wrap:anywhere}
+/* ==========================================================================
+   Base & Reset for TravelApp
+   ========================================================================== */
+.travel-app {
+  font-family: var(--font-body);
+  color: var(--color-foreground);
+  background: var(--color-background);
+  min-height: 100vh;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+}
+
+.travel-app * {
+  box-sizing: border-box;
+}
+
+.travel-app h1,
+.travel-app h2,
+.travel-app h3,
+.travel-app h4,
+.travel-app h5,
+.travel-app h6 {
+  font-family: var(--font-heading);
+  color: var(--color-foreground);
+  margin-top: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.travel-app h1 {
+  font-size: 28px;
+  line-height: 1.25;
+  margin-bottom: var(--space-md);
+  letter-spacing: -0.02em;
+}
+
+.travel-app h2 {
+  font-size: 20px;
+  margin-bottom: var(--space-sm);
+}
+
+.travel-app h3 {
+  font-size: 17px;
+  margin-bottom: var(--space-xs);
+}
+
+.travel-app p,
+.travel-app blockquote {
+  overflow-wrap: anywhere;
+  margin-top: 0;
+  margin-bottom: var(--space-sm);
+  color: var(--color-foreground-muted);
+}
+
+/* ==========================================================================
+   Header (Glassmorphic & Brand)
+   ========================================================================== */
+.travel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-md) 4%;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  box-shadow: var(--shadow-sm);
+}
+
+.travel-brand-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.travel-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--color-foreground);
+  text-decoration: none;
+}
+
+.travel-brand b {
+  color: var(--color-primary);
+  font-weight: 800;
+}
+
+.travel-tagline {
+  font-size: 13px;
+  color: var(--color-foreground-muted);
+  background: var(--color-surface-subtle);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+}
+
+.travel-user-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-left: auto;
+}
+
+/* ==========================================================================
+   Workspace / Zone Switcher
+   ========================================================================== */
+.zone-switcher {
+  display: flex;
+  align-items: center;
+  background: var(--color-surface-subtle);
+  padding: 4px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  gap: 2px;
+}
+
+.zone-btn {
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: var(--color-foreground-muted);
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.zone-btn:hover {
+  color: var(--color-foreground);
+}
+
+.zone-btn.active {
+  background: white;
+  color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ==========================================================================
+   App Layout (Sidebar + Main)
+   ========================================================================== */
+.travel-layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  flex: 1;
+}
+
+.travel-layout nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-lg) var(--space-md);
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.nav-heading-tag {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-foreground-muted);
+  font-weight: 700;
+  padding: var(--space-xs) var(--space-sm);
+  margin-top: var(--space-xs);
+}
+
+.travel-layout nav button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: transparent;
+  color: var(--color-foreground);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  text-align: left;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  width: 100%;
+}
+
+.travel-layout nav button:hover {
+  background: var(--color-surface-subtle);
+  color: var(--color-primary);
+}
+
+.travel-layout nav button[aria-current='page'] {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-weight: 700;
+  border-color: rgba(234, 88, 12, 0.2);
+}
+
+.travel-layout main {
+  padding: var(--space-xl);
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* ==========================================================================
+   Buttons & Interactive Elements
+   ========================================================================== */
+.travel-app button {
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  min-height: 40px;
+}
+
+.travel-app button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-primary,
+.travel-app button:not(.btn-secondary):not(.btn-outline):not(.btn-subtle):not(.travel-subtle):not(.zone-btn):not(.nav-item):not(.day-chip):not(.sub-tab) {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+  box-shadow: 0 1px 2px rgba(234, 88, 12, 0.2);
+}
+
+.btn-primary:hover,
+.travel-app button:not(.btn-secondary):not(.btn-outline):not(.btn-subtle):not(.travel-subtle):not(.zone-btn):not(.nav-item):not(.day-chip):not(.sub-tab):hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: var(--color-secondary);
+  color: white;
+  border-color: var(--color-secondary);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--color-secondary-hover);
+  border-color: var(--color-secondary-hover);
+}
+
+.btn-outline {
+  background: white;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: var(--color-primary-light);
+}
+
+.travel-app .travel-subtle,
+.btn-subtle {
+  background: white;
+  color: var(--color-foreground-muted);
+  border: 1px solid var(--color-border);
+}
+
+.travel-app .travel-subtle:hover:not(:disabled),
+.btn-subtle:hover:not(:disabled) {
+  background: var(--color-surface-subtle);
+  color: var(--color-foreground);
+  border-color: var(--color-border-hover);
+}
+
+/* ==========================================================================
+   Cards & Panels
+   ========================================================================== */
+.travel-panel {
+  padding: var(--space-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  margin: var(--space-md) 0;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-fast);
+  min-width: 0;
+}
+
+.travel-panel:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.travel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: var(--space-md);
+  margin: var(--space-md) 0;
+}
+
+.travel-grid .travel-panel {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* ==========================================================================
+   Forms, Inputs, Controls
+   ========================================================================== */
+.travel-app form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-md);
+  margin: var(--space-md) 0;
+}
+
+.travel-app label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-foreground);
+  min-width: 0;
+  flex: 1 1 200px;
+}
+
+.travel-app input:not([type=checkbox]),
+.travel-app select,
+.travel-app textarea {
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 14px;
+  background: white;
+  color: var(--color-foreground);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  width: 100%;
+}
+
+.travel-app input:not([type=checkbox]):focus,
+.travel-app select:focus,
+.travel-app textarea:focus {
+  border-color: var(--color-primary);
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.travel-app input[type=checkbox] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.travel-app textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.checkbox-label {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+/* Search bar special */
+.travel-search {
+  background: white;
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--space-lg);
+}
+
+/* Status & Errors */
+.travel-status {
+  min-height: 24px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--space-sm);
+}
+
+.travel-status.alert-success {
+  color: var(--color-success);
+}
+
+.travel-error {
+  padding: 14px 18px;
+  background: var(--color-destructive-bg);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  color: var(--color-destructive);
+  border-radius: var(--radius-sm);
+  margin: var(--space-md) 0;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-wrap: anywhere;
+}
+
+/* Status pills & Badges */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-subtle);
+  color: var(--color-foreground-muted);
+}
+
+.status-pill.status-active {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+/* Data List (DL) */
+.travel-app dl {
+  margin: var(--space-md) 0;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.travel-app dl > div {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 12px;
+  padding: 10px 14px;
+  background: white;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.travel-app dl > div:nth-child(even) {
+  background: var(--color-surface-subtle);
+}
+
+.travel-app dt {
+  font-weight: 600;
+  color: var(--color-foreground-muted);
+  font-size: 13px;
+}
+
+.travel-app dd {
+  margin: 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+/* Details summary */
+.travel-app details {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  margin: var(--space-md) 0;
+  background: white;
+}
+
+.travel-app summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 8px 0;
+  color: var(--color-foreground);
+  user-select: none;
+}
+
+/* Accessibility focus & Skip */
+.travel-app :focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.travel-skip {
+  position: absolute;
+  left: -9999px;
+}
+
+.travel-skip:focus {
+  left: 12px;
+  top: 12px;
+  background: white;
+  padding: 12px 18px;
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  z-index: 100;
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   Trip Studio & Timeline Styles
+   ========================================================================== */
+.trip-studio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.days-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.day-chip {
+  padding: 8px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: white;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-foreground);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.day-chip:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.day-chip.is-active {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 4px rgba(234, 88, 12, 0.25);
+}
+
+.day-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin: var(--space-md) 0;
+}
+
+.route-segment-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: var(--color-secondary-light);
+  color: var(--color-secondary-hover);
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  margin: 6px 0 6px 20px;
+}
+
+.timeline-card {
+  border-left: 4px solid var(--color-primary);
+}
+
+.timeline-card.item-locked {
+  border-left-color: var(--color-secondary);
+}
+
+.timeline-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.place-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.step-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.item-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.meta-pill {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-subtle);
+  color: var(--color-foreground-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.meta-pill.pill-locked {
+  background: var(--color-secondary-light);
+  color: var(--color-secondary-hover);
+  font-weight: 600;
+}
+
+.meta-pill.pill-unlocked {
+  background: var(--color-surface-subtle);
+  color: var(--color-foreground-muted);
+}
+
+.item-note {
+  font-style: italic;
+  font-size: 13px;
+  color: var(--color-foreground-muted);
+  margin-top: var(--space-sm);
+}
+
+.empty-subtle {
+  text-align: center;
+  padding: var(--space-xl);
+  color: var(--color-foreground-muted);
+  background: var(--color-surface-subtle);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-border);
+  margin: var(--space-md) 0;
+}
+
+/* ==========================================================================
+   Sub-tabs for Business & Moderation
+   ========================================================================== */
+.sub-tab-bar {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid var(--color-border);
+  margin-bottom: var(--space-md);
+  overflow-x: auto;
+}
+
+.sub-tab {
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  color: var(--color-foreground-muted);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sub-tab.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+/* ==========================================================================
+   Responsive Breakpoints (Mobile First to Desktop)
+   No horizontal scroll at 320, 390, 768, 1280
+   ========================================================================== */
+@media (max-width: 900px) {
+  .travel-layout {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .travel-layout nav {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: var(--space-sm) var(--space-md);
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .travel-layout nav button {
+    white-space: nowrap;
+    width: auto;
+  }
+
+  .travel-layout main {
+    padding: var(--space-md);
+  }
+
+  .travel-header {
+    flex-wrap: wrap;
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .zone-switcher {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    margin-top: var(--space-xs);
+  }
+}
+
+@media (max-width: 600px) {
+  .travel-app form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .travel-app label {
+    flex: 1 1 100%;
+  }
+
+  .travel-app dl > div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .travel-app button {
+    min-height: 44px;
+    width: 100%;
+  }
+
+  .zone-btn {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+}
