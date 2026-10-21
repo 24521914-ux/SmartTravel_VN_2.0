@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
 import { ApiClient } from './api/client';
 import { browserTokenStore } from './api/auth';
 import { IdentityClient } from './api/identity';
@@ -100,6 +100,96 @@ function Field({
       {title}
       <input name={name} type={type} required={required} maxLength={1024} placeholder={placeholder} />
     </label>
+  );
+}
+
+function LiquidZoneSwitcher({
+  activeZone,
+  onSelectTraveler,
+  onSelectBusiness,
+  onSelectAdmin,
+}: {
+  activeZone: 'traveler' | 'business' | 'admin';
+  onSelectTraveler: () => void;
+  onSelectBusiness: () => void;
+  onSelectAdmin: () => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const btnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [style, setStyle] = useState({ left: 0, width: 0, ready: false });
+
+  const update = () => {
+    const container = containerRef.current;
+    const btn = btnRefs.current[activeZone];
+    if (!container || !btn) return;
+    const cRect = container.getBoundingClientRect();
+    const bRect = btn.getBoundingClientRect();
+    setStyle({
+      left: bRect.left - cRect.left,
+      width: bRect.width,
+      ready: true,
+    });
+  };
+
+  useLayoutEffect(() => {
+    update();
+  }, [activeZone]);
+
+  useEffect(() => {
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [activeZone]);
+
+  return (
+    <div ref={containerRef} className="zone-switcher" role="group" aria-label="Không gian làm việc">
+      <div
+        className="zone-liquid-indicator"
+        style={{
+          transform: `translate3d(${style.left}px, 0, 0)`,
+          width: `${style.width}px`,
+          opacity: style.ready ? 1 : 0,
+        }}
+        aria-hidden="true"
+      >
+        <div className="zone-liquid-inner" />
+      </div>
+      <button
+        ref={el => {
+          btnRefs.current['traveler'] = el;
+        }}
+        type="button"
+        className={`zone-btn ${activeZone === 'traveler' ? 'active' : ''}`}
+        onClick={onSelectTraveler}
+        aria-pressed={activeZone === 'traveler'}
+      >
+        <Icon name="compass" size={14} />
+        <span>Du lịch</span>
+      </button>
+      <button
+        ref={el => {
+          btnRefs.current['business'] = el;
+        }}
+        type="button"
+        className={`zone-btn ${activeZone === 'business' ? 'active' : ''}`}
+        onClick={onSelectBusiness}
+        aria-pressed={activeZone === 'business'}
+      >
+        <Icon name="building" size={14} />
+        <span>Doanh nghiệp</span>
+      </button>
+      <button
+        ref={el => {
+          btnRefs.current['admin'] = el;
+        }}
+        type="button"
+        className={`zone-btn ${activeZone === 'admin' ? 'active' : ''}`}
+        onClick={onSelectAdmin}
+        aria-pressed={activeZone === 'admin'}
+      >
+        <Icon name="shield" size={14} />
+        <span>Quản trị</span>
+      </button>
+    </div>
   );
 }
 
@@ -233,7 +323,11 @@ export default function TravelApp() {
   // Active Zone determination
   const isBusinessZone = section === 'Doanh nghiệp';
   const isAdminZone = section === 'Kiểm duyệt' || section === 'Quản trị';
-  const isTravelerZone = !isBusinessZone && !isAdminZone;
+  const activeZone: 'traveler' | 'business' | 'admin' = isBusinessZone
+    ? 'business'
+    : isAdminZone
+    ? 'admin'
+    : 'traveler';
 
   return (
     <div className="travel-app">
@@ -253,35 +347,12 @@ export default function TravelApp() {
         </div>
 
         {/* 4-Zone Switcher */}
-        <div className="zone-switcher" role="group" aria-label="Không gian làm việc">
-          <button
-            type="button"
-            className={`zone-btn ${isTravelerZone ? 'active' : ''}`}
-            onClick={() => setSection('Khám phá')}
-            aria-pressed={isTravelerZone}
-          >
-            <Icon name="compass" size={14} />
-            <span>Du lịch</span>
-          </button>
-          <button
-            type="button"
-            className={`zone-btn ${isBusinessZone ? 'active' : ''}`}
-            onClick={() => setSection('Doanh nghiệp')}
-            aria-pressed={isBusinessZone}
-          >
-            <Icon name="building" size={14} />
-            <span>Doanh nghiệp</span>
-          </button>
-          <button
-            type="button"
-            className={`zone-btn ${isAdminZone ? 'active' : ''}`}
-            onClick={() => setSection('Kiểm duyệt')}
-            aria-pressed={isAdminZone}
-          >
-            <Icon name="shield" size={14} />
-            <span>Quản trị</span>
-          </button>
-        </div>
+        <LiquidZoneSwitcher
+          activeZone={activeZone}
+          onSelectTraveler={() => setSection('Khám phá')}
+          onSelectBusiness={() => setSection('Doanh nghiệp')}
+          onSelectAdmin={() => setSection('Kiểm duyệt')}
+        />
 
         <div className="travel-user-actions">
           {session ? (
