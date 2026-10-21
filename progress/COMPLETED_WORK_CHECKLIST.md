@@ -1,11 +1,15 @@
 # Checklist những gì đã làm được
 
 
-Cập nhật giao code **21/10/2026**: toàn bộ checkpoint local gốc được giữ trong [lịch sử](evidence/2026-10-20-local-checklist-history.md). P03 **PARTIAL**, chờ CI revision cuối; không thay chữ ký owner/reviewer hoặc mở P04.
+Cập nhật giao code **21/10/2026**: [PR #20](https://github.com/24521914-ux/SmartTravel_VN/pull/20) đã merge sau 11/11 checks PASS trên `1768b94`; main `c1e8e29`. P03 vẫn **PARTIAL**, chưa đủ toàn bộ tiêu chí hoặc chữ ký owner/reviewer; không mở P04. [Evidence](evidence/2026-10-21-github-delivery-ci.md).
 
-Cập nhật lần cuối: **21/10/2026** · Revision: `0bcdca4` · Người cập nhật: coding agent theo yêu cầu người dùng · Evidence giao code/CI: [2026-10-21-github-delivery-ci.md](evidence/2026-10-21-github-delivery-ci.md).
+Cập nhật lần cuối: **21/10/2026** · Revision: `c1e8e29` · Người cập nhật: coding agent theo yêu cầu người dùng · Evidence giao code/CI: [2026-10-21-github-delivery-ci.md](evidence/2026-10-21-github-delivery-ci.md).
 
 File này tóm tắt **artifact và chức năng đã làm được** theo mốc thời gian. `[x]` nghĩa là artifact có thật và có evidence ghi kèm; không có nghĩa phase đã nghiệm thu. Mục mới nhất ở trên. Mục cũ giữ nguyên trạng thái tại ngày ghi.
+
+## Giao code qua GitHub — 21/10/2026
+
+- PR #20 squash merge `c1e8e29`, người merge `Truong102006`, lúc 11:00:25; revision cuối 1768b94 đạt 11/11 checks. Chi tiết run ID, lỗi cũ và giới hạn tại [evidence](evidence/2026-10-21-github-delivery-ci.md). Không nâng gate hoặc tự ký nghiệm thu.
 
 ## Quét source đối chiếu — 20/10/2026
 

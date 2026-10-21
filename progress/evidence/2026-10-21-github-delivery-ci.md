@@ -1,6 +1,6 @@
 # Giao code và xử lý CI — 21/10/2026
 
-Cập nhật lần cuối: **21/10/2026** · Revision: `11f4f32` · Người cập nhật: coding agent theo yêu cầu push, tạo PR và merge của người dùng. Nhánh `feature/verification-phase03-delivery`, [PR #20](https://github.com/24521914-ux/SmartTravel_VN/pull/20). Không thay chữ ký N1/N2 hoặc đóng gate phase.
+Cập nhật lần cuối: **21/10/2026** · Revision: `c1e8e29` · Người cập nhật: coding agent theo yêu cầu push, tạo PR và merge của người dùng. Nhánh `feature/verification-phase03-delivery`, [PR #20](https://github.com/24521914-ux/SmartTravel_VN/pull/20). Không thay chữ ký N1/N2 hoặc đóng gate phase.
 
 ## Trạng thái và phạm vi
 
@@ -52,10 +52,10 @@ Checkout GitHub sạch trên đúng `0bcdca489216b5fd5d399926117848768884d1b8`: 
 
 | Run | Job và kết quả |
 |---|---|
-| [39538276131](https://github.com/24521914-ux/SmartTravel_VN/actions/runs/39538276131) | P00 `verify` PASS2m50s, frontend PASS13s. P00 build mặc định vẫn skip suite DB/broker theo cấu hình; không suy thành đủ nghiệm thu sáu service. |
+| [39538276131](https://github.com/24521914-ux/SmartTravel_VN/actions/runs/39538276131) | P00 `verify` PASS 2m50s, frontend PASS 13s. P00 build mặc định vẫn skip suite DB/broker theo cấu hình; không suy thành đủ nghiệm thu sáu service. |
 | [39538276163](https://github.com/24521914-ux/SmartTravel_VN/actions/runs/39538276163) | P01 Catalog/Community/Identity/Ingestion/Trip, contracts và platform đều PASS. Job Community ghi kernel6.8.0-1070-azure, disposable suite30 test, 0 failure/error/skip; xác nhận hết lỗi kernel trước đây. |
-| [39538276124](https://github.com/24521914-ux/SmartTravel_VN/actions/runs/39538276124) | P02 connected PASS8m31s trên kernel6.8.0-1064-azure: 11 nhóm E2E không AI, 8 nhóm resilience, import commit/missing ACK/retry, frontend real Gateway, 8 browser cases không gọi AI, manifest và monitor `alarms=[]`. |
-| [39538276132](https://github.com/24521914-ux/SmartTravel_VN/actions/runs/39538276132) | P03 tooling PASS29s: 94 test trên Linux; không có skip symlink Windows. Contract validation và frontend trong job đều PASS. |
+| [39538276124](https://github.com/24521914-ux/SmartTravel_VN/actions/runs/39538276124) | P02 connected PASS 8m31s trên kernel6.8.0-1064-azure: 11 nhóm E2E không AI, 8 nhóm resilience, import commit/missing ACK/retry, frontend real Gateway, 8 browser cases không gọi AI, manifest và monitor `alarms=[]`. |
+| [39538276132](https://github.com/24521914-ux/SmartTravel_VN/actions/runs/39538276132) | P03 tooling PASS 29s: 94 test trên Linux; không có skip symlink Windows. Contract validation và frontend trong job đều PASS. |
 
 CI Linux dùng Java21/Python3.12 theo workflow; fixture là dữ liệu tổng hợp, Mailpit sandbox, PostgreSQL/MongoDB/RabbitMQ disposable và các service thật trong Docker. Các kết quả không đo production hoặc AI. Giới hạn archive best-effort vẫn giữ: Actions logs là bằng chứng trực tiếp, không tuyên bố đủ artifact release/rollback khi upload bị quota.
 
@@ -67,10 +67,27 @@ F-12 được xác nhận sửa kỹ thuật bởi review của agent điều ph
 
 Lỗi nằm ở giả định health/startup đủ chứng minh đường HTTP phụ thuộc đã phục hồi. Bằng chứng chưa xác định sâu hơn là connection pool hay warm-up; không tự kết luận lỗi ứng dụng đã được sửa. `d8cf51c` sửa phép đo recovery: tạo collection private có một địa điểm trước outage, sau restart chỉ poll GET collection items qua Gateway→Community→Catalog tối đa30s. Chỉ503/504 được chờ; auth/error khác hoặc mất saved place fail ngay. Review POST không bị retry. Outage assertions và các phép đo khác giữ nguyên.
 
-Local Windows/Java21/Node24/Python3.14/Docker29 như trên, checkout dirty trước `d8cf51c`: `python backend/infra/p03_nonai_tests.py` chạy97 test, 0 failure/error, 1 skip symlink Windows. Ba test mới kiểm chỉ GET khi phục hồi, fail auth/sai dữ liệu và giữ deadline khi outage vĩnh viễn. CI runner thật trên revision sau sửa vẫn cần đạt; F-13 **PARTIAL**, người xử lý điều phối/CI. P03 giữ PARTIAL, không đóng gate.
+Local Windows/Java21/Node24/Python3.14/Docker29 như trên, checkout dirty trước `d8cf51c`: `python backend/infra/p03_nonai_tests.py` chạy 97 test, 0 failure/error, 1 skip symlink Windows. Ba test mới kiểm chỉ GET khi phục hồi, fail auth/sai dữ liệu và giữ deadline khi outage vĩnh viễn. CI runner thật trên revision sau sửa vẫn cần đạt; F-13 **PARTIAL**, người xử lý điều phối/CI. P03 giữ PARTIAL, không đóng gate.
 
 ### Lỗi fixture collection trên `2120ddd`
 
 [Run39539986471](https://github.com/24521914-ux/SmartTravel_VN/actions/runs/39539986471) **FAIL** trước khi chạy Catalog outage/probe: fixture mới gửi `note` rỗng khi thêm collection item, nhưng schema frozen yêu cầu minLength1, nên trả400 VALIDATION_ERROR. Đây là lỗi fixture do agent thêm, không chứng minh recovery probe hỏng hoặc đạt. Giữ nguyên lượt fail; 10 job khác đạt không làm cả revision thành PASS.
 
-Đã đổi fixture sang note có nội dung và thêm test validate body do runner sinh bằng chính schema request Community và UUID FormatChecker. Local checkout dirty sau `2120ddd`, cùng môi trường Windows nêu trên: `python backend/infra/p03_nonai_tests.py` chạy98 test, 0 failure/error, 1 skip symlink Windows. Không retry mutation hoặc bỏ kiểm schema; CI revision mới vẫn phải đạt trước merge. F-13 giữ PARTIAL.
+Đã đổi fixture sang note có nội dung và thêm test validate body do runner sinh bằng chính schema request Community và UUID FormatChecker. Local checkout dirty sau `2120ddd`, cùng môi trường Windows nêu trên: `python backend/infra/p03_nonai_tests.py` chạy 98 test, 0 failure/error, 1 skip symlink Windows. Không retry mutation hoặc bỏ kiểm schema; CI revision mới vẫn phải đạt trước merge. F-13 giữ PARTIAL.
+
+## Kết quả cuối và merge PR #20 — 21/10/2026
+
+Revision PR cuối `1768b941b41a5804635f381a3c1aa936e625d056`, checkout CI sạch: **11/11 checks PASS**, 0 job fail. Source và toàn bộ cây file của squash commit `c1e8e2982dd6212ca6e1ff9d2c3ba16ad5c8965e` khớp revision PR cuối (`git diff --exit-code` đạt).
+
+| Run cuối | Kết quả |
+|---|---|
+| [39540804336](https://github.com/24521914-ux/SmartTravel_VN/actions/runs/39540804336) | P00 verify PASS 2m50s; frontend PASS 16s. Các suite DB/broker mặc định skip trong build P00 vẫn không tính là pass nghiệp vụ. |
+| [39540804296](https://github.com/24521914-ux/SmartTravel_VN/actions/runs/39540804296) | Năm service DB/provider/broker/image, contracts và platform đều PASS. |
+| [39540804332](https://github.com/24521914-ux/SmartTravel_VN/actions/runs/39540804332) | P03 tooling PASS 1m29s, gồm 98 test; Linux không bị skip symlink Windows. |
+| [39540804333](https://github.com/24521914-ux/SmartTravel_VN/actions/runs/39540804333) | P02 connected PASS 8m35s: 11 nhóm E2E không AI, 8 nhóm resilience, import ACK/retry, real Gateway client, 8 browser cases không gọi AI, manifest/monitor. Bước archive lần cuối cũng thành công; giới hạn best-effort khi quota hết vẫn được giữ trong workflow. |
+
+Log job `119027847448` xác nhận `PASS Community Catalog read path recovers after restart` lúc03:58:02UTC, rating reconciliation03:58:04UTC, DLQ replay03:58:39UTC, browser03:59:07UTC. Fixture note hợp schema, GET recovery và review POST đơn đã được chạy thật. F-13 được xác nhận sửa kỹ thuật bởi CI này và review của agent điều phối; các lượt fail trước giữ nguyên trong lịch sử.
+
+[PR #20](https://github.com/24521914-ux/SmartTravel_VN/pull/20) được **squash merge** bởi `Truong102006` lúc **21/10/2026 11:00:25 Asia/Ho_Chi_Minh** (`2026-10-21T04:00:25Z`), merge commit `c1e8e2982dd6212ca6e1ff9d2c3ba16ad5c8965e`. Các nhánh remote được giữ. Main local được pull fast-forward; worktree main phụ sạch được chuyển detached, giữ nguyên đường dẫn và dữ liệu để main có thể checkout trong workspace IDE chính.
+
+Đây là hoàn tất giao code/GitHub, không phải nghiệm thu phase: P03 vẫn **PARTIAL**, P04 **NOT_STARTED**; không cấp SYSTEM_VERIFIED, RELEASED hoặc chữ ký N1/N2. AI và production chưa được nghiệm thu. Lượt kiểm tài liệu sau merge chỉ sửa progress, kiểm link/nội dung/diff, không cần chạy lại suite code đã xanh.
