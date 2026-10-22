@@ -1,6 +1,6 @@
 # P02 Kết nối sáu service đã hoàn thiện
 
-Trạng thái (20/10/2026): **PARTIAL — 12/15 task LOCAL_VERIFIED**. Code merge qua PR #16 (`14b342c`) và #17 (`9f4beca`); evidence connected local ngày 11/10/2026 trên checkout gốc. Còn P02-01 (object storage/tracing), P02-08 (notification contribution/model.deployed), P02-14 (schema evolution), run ID CI `connected` và chữ ký N1/N2. Evidence chính thức: [progress](../../progress_be.md#6-p02--kết-nối-các-service). Checkbox trong file này là yêu cầu.
+Trạng thái (23/10/2026): **PARTIAL — 11/15 task LOCAL_VERIFIED** (P02-09 hạ do frontend mới, xem progress_be.md). Code merge qua PR #16 (`14b342c`) và #17 (`9f4beca`); evidence connected local ngày 11/10/2026 trên checkout gốc. Còn P02-01 (object storage/tracing), P02-08 (notification contribution/model.deployed), P02-14 (schema evolution), run ID CI `connected` và chữ ký N1/N2. Evidence chính thức: [progress](../../progress_be.md#6-p02--kết-nối-các-service). Checkbox trong file này là yêu cầu.
 
 Người điều phối quản lý Gateway/infra/config. Owner hai đầu cùng chịu trách nhiệm kết nối, không giao mọi lỗi tích hợp cho một cá nhân duy nhất.
 

@@ -1,6 +1,6 @@
 # Kế hoạch SmartTravel VN với 6 microservice
 
-Ngày lập: 08/10/2026. Trạng thái hiện hành (20/10/2026): **P00 READY_FOR_REVIEW**, còn xác nhận bàn giao N1/N2 và freeze contract `1.0.0-candidate`. **P01**: sáu service đã có domain API/handlers/tests trên `main` (PR #5–#15), người dùng chấp nhận 11/10/2026, chờ chữ ký reviewer. **P02**: PARTIAL 12/15 task (PR #16–#17). **P03–P04**: chưa bắt đầu. Chi tiết và findings tại [progress](../progress_be.md); manifest P00 tại [P00_HANDOFF](../backend/platform/P00_HANDOFF.md).
+Ngày lập: 08/10/2026. Trạng thái hiện hành (23/10/2026): **P00 READY_FOR_REVIEW**, còn xác nhận bàn giao N1/N2 và freeze contract `1.0.0-candidate`. **P01**: sáu service đã có domain API/handlers/tests trên `main` (PR #5–#15), người dùng chấp nhận 11/10/2026, chờ chữ ký reviewer. **P02**: PARTIAL 11/15 task (PR #16–#17; P02-09 hạ sau khi frontend thiết kế lại). **P03**: PARTIAL (phạm vi không AI, PR #20; AI hoãn). **P04**: chưa bắt đầu. Chi tiết và findings tại [progress](../progress_be.md); manifest P00 tại [P00_HANDOFF](../backend/platform/P00_HANDOFF.md).
 
 Phạm vi được chốt gồm **Identity, Catalog, Community, Trip, Intelligence và Ingestion Service**. Ingestion là service thứ sáu do người dùng xác nhận. API Gateway, message broker, object storage và hệ thống observability là hạ tầng hỗ trợ, không tính thêm vào sáu service nghiệp vụ.
 
