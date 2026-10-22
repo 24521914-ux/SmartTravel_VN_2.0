@@ -1,7 +1,7 @@
 # P01 — database và runtime độc lập
 
 Sáu service đã có domain API, HTTP adapters và transport độc lập. Evidence hiện hành và
-trạng thái review/handoff tập trung tại `progress/PHASE_TASK_CHECKLIST.md`.
+trạng thái review/handoff tập trung tại `PROGRESS.md`.
 Các mục baseline M1 bên dưới là lịch sử triển khai ngày10/10; mục hoàn thiện cuối tài liệu
 và README từng service ghi commands/config hiện hành. Smoke unknown-route chỉ kiểm DB/security;
 domain, frozen provider và broker fault gates dùng các runners riêng.
@@ -93,7 +93,7 @@ Tiếp tục M1 của năm service còn lại: taxonomy/geo/registry/itinerary/v
 ## Lượt hoàn thiện P01 — 10–11/10/2026
 
 Phần M1 ở trên là evidence lịch sử. Code domain/adapter/provider/transport đang được ghép
-và kiểm độc lập; trạng thái chính xác tại `progress/PHASE_TASK_CHECKLIST.md`.
+và kiểm độc lập; trạng thái chính xác tại `PROGRESS.md`.
 `p01.py up --service <service>` khởi động DB của đúng service và local broker dùng chung,
 chỉ Identity cần mail sink. Không yêu cầu runtime hoặc DB của năm partner services.
 Tên Compose `identity-broker` được giữ để bảo toàn volume/credentials đã có; broker là

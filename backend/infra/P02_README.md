@@ -170,14 +170,14 @@ candidate freeze and remote CI for the latest source remain pending.
 This paragraph is the historical 11 October 2026 local claim on the original
 checkout. The 20 October 2026 source scan reclassified the P02 gate as PARTIAL
 (P02-01, P02-08 and P02-14 remain open); the authoritative status is in
-[progress](../../progress/PHASE_TASK_CHECKLIST.md#p02--kết-nối-thật).
+[progress](../../PROGRESS.md#6-p02--kết-nối-các-service).
 Fault tests temporarily stop only P02-owned apps and restore them
 in `finally` blocks. Run them after core smoke has created the connected fixtures.
 
 `smoke-report.json`, `fault-report.json`, `privacy-report.json`,
 `transport-report.json`, `import-ack-report.json`, `manifest.json` and `monitor.json` are
 ignored local evidence. No separate phase report is needed;
-[progress checklist](../../progress/PHASE_TASK_CHECKLIST.md) records commands,
+[progress checklist](../../PROGRESS.md) records commands,
 results, journal and remaining gates. Browser smoke additionally needs a running
 Vite dev server and Playwright Chromium (`npm --prefix frontend exec playwright
 install chromium` when not already installed).

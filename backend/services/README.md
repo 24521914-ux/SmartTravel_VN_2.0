@@ -82,5 +82,5 @@ python backend/platform/sync_security_templates.py --write --output <review-dire
 Review/apply diff thủ công; không export vào `backend/services`, không overwrite proposal đã có.
 Tài liệu/platform P00 template và backend demo lịch sử không được coi là service domain hiện hành và không refactor trong lượt này.
 
-Evidence refactor tại [progress](../../progress/PHASE_TASK_CHECKLIST.md).
+Evidence refactor tại [progress](../../PROGRESS.md).
 Không suy ra Identity đã hoàn tất P01 hoặc reviewer/remote CI đã ký chỉ từ build/layout tests.

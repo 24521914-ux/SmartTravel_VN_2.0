@@ -1,6 +1,6 @@
 # P01-TR Trip Service — nhóm D
 
-Trạng thái (20/10/2026): **10/11 task LOCAL_VERIFIED; TR-11 (handoff/reviewer N1) còn PARTIAL**. Code đã merge vào `main` (PR #12, merge `33b2627`); người dùng chấp nhận P01 ngày 11/10/2026, chưa có chữ ký reviewer. Evidence chính thức tại [progress](../../../progress/PHASE_TASK_CHECKLIST.md); checkbox trong file này là yêu cầu, không phải trạng thái. Dependency: P00, không chờ Identity/Catalog/Intelligence. Scope F09/F10. Reviewer: E.
+Trạng thái (20/10/2026): **10/11 task LOCAL_VERIFIED; TR-11 (handoff/reviewer N1) còn PARTIAL**. Code đã merge vào `main` (PR #12, merge `33b2627`); người dùng chấp nhận P01 ngày 11/10/2026, chưa có chữ ký reviewer. Evidence chính thức tại [progress](../../../PROGRESS.md); checkbox trong file này là yêu cầu, không phải trạng thái. Dependency: P00, không chờ Identity/Catalog/Intelligence. Scope F09/F10. Reviewer: E.
 
 [Database Trip](../../database/trip.md) · [DDL](../../database/sql/trip.sql) · [Contract](../../04-api-events.md) · [Gate](README.md). Owner: `backend/services/trip-service/**`.
 

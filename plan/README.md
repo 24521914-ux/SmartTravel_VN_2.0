@@ -1,6 +1,6 @@
 # Kế hoạch SmartTravel VN với 6 microservice
 
-Ngày lập: 08/10/2026. Trạng thái hiện hành (20/10/2026): **P00 READY_FOR_REVIEW**, còn xác nhận bàn giao N1/N2 và freeze contract `1.0.0-candidate`. **P01**: sáu service đã có domain API/handlers/tests trên `main` (PR #5–#15), người dùng chấp nhận 11/10/2026, chờ chữ ký reviewer. **P02**: PARTIAL 12/15 task (PR #16–#17). **P03–P04**: chưa bắt đầu. Chi tiết và findings tại [progress](../progress/PHASE_TASK_CHECKLIST.md); manifest P00 tại [P00_HANDOFF](../backend/platform/P00_HANDOFF.md).
+Ngày lập: 08/10/2026. Trạng thái hiện hành (20/10/2026): **P00 READY_FOR_REVIEW**, còn xác nhận bàn giao N1/N2 và freeze contract `1.0.0-candidate`. **P01**: sáu service đã có domain API/handlers/tests trên `main` (PR #5–#15), người dùng chấp nhận 11/10/2026, chờ chữ ký reviewer. **P02**: PARTIAL 12/15 task (PR #16–#17). **P03–P04**: chưa bắt đầu. Chi tiết và findings tại [progress](../PROGRESS.md); manifest P00 tại [P00_HANDOFF](../backend/platform/P00_HANDOFF.md).
 
 Phạm vi được chốt gồm **Identity, Catalog, Community, Trip, Intelligence và Ingestion Service**. Ingestion là service thứ sáu do người dùng xác nhận. API Gateway, message broker, object storage và hệ thống observability là hạ tầng hỗ trợ, không tính thêm vào sáu service nghiệp vụ.
 
@@ -12,7 +12,7 @@ Xem [database, phân công hai người, scope và baseline vận hành](P00-DEC
 
 ## Theo dõi tiến độ thực tế
 
-Xem [checklist task của các phase](../progress/PHASE_TASK_CHECKLIST.md) và [checklist những gì đã làm được](../progress/COMPLETED_WORK_CHECKLIST.md). Checklist trong kế hoạch là yêu cầu cần làm, không phải bằng chứng hoàn thành; trạng thái thực tế được cập nhật trong hai file này, evidence chi tiết trong `progress/evidence/`, theo quy tắc [AGENTS.md mục 10](../AGENTS.md#10-quy-tắc-ghi-progress).
+Xem [PROGRESS.md](../PROGRESS.md). Checklist trong kế hoạch là yêu cầu cần làm, không phải bằng chứng hoàn thành; trạng thái thực tế và bằng chứng chỉ được cập nhật trong file này, theo quy tắc [AGENTS.md mục 10](../AGENTS.md#10-quy-tắc-ghi-progress).
 
 ## Đọc theo thứ tự
 
