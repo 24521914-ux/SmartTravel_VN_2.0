@@ -3,7 +3,7 @@
 
 Cập nhật giao code **21/10/2026**: [PR #20](https://github.com/24521914-ux/SmartTravel_VN/pull/20) đã merge sau 11/11 checks PASS trên `1768b94`; main `c1e8e29`. P03 vẫn **PARTIAL**, chưa đủ toàn bộ tiêu chí hoặc chữ ký owner/reviewer; không mở P04. [Evidence](evidence/2026-10-21-github-delivery-ci.md).
 
-Cập nhật lần cuối: **21/10/2026** · Revision: `c1e8e29` · Người cập nhật: coding agent theo yêu cầu người dùng · Evidence giao code/CI: [2026-10-21-github-delivery-ci.md](evidence/2026-10-21-github-delivery-ci.md).
+Cập nhật lần cuối: **22/10/2026** · Revision: `cfd121d` (dirty, nhánh `feature/frontend-travel-editorial`) · Người cập nhật: coding agent theo yêu cầu người dùng · [Evidence frontend mới](evidence/2026-10-22-frontend-travel-editorial.md).
 
 ## Cách cập nhật
 
@@ -237,7 +237,7 @@ Nguồn: [checklist P03](../plan/phases/P03-system-verification.md). **NOT_START
 - [ ] P03-04: Authorization/security/upload/rate limit/secret/PII — **NOT_STARTED**.
 - [ ] P03-05: Load/EXPLAIN/index/pool/timeout/backpressure — **NOT_STARTED** · đầu vào F-04.
 - [ ] P03-06: Backup/restore/rebuild/retention/deletion/revocation — **NOT_STARTED**.
-- [ ] P03-07: Frontend responsive/accessibility/loading/error/async — **NOT_STARTED**.
+- [ ] P03-07: Frontend responsive/accessibility/loading/error/async — **PARTIAL** · người làm: coding agent, nhánh `feature/frontend-travel-editorial` · navbar/landing travel editorial, build PASS, 8 contract tests và 32 kiểm tra giao diện PASS; screenshot đọc Gateway thật ở 375/430/768/1366/1920px, kiểm chức năng bằng API tổng hợp; thiếu E2E đầy đủ user/business/admin, dữ liệu du lịch thật (F-14), tối ưu LCP (F-15), ma trận accessibility và CI revision cuối · [evidence 22/10/2026](evidence/2026-10-22-frontend-travel-editorial.md). [Lịch sử claymorphism](evidence/2026-10-22-frontend-clay-redesign.md) giữ nguyên. Cập nhật cinematic V3 A/B/C: build PASS, 8 contract + 22 cinematic + 32 regression checks PASS trên checkout dirty; không nâng trạng thái. [Evidence V3](evidence/2026-10-22-frontend-cinematic-v3.md).
 - [ ] P03-08: Release evidence/findings/dashboards/runbook/owner vận hành — **NOT_STARTED**.
 - [ ] P03-09: Dữ liệu thực hợp lệ và ML holdout evaluation — **NOT_STARTED**.
 - [ ] P03-10: So model với Basic; giữ Basic nếu quality gate chưa đạt — **NOT_STARTED**.
@@ -276,5 +276,7 @@ Chi tiết và cách phát hiện: [2026-10-20-source-scan.md](evidence/2026-10-
 | F-11 | Thông tin | Scan 20/10 dùng Java 25, thiếu Docker/Python | — | OPEN đến khi chạy lại đủ |
 | F-12 | Trung bình | MongoDB8 không tương thích kernel runner>=6.19; đã pin job DB Ubuntu22.04 và kiểm lại thật | Điều phối/CI | CLOSED 21/10/2026 · `c1e8e29`, run 39540804296/39540804333; agent điều phối xác nhận kỹ thuật, không thay chữ ký N1/N2 |
 | F-13 | Trung bình | Health chưa chứng minh đường Community→Catalog phục hồi; đã thêm GET probe hữu hạn và fixture đúng schema | Điều phối/CI | CLOSED 21/10/2026 · `c1e8e29`, [CI recovery](https://github.com/24521914-ux/SmartTravel_VN/actions/runs/39540804333); agent điều phối xác nhận kỹ thuật |
+| F-14 | Trung bình | Danh mục public ở Gateway local trả bản ghi P02/P03; cần dữ liệu du lịch thật và media được cấp phép, frontend giữ tên gốc trong disclosure có nhãn kiểm thử · [evidence](evidence/2026-10-22-frontend-travel-editorial.md) | N1/Catalog | OPEN |
+| F-15 | Trung bình | Lighthouse preview production local còn LCP 4.0s (mục tiêu <2.5s), Performance 80; cần tối ưu/đo lại trước nghiệm thu · [evidence](evidence/2026-10-22-frontend-travel-editorial.md) | Frontend | OPEN |
 
 Task không áp dụng phải ghi `N/A` kèm lý do và quyết định scope, không tự tích hoàn thành.

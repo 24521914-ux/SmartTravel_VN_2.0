@@ -3,9 +3,33 @@
 
 Cập nhật giao code **21/10/2026**: [PR #20](https://github.com/24521914-ux/SmartTravel_VN/pull/20) đã merge sau 11/11 checks PASS trên `1768b94`; main `c1e8e29`. P03 vẫn **PARTIAL**, chưa đủ toàn bộ tiêu chí hoặc chữ ký owner/reviewer; không mở P04. [Evidence](evidence/2026-10-21-github-delivery-ci.md).
 
-Cập nhật lần cuối: **21/10/2026** · Revision: `c1e8e29` · Người cập nhật: coding agent theo yêu cầu người dùng · Evidence giao code/CI: [2026-10-21-github-delivery-ci.md](evidence/2026-10-21-github-delivery-ci.md).
+Cập nhật lần cuối: **22/10/2026** · Revision: `cfd121d` (dirty, nhánh `feature/frontend-travel-editorial`) · Người cập nhật: coding agent theo yêu cầu người dùng · [Evidence frontend mới](evidence/2026-10-22-frontend-travel-editorial.md).
 
 File này tóm tắt **artifact và chức năng đã làm được** theo mốc thời gian. `[x]` nghĩa là artifact có thật và có evidence ghi kèm; không có nghĩa phase đã nghiệm thu. Mục mới nhất ở trên. Mục cũ giữ nguyên trạng thái tại ngày ghi.
+
+## Frontend visual refinement V4 (Floria Art Direction) — 22/10/2026
+
+- Header chuyển đổi mượt từ transparent 100% tại `scrollY = 0` sang floating glass capsule (`width: min(1180px, calc(100% - 48px))`, `backdrop-filter: blur(24px) saturate(150%)`, viền mảnh `rgba(255,255,255,0.12)`); grid 3 cột cân xứng tuyệt đối, không che chữ headline hero.
+- Typography editorial tương phản cao: Display Serif `Playfair Display` italic kết hợp UI Sans `Be Vietnam Pro`, khoảng đệm descender `padding-bottom: 6px` chống cắt dấu tiếng Việt.
+- Bố cục ảnh bất đối xứng (`.journey-editorial-asymmetric`): Thẻ tiêu điểm Ninh Bình làm focal point (chiếm 58% chiều rộng), hai thẻ vệ tinh Hội An & Hạ Long xếp so le với tỉ lệ 16:11.
+- Chuyển tầng background: Hero full-bleed -> khám phá emerald mờ -> editorial bất đối xứng -> khối nghỉ warm stone (`#e9e5dc`) -> finale Hạ Long.
+- Thu gọn empty state Catalog thành glass badge ngang thanh lịch, không cướp tiêu điểm thị giác.
+- Kiểm thử: Build PASS (15.01s), 8 contract tests PASS, 32 editorial UI checks PASS trên checkout dirty. P03-07 giữ **PARTIAL**; xem [evidence](evidence/2026-10-22-frontend-floria-v4-refinement.md). Chưa commit/push.
+
+## Frontend cinematic V3 — 22/10/2026
+
+- Header/hero full-bleed, motion, showcase Catalog, review thật và CTA; build PASS, 8 contract + 22 cinematic + 32 regression checks PASS trên checkout dirty. P03-07 giữ **PARTIAL**; xem [evidence và giới hạn](evidence/2026-10-22-frontend-cinematic-v3.md). Chưa commit/push.
+
+## Navbar và landing travel editorial — 22/10/2026
+
+- Hero ảnh Tam Cốc, search/filter/cursor thật, card không bịa ảnh/rating, editorial có attribution; responsive/dark mode, keyboard và trạng thái bất đồng bộ. Bảo toàn thay đổi dirty có trước, không commit/push.
+- Build PASS, 8 contract tests PASS, 32 kiểm tra giao diện PASS; Lighthouse local 80/100/100/100, LCP 4.0s còn thiếu. P03-07 giữ **PARTIAL**, F-14/F-15 mở. [Evidence và lịch sử fail](evidence/2026-10-22-frontend-travel-editorial.md).
+
+## Giao diện claymorphism — 22/10/2026
+
+- Artifact: hệ thống CSS chung, điều hướng desktop/mobile, icon Phosphor, hướng dẫn và trạng thái trống cho các màn chức năng; danh sách nguồn nhập dữ liệu quản trị.
+- Phần hình thức navbar/landing được thay thế bởi mục travel editorial ngày 22/10/2026 ở trên; giữ nguyên lịch sử và evidence cũ.
+- Kiểm thử và giới hạn: [evidence frontend](evidence/2026-10-22-frontend-clay-redesign.md). P03-07 giữ **PARTIAL**; chưa có CI hoặc nghiệm thu tích hợp backend trên thay đổi này.
 
 ## Giao code qua GitHub — 21/10/2026
 
