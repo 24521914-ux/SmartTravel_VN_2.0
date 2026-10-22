@@ -10,17 +10,33 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const directory = mkdtempSync(resolve(tmpdir(), 'smarttravel-api-tests-'));
 after(() => rmSync(directory, { recursive: true, force: true }));
 writeFileSync(resolve(directory, 'package.json'), '{"type":"module"}');
-for (const name of ['auth', 'client', 'types', 'identity']) {
+for (const name of ['auth', 'client', 'types', 'identity', 'travel']) {
   const input = readFileSync(resolve(root, `src/api/${name}.ts`), 'utf8');
   const output = ts.transpileModule(input, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText;
   writeFileSync(resolve(directory, `${name}.js`), output.replace(/from '(.\/\w+)'/g, "from '$1.js'"));
 }
 const { ApiClient } = await import(pathToFileURL(resolve(directory, 'client.js')));
 const { IdentityClient } = await import(pathToFileURL(resolve(directory, 'identity.js')));
+const { TravelClient } = await import(pathToFileURL(resolve(directory, 'travel.js')));
 const { memoryTokenStore } = await import(pathToFileURL(resolve(directory, 'auth.js')));
 const pair = (suffix = 'old') => ({ access_token: `access-${suffix}`, refresh_token: `refresh-${suffix}`, token_type: 'Bearer', expires_in: 600 });
 const response = value => new Response(JSON.stringify(value), { status: 200, headers: { 'Content-Type': 'application/json' } });
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
+
+test('catalog search preserves Unicode, category and opaque cursor across pages', async () => {
+  let sent;
+  const api = new ApiClient({ correlationId: () => 'search-fixture', fetchImpl: async url => { sent = url; return response({ items: [], next_cursor: null }); } });
+  const travel = new TravelClient(api);
+  await travel.places(' Hội An & biển ', { cursor: 'opaque+/= cursor', categoryId: 'category-fixture', limit: 12 });
+  const url = new URL(sent, 'https://example.invalid');
+  assert.equal(url.pathname, '/api/catalog/api/v1/places');
+  assert.equal(url.searchParams.get('q'), 'Hội An & biển');
+  assert.equal(url.searchParams.get('cursor'), 'opaque+/= cursor');
+  assert.equal(url.searchParams.get('categoryId'), 'category-fixture');
+  assert.equal(url.searchParams.get('limit'), '12');
+  await travel.places('   ');
+  assert.equal(sent, '/api/catalog/api/v1/places');
+});
 
 test('reads six frozen partner fixture sets using native filesystem paths', () => {
   for (const service of ['identity', 'catalog', 'community', 'trip', 'ingestion', 'intelligence']) {

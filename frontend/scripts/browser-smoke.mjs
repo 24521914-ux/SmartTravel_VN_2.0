@@ -19,18 +19,26 @@ const waitIdle = async () => {
   assert.equal(error, '', error);
 };
 async function navigate(name) {
-  await page.getByRole('navigation').getByRole('button', { name, exact: true }).click();
+  const button = page.getByRole('navigation').getByRole('button', { name, exact: true });
+  if (!await button.isVisible()) {
+    const mobile = page.getByRole('button', { name: 'Mở menu', exact: true });
+    if (await mobile.isVisible()) await mobile.click();
+    else await page.locator('.more-toggle').click();
+  }
+  await button.click();
   await page.getByRole('heading', { name, exact: true, level: 1 }).waitFor();
   await waitIdle();
 }
 try {
   await page.goto(`${process.env.P02_FRONTEND_URL ?? 'http://127.0.0.1:5173'}/app`);
   await waitIdle();
+  await navigate('Tài khoản');
   await page.getByLabel('Email', { exact: true }).first().fill(process.env.P02_USER_EMAIL ?? 'fixture-u1@example.invalid');
   await page.getByLabel('Mật khẩu', { exact: true }).fill(process.env.P02_USER_PASSWORD ?? secrets.IDENTITY_FIXTURE_PASSWORD);
-  await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
+  await page.locator('form').getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await page.getByRole('button', { name: 'Đăng xuất', exact: true }).waitFor();
   await waitIdle();
+  await navigate('Khám phá');
   await page.getByRole('button', { name: 'Xem chi tiết', exact: true }).first().click();
   await waitIdle();
   await page.getByRole('heading', { name: 'Đánh giá', exact: true }).waitFor();

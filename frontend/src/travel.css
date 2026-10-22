@@ -1,3 +1,1013 @@
-.travel-app{font-family:system-ui,sans-serif;color:#19332b;background:#f6f8f4;min-height:100vh}.travel-app *{box-sizing:border-box}.travel-app header{display:flex;align-items:center;gap:24px;padding:22px 5%;background:white;border-bottom:1px solid #dce5dc}.travel-app header>a{font-size:23px;text-decoration:none;color:#19332b;font-weight:700}.travel-app header>button{margin-left:auto}.travel-layout{display:grid;grid-template-columns:190px 1fr;max-width:1400px;margin:auto}.travel-layout nav{display:flex;flex-direction:column;gap:8px;padding:28px 12px}.travel-layout main{padding:28px;min-width:0}.travel-app button{padding:10px 16px;border:1px solid #275f49;border-radius:8px;background:#275f49;color:white;cursor:pointer;font:inherit}.travel-app button:disabled{opacity:.55;cursor:wait}.travel-app nav button{background:transparent;color:#19332b;border-color:transparent;text-align:left}.travel-app nav button[aria-current]{background:#dcebdd;font-weight:700}.travel-app h1{font-size:34px;margin:0 0 18px}.travel-app h2{font-size:21px}.travel-panel{padding:24px;border:1px solid #dce5dc;border-radius:12px;background:white;margin:18px 0}.travel-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}.travel-grid .travel-panel{margin:0}.travel-app form{display:flex;flex-wrap:wrap;align-items:end;gap:14px;margin:18px 0}.travel-app label{display:flex;flex-direction:column;gap:7px;font-size:14px}.travel-app input:not([type=checkbox]),.travel-app select,.travel-app textarea{padding:11px;border:1px solid #9eb6a7;border-radius:6px;font:inherit;max-width:100%;background:white;color:#19332b}.travel-app input[type=checkbox]{width:20px;height:20px}.travel-app textarea{min-width:240px;min-height:85px}.travel-status{min-height:26px;color:#275f49}.travel-error{padding:16px;background:#ffebe6;color:#8d2717;overflow-wrap:anywhere}.travel-app .travel-subtle{background:white;color:#275f49}.travel-app dl>div{display:grid;grid-template-columns:150px 1fr;gap:12px;padding:8px;border-bottom:1px solid #edf1ed}.travel-app dd{margin:0;overflow-wrap:anywhere}.travel-app summary{cursor:pointer;padding:14px 0}.travel-app :focus-visible{outline:3px solid #dd8a3f;outline-offset:3px}.travel-skip{position:absolute;left:-9999px}.travel-skip:focus{left:12px;top:12px;background:white;padding:12px;z-index:20}@media(max-width:700px){.travel-layout{display:block}.travel-layout nav{flex-direction:row;overflow:auto;padding:12px}.travel-layout nav button{white-space:nowrap}.travel-layout main{padding:18px}.travel-app header>span{display:none}.travel-app form{align-items:stretch;flex-direction:column}.travel-app dl>div{grid-template-columns:1fr}.travel-app button{min-height:44px}}
+@import './tokens.css';
 
-.travel-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr))}.travel-grid .travel-panel{min-width:0;overflow-wrap:anywhere}.travel-app h1,.travel-app h2,.travel-app p,.travel-app blockquote{overflow-wrap:anywhere}
+/* ==========================================================================
+   Liquid Glass (Kính Lỏng) Keyframe Animations
+   ========================================================================== */
+@keyframes liquidGlassSweep {
+  0% {
+    transform: translateX(-160%) skewX(-20deg);
+  }
+  40%, 100% {
+    transform: translateX(260%) skewX(-20deg);
+  }
+}
+
+@keyframes liquidFloatGlow {
+  0%, 100% {
+    box-shadow: 0 4px 16px rgba(234, 88, 12, 0.16),
+                inset 0 1.5px 2px rgba(255, 255, 255, 0.95),
+                inset 0 -1px 2px rgba(234, 88, 12, 0.08);
+  }
+  50% {
+    box-shadow: 0 6px 22px rgba(234, 88, 12, 0.28),
+                inset 0 2px 3px rgba(255, 255, 255, 1),
+                inset 0 -1.5px 3px rgba(234, 88, 12, 0.15);
+  }
+}
+
+@keyframes liquidPrimaryPulse {
+  0%, 100% {
+    box-shadow: 0 5px 18px rgba(234, 88, 12, 0.32),
+                inset 0 1.5px 2px rgba(255, 255, 255, 0.45),
+                inset 0 -2px 4px rgba(0, 0, 0, 0.18);
+  }
+  50% {
+    box-shadow: 0 8px 26px rgba(234, 88, 12, 0.48),
+                inset 0 2px 3px rgba(255, 255, 255, 0.6),
+                inset 0 -2px 4px rgba(0, 0, 0, 0.24);
+  }
+}
+
+/* ==========================================================================
+   Base & Reset for TravelApp
+   ========================================================================== */
+.travel-app {
+  font-family: var(--font-body);
+  color: var(--color-foreground);
+  background: var(--color-background);
+  min-height: 100vh;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+}
+
+.travel-app * {
+  box-sizing: border-box;
+}
+
+.travel-app h1,
+.travel-app h2,
+.travel-app h3,
+.travel-app h4,
+.travel-app h5,
+.travel-app h6 {
+  font-family: var(--font-heading);
+  color: var(--color-foreground);
+  margin-top: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.travel-app h1 {
+  font-size: 28px;
+  line-height: 1.25;
+  margin-bottom: var(--space-md);
+  letter-spacing: -0.02em;
+}
+
+.travel-app h2 {
+  font-size: 20px;
+  margin-bottom: var(--space-sm);
+}
+
+.travel-app h3 {
+  font-size: 17px;
+  margin-bottom: var(--space-xs);
+}
+
+.travel-app p,
+.travel-app blockquote {
+  overflow-wrap: anywhere;
+  margin-top: 0;
+  margin-bottom: var(--space-sm);
+  color: var(--color-foreground-muted);
+}
+
+/* ==========================================================================
+   Header (Clean & Warm PawSpa Style)
+   ========================================================================== */
+.travel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 28px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border-bottom: 1px solid rgba(234, 88, 12, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 2px 14px rgba(15, 23, 42, 0.03);
+  box-sizing: border-box;
+  max-width: 100vw;
+}
+
+.travel-brand-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.travel-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.brand-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  box-shadow: 0 3px 10px rgba(234, 88, 12, 0.25);
+  flex-shrink: 0;
+}
+
+.brand-icon-box svg {
+  color: #FFFFFF;
+  stroke-width: 2.2;
+}
+
+.brand-title {
+  font-family: var(--font-heading);
+  font-size: 19px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: -0.02em;
+}
+
+.brand-dot {
+  color: #EA580C;
+  margin-left: 2px;
+  font-weight: 800;
+}
+
+/* ==========================================================================
+   Horizontal Header Navigation Tabs (Matching Hình 2 / PawSpa)
+   ========================================================================== */
+.travel-top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  padding: 2px 8px;
+}
+
+.travel-app button.nav-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 6px 11px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #475569;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  min-height: 34px;
+  box-shadow: none;
+  animation: none !important;
+}
+
+.travel-app button.nav-tab-btn svg {
+  display: none; /* Clean minimalist text tabs matching PawSpa reference */
+}
+
+.travel-app button.nav-tab-btn:hover:not(.active):not(:disabled) {
+  color: #EA580C;
+  background: rgba(234, 88, 12, 0.06);
+}
+
+.travel-app button.nav-tab-btn.active,
+.travel-app button.nav-tab-btn[aria-current='page'] {
+  color: #EA580C;
+  font-weight: 600;
+  background: rgba(234, 88, 12, 0.08);
+  border: 1px solid rgba(234, 88, 12, 0.14);
+}
+
+.travel-app button.nav-tab-btn::after {
+  display: none !important;
+}
+
+/* Header User Actions & Pill CTA Button */
+.travel-user-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.travel-app button.nav-auth-link {
+  background: transparent;
+  border: none;
+  color: #475569;
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  cursor: pointer;
+  min-height: 38px;
+  box-shadow: none;
+  animation: none !important;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.travel-app button.nav-auth-link:hover {
+  color: #0F172A;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.travel-app button.nav-auth-link::after {
+  display: none !important;
+}
+
+.travel-app button.nav-cta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
+  color: #FFFFFF;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.32);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  min-height: 40px;
+  animation: none !important;
+}
+
+.travel-app button.nav-cta-pill:hover:not(:disabled) {
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 20px rgba(234, 88, 12, 0.42);
+  background: linear-gradient(135deg, #FB923C 0%, #EA580C 100%);
+}
+
+.travel-app button.nav-cta-pill:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.travel-app button.nav-cta-pill::after {
+  display: none !important;
+}
+
+.cta-emoji {
+  font-size: 15px;
+  line-height: 1;
+}
+
+/* ==========================================================================
+   App Layout (Centered Single-Column, No Vertical Sidebar)
+   ========================================================================== */
+.travel-layout {
+  display: flex;
+  flex-direction: column;
+  max-width: 1240px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 36px 24px 64px;
+  flex: 1;
+  box-sizing: border-box;
+}
+
+.travel-layout main {
+  padding: 0;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 1180px) {
+  .travel-header {
+    flex-wrap: wrap;
+    padding: 12px 20px;
+    gap: 12px;
+  }
+
+  .travel-top-nav {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+    justify-content: flex-start;
+    padding: 4px 0 6px;
+    gap: 4px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .travel-top-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .travel-layout {
+    padding: 24px 16px 48px;
+  }
+}
+
+
+.main-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+/* ==========================================================================
+   Buttons & Interactive Elements (Liquid Glass Specular)
+   ========================================================================== */
+.travel-app button {
+  padding: 10px 22px;
+  border-radius: 9999px; /* Bo tròn hoàn toàn */
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  min-height: 42px;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+}
+
+.travel-app button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  animation: none !important;
+}
+
+/* Primary Liquid Glass Button (Đăng nhập, Tạo mới, Gửi...) */
+.btn-primary,
+.travel-app button:not(.btn-secondary):not(.btn-outline):not(.btn-subtle):not(.travel-subtle):not(.zone-btn):not(.nav-item):not(.day-chip):not(.sub-tab):not(.btn-destructive):not(.nav-tab-btn):not(.nav-auth-link):not(.nav-cta-pill) {
+  background: linear-gradient(135deg, #FF6B1A 0%, #EA580C 50%, #C2410C 100%);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 9999px;
+  box-shadow: 0 5px 18px rgba(234, 88, 12, 0.32),
+              inset 0 1.5px 2px rgba(255, 255, 255, 0.45),
+              inset 0 -2px 4px rgba(0, 0, 0, 0.18);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  animation: liquidPrimaryPulse 4s infinite ease-in-out;
+}
+
+.btn-primary:hover:not(:disabled),
+.travel-app button:not(.btn-secondary):not(.btn-outline):not(.btn-subtle):not(.travel-subtle):not(.zone-btn):not(.nav-item):not(.day-chip):not(.sub-tab):not(.btn-destructive):not(.nav-tab-btn):not(.nav-auth-link):not(.nav-cta-pill):hover:not(:disabled) {
+  background: linear-gradient(135deg, #FB923C 0%, #EA580C 50%, #B43A08 100%);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(234, 88, 12, 0.45),
+              inset 0 2px 3px rgba(255, 255, 255, 0.55),
+              inset 0 -2px 4px rgba(0, 0, 0, 0.22);
+}
+
+.btn-primary::after,
+.travel-app button:not(.btn-secondary):not(.btn-outline):not(.btn-subtle):not(.travel-subtle):not(.zone-btn):not(.nav-item):not(.day-chip):not(.sub-tab):not(.btn-destructive):not(.nav-tab-btn):not(.nav-auth-link):not(.nav-cta-pill)::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transform: translateX(-160%) skewX(-20deg);
+  animation: liquidGlassSweep 4s infinite ease-in-out;
+  pointer-events: none;
+}
+
+/* Secondary Button (Xanh ngọc lỏng) */
+.btn-secondary {
+  background: linear-gradient(135deg, #06B6D4 0%, #0891B2 50%, #0E7490 100%);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 9999px;
+  box-shadow: 0 4px 16px rgba(8, 145, 178, 0.28),
+              inset 0 1.5px 2px rgba(255, 255, 255, 0.4);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #22D3EE 0%, #0891B2 50%, #155E75 100%);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 7px 22px rgba(8, 145, 178, 0.4),
+              inset 0 2px 3px rgba(255, 255, 255, 0.5);
+}
+
+/* Outline Glass Button */
+.btn-outline {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--color-primary);
+  border: 1.5px solid rgba(234, 88, 12, 0.32);
+  border-radius: 9999px;
+  box-shadow: 0 3px 10px rgba(234, 88, 12, 0.08),
+              inset 0 1px 1.5px rgba(255, 255, 255, 0.95);
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 5px 16px rgba(234, 88, 12, 0.18);
+}
+
+/* Subtle Glass Button */
+.travel-app .travel-subtle,
+.btn-subtle {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--color-foreground-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  padding: 8px 18px;
+}
+
+.travel-app .travel-subtle:hover:not(:disabled),
+.btn-subtle:hover:not(:disabled) {
+  background: white;
+  color: var(--color-foreground);
+  border-color: var(--color-border-hover);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+/* Destructive Button */
+.btn-destructive {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 9999px;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.3);
+}
+
+.btn-destructive:hover:not(:disabled) {
+  background: linear-gradient(135deg, #F87171 0%, #B91C1C 100%);
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   Cards & Panels
+   ========================================================================== */
+.travel-panel {
+  padding: var(--space-lg);
+  border: 1px solid rgba(234, 88, 12, 0.12);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  margin: var(--space-md) 0;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+  min-width: 0;
+}
+
+.travel-panel:hover {
+  box-shadow: var(--shadow-md);
+  border-color: rgba(234, 88, 12, 0.2);
+}
+
+.travel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: var(--space-md);
+  margin: var(--space-md) 0;
+}
+
+.travel-grid .travel-panel {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* ==========================================================================
+   Forms, Inputs, Controls (Bo góc mềm mại & Kính lỏng nhẹ)
+   ========================================================================== */
+.travel-app form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-md);
+  margin: var(--space-md) 0;
+}
+
+.travel-app label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-foreground);
+  min-width: 0;
+  flex: 1 1 200px;
+}
+
+.travel-app input:not([type=checkbox]),
+.travel-app select,
+.travel-app textarea {
+  padding: 11px 16px;
+  border: 1px solid rgba(234, 88, 12, 0.18);
+  border-radius: var(--radius-md); /* Bo góc mềm mại */
+  font: inherit;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  color: var(--color-foreground);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  width: 100%;
+}
+
+.travel-app input:not([type=checkbox]):focus,
+.travel-app select:focus,
+.travel-app textarea:focus {
+  border-color: var(--color-primary);
+  outline: none;
+  box-shadow: var(--focus-ring);
+  background: white;
+}
+
+.travel-app input[type=checkbox] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.travel-app textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.checkbox-label {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+/* Search bar special (Kính lỏng) */
+.travel-search {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: 9999px; /* Bo tròn hoàn toàn */
+  border: 1px solid rgba(234, 88, 12, 0.2);
+  box-shadow: 0 6px 20px rgba(234, 88, 12, 0.08);
+  margin-bottom: var(--space-lg);
+}
+
+/* Status & Errors */
+.travel-status {
+  min-height: 24px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--space-sm);
+}
+
+.travel-error {
+  padding: 14px 18px;
+  background: rgba(254, 226, 226, 0.9);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  color: var(--color-destructive);
+  border-radius: var(--radius-md);
+  margin: var(--space-md) 0;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-wrap: anywhere;
+}
+
+/* Status pills & Badges */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 9999px; /* Bo tròn hoàn toàn */
+  background: var(--color-surface-subtle);
+  color: var(--color-foreground-muted);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.status-pill.status-active {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border-color: rgba(21, 128, 61, 0.2);
+}
+
+/* Data List (DL) */
+.travel-app dl {
+  margin: var(--space-md) 0;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.travel-app dl > div {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 12px;
+  padding: 10px 14px;
+  background: white;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.travel-app dl > div:nth-child(even) {
+  background: var(--color-surface-subtle);
+}
+
+.travel-app dt {
+  font-weight: 600;
+  color: var(--color-foreground-muted);
+  font-size: 13px;
+}
+
+.travel-app dd {
+  margin: 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+/* Details summary */
+.travel-app details {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  margin: var(--space-md) 0;
+  background: white;
+}
+
+.travel-app summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 8px 0;
+  color: var(--color-foreground);
+  user-select: none;
+}
+
+/* Accessibility focus & Skip */
+.travel-app :focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.travel-skip {
+  position: absolute;
+  left: -9999px;
+}
+
+.travel-skip:focus {
+  left: 12px;
+  top: 12px;
+  background: white;
+  padding: 12px 18px;
+  border: 2px solid var(--color-primary);
+  border-radius: 9999px;
+  z-index: 100;
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   Trip Studio & Timeline Styles (Liquid Glass Chips & Nodes)
+   ========================================================================== */
+.trip-studio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.days-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.day-chip {
+  padding: 8px 18px;
+  border: 1px solid rgba(234, 88, 12, 0.2);
+  border-radius: 9999px; /* Bo tròn hoàn toàn */
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-foreground);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.day-chip:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+.day-chip.is-active {
+  background: linear-gradient(135deg, #FF6B1A 0%, #EA580C 100%);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 16px rgba(234, 88, 12, 0.35),
+              inset 0 1.5px 1px rgba(255, 255, 255, 0.45);
+  transform: scale(1.03);
+}
+
+.day-chip.is-active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  transform: translateX(-160%) skewX(-20deg);
+  animation: liquidGlassSweep 4s infinite ease-in-out;
+  pointer-events: none;
+}
+
+.day-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin: var(--space-md) 0;
+}
+
+.route-segment-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: rgba(207, 250, 254, 0.8);
+  backdrop-filter: blur(8px);
+  color: var(--color-secondary-hover);
+  border-radius: 9999px; /* Bo tròn hoàn toàn */
+  border: 1px solid rgba(8, 145, 178, 0.2);
+  font-size: 12px;
+  font-weight: 600;
+  margin: 6px 0 6px 20px;
+}
+
+.timeline-card {
+  border-left: 4px solid var(--color-primary);
+}
+
+.timeline-card.item-locked {
+  border-left-color: var(--color-secondary);
+}
+
+.timeline-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.place-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.step-badge {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%; /* Bo tròn hoàn toàn */
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  border: 1px solid rgba(234, 88, 12, 0.2);
+}
+
+.item-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.meta-pill {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 9999px; /* Bo tròn hoàn toàn */
+  background: var(--color-surface-subtle);
+  color: var(--color-foreground-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.meta-pill.pill-locked {
+  background: var(--color-secondary-light);
+  color: var(--color-secondary-hover);
+  font-weight: 600;
+}
+
+.item-note {
+  font-style: italic;
+  font-size: 13px;
+  color: var(--color-foreground-muted);
+  margin-top: var(--space-sm);
+}
+
+.empty-subtle {
+  text-align: center;
+  padding: var(--space-xl);
+  color: var(--color-foreground-muted);
+  background: rgba(248, 245, 238, 0.7);
+  backdrop-filter: blur(8px);
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--color-border);
+  margin: var(--space-md) 0;
+}
+
+/* ==========================================================================
+   Sub-tabs for Business & Moderation (Liquid Glass Pills)
+   ========================================================================== */
+.sub-tab-bar {
+  display: inline-flex;
+  gap: 6px;
+  background: rgba(254, 248, 240, 0.7);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 5px;
+  border-radius: 9999px; /* Bo tròn hoàn toàn */
+  border: 1px solid rgba(234, 88, 12, 0.16);
+  margin-bottom: var(--space-md);
+  overflow-x: auto;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.sub-tab {
+  padding: 8px 18px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 9999px; /* Bo tròn hoàn toàn */
+  color: var(--color-foreground-muted);
+  font-weight: 600;
+  font-size: 13.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+}
+
+.sub-tab:hover {
+  color: var(--color-foreground);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.sub-tab.active {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 247, 237, 0.92) 100%);
+  color: var(--color-primary);
+  border-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.16),
+              inset 0 1.5px 1.5px rgba(255, 255, 255, 1);
+  transform: scale(1.02);
+}
+
+.sub-tab.active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  transform: translateX(-160%) skewX(-20deg);
+  animation: liquidGlassSweep 4s infinite ease-in-out;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   Responsive Breakpoints (Mobile First to Desktop)
+   No horizontal scroll at 320, 390, 768, 1280
+   ========================================================================== */
+@media (max-width: 900px) {
+  .travel-layout {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .travel-layout nav {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: var(--space-sm) var(--space-md);
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .travel-layout nav button {
+    white-space: nowrap;
+    width: auto;
+  }
+
+  .travel-layout main {
+    padding: var(--space-md);
+  }
+
+  .travel-header {
+    flex-wrap: wrap;
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .zone-switcher {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    margin-top: var(--space-xs);
+  }
+}
+
+@media (max-width: 600px) {
+  .travel-app form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .travel-app label {
+    flex: 1 1 100%;
+  }
+
+  .travel-app dl > div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .travel-app button {
+    min-height: 44px;
+    width: 100%;
+  }
+
+  .zone-btn {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -1,0 +1,35 @@
+[
+  {
+    "file": "ninh-binh.webp",
+    "source": "https://commons.wikimedia.org/wiki/File:Tam_Coc_Panorama_(8604887215).jpg",
+    "original": "https://upload.wikimedia.org/wikipedia/commons/7/76/Tam_Coc_Panorama_%288604887215%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "author": "Jean-Marc Astesana",
+    "license": "CC BY-SA 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0",
+    "modifications": "Resized, WebP conversion; CSS crop in page",
+    "width": 1600,
+    "height": 468
+  },
+  {
+    "file": "hoi-an.webp",
+    "source": "https://commons.wikimedia.org/wiki/File:Boats_with_lanterns_on_the_Thu_Bon_river_IMG_3864.jpg",
+    "original": "https://upload.wikimedia.org/wikipedia/commons/c/cc/Boats_with_lanterns_on_the_Thu_Bon_river_IMG_3864.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "author": "Kuroczynski",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "modifications": "Resized, WebP conversion; CSS crop in page",
+    "width": 1200,
+    "height": 1600
+  },
+  {
+    "file": "ha-long.webp",
+    "source": "https://commons.wikimedia.org/wiki/File:Ha_Long_Bay,_Vietnam,_Islands.jpg",
+    "original": "https://upload.wikimedia.org/wikipedia/commons/d/d8/Ha_Long_Bay%2C_Vietnam%2C_Islands.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "author": "Vyacheslav Argenberg",
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0",
+    "modifications": "Resized, WebP conversion; CSS crop in page",
+    "width": 1600,
+    "height": 1067
+  }
+]
