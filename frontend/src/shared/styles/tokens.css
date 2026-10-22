@@ -1,0 +1,113 @@
+:root {
+  /* Brand Palette - Modern Vietnam Travel */
+  --color-primary: #087e8b;
+  --color-primary-hover: #066a75;
+  --color-primary-active: #04525b;
+  --color-primary-light: #e6f4f5;
+  --color-primary-subtle: #f0f8f9;
+  --color-on-primary: #ffffff;
+
+  --color-secondary: #2f9e76;
+  --color-secondary-hover: #268261;
+  --color-secondary-light: #eaf6f1;
+  --color-on-secondary: #ffffff;
+
+  --color-accent: #f4b860;
+  --color-accent-hover: #e09f44;
+  --color-accent-light: #fef7ed;
+  --color-on-accent: #1f2937;
+
+  /* Surfaces & Neutrals */
+  --color-background: #f8faf9;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #ffffff;
+  --color-surface-subtle: #f1f5f3;
+  --color-surface-sunken: #eaf0ed;
+
+  --color-text-primary: #1f2937;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #94a3b8;
+  --color-text-inverse: #ffffff;
+
+  --color-border: #e2e8f0;
+  --color-border-subtle: #edf2f0;
+  --color-border-strong: #cbd5e1;
+
+  /* Status Colors */
+  --color-success: #15803d;
+  --color-success-bg: #dcfce7;
+  --color-warning: #b45309;
+  --color-warning-bg: #fef3c7;
+  --color-destructive: #dc2626;
+  --color-destructive-hover: #b91c1c;
+  --color-destructive-bg: #fee2e2;
+  --color-on-destructive: #ffffff;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-button: 12px;
+  --radius-md: 14px;
+  --radius-card: 20px;
+  --radius-modal: 24px;
+  --radius-pill: 9999px;
+
+  /* Typography Hierarchy */
+  --font-display: 'Playfair Display', 'Be Vietnam Pro', Georgia, serif;
+  --font-heading: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  --text-display-xl: clamp(52px, 7.2vw, 108px);
+  --text-display-lg: clamp(38px, 4.8vw, 68px);
+  --text-heading-lg: clamp(30px, 3.6vw, 46px);
+  --text-heading-md: clamp(22px, 2.4vw, 32px);
+  --text-body-lg: 18px;
+  --text-body: 15px;
+  --text-caption: 12px;
+
+  /* Spacing Grid (8pt scale) */
+  --space-2xs: 2px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(31, 41, 55, 0.04), 0 1px 2px rgba(31, 41, 55, 0.02);
+  --shadow-md: 0 4px 12px rgba(31, 41, 55, 0.06), 0 1px 3px rgba(31, 41, 55, 0.04);
+  --shadow-lg: 0 12px 28px -4px rgba(31, 41, 55, 0.08), 0 4px 10px -2px rgba(31, 41, 55, 0.04);
+  --shadow-xl: 0 20px 35px -6px rgba(8, 126, 139, 0.12), 0 8px 12px -4px rgba(31, 41, 55, 0.04);
+
+  /* Liquid Glass System */
+  --glass-bg: rgba(255, 255, 255, 0.84);
+  --glass-border: rgba(255, 255, 255, 0.7);
+  --glass-blur: blur(16px);
+  --glass-shadow: 0 10px 30px rgba(8, 126, 139, 0.08);
+
+  /* Interactive & Focus */
+  --focus-ring: 0 0 0 3px rgba(8, 126, 139, 0.28);
+  --transition-fast: 150ms ease;
+  --transition-normal: 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme="dark"] {
+  --color-background: #0f172a;
+  --color-surface: #1e293b;
+  --color-surface-elevated: #334155;
+  --color-surface-subtle: #192338;
+  --color-surface-sunken: #0c1222;
+
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+
+  --color-border: #334155;
+  --color-border-subtle: #243147;
+  --color-border-strong: #475569;
+
+  --glass-bg: rgba(30, 41, 59, 0.82);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}

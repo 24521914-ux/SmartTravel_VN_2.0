@@ -3,11 +3,12 @@
 /* ==========================================================================
    Liquid Glass Navigation Bar System (Apple-inspired fluid optics)
    ========================================================================== */
-.liquid-glass-nav{position:relative;display:inline-flex;align-items:center;gap:4px;padding:4px 6px;background:rgba(255,253,247,0.5);border-radius:9999px;user-select:none}
-.liquid-nav-link{position:relative;z-index:2;display:inline-flex;align-items:center;justify-content:center;padding:9px 20px;border-radius:9999px;font-size:14.5px;font-weight:600;color:#333c32;text-decoration:none;transition:color .25s cubic-bezier(0.2,0.8,0.2,1),transform .2s ease;white-space:nowrap;outline:none}
+.liquid-glass-nav{position:relative;display:inline-flex;align-items:center;gap:2px;padding:3px 5px;background:rgba(255,253,247,0.5);border-radius:9999px;user-select:none;flex-shrink:0}
+.liquid-nav-link{position:relative;z-index:2;display:inline-flex;align-items:center;justify-content:center;padding:6px 12px;border-radius:9999px;font-size:13.5px;font-weight:600;color:#333c32;text-decoration:none;background:transparent;border:none;cursor:pointer;font-family:inherit;transition:color .25s cubic-bezier(0.2,0.8,0.2,1),transform .2s ease;white-space:nowrap;outline:none}
 .liquid-nav-link:hover{color:var(--orange)}
 .liquid-nav-link.active{color:var(--orange);font-weight:700}
 .liquid-nav-link:focus-visible{outline:2px solid var(--orange);outline-offset:3px}
+.nav-actions-group{display:flex;align-items:center;gap:10px;flex-shrink:0}
 .liquid-nav-label{position:relative;z-index:3;display:inline-block;pointer-events:none;transition:transform .2s ease}
 .liquid-nav-link:active .liquid-nav-label{transform:scale(.96)}
 .liquid-glass-indicator{position:absolute;top:0;left:0;pointer-events:none;z-index:1;will-change:transform,width;transition:transform .48s cubic-bezier(0.34,1.42,0.64,1),width .38s cubic-bezier(0.25,1,0.5,1),opacity .22s ease}
@@ -32,3 +33,72 @@
 @media(min-width:1450px){.hero{padding-top:65px;padding-bottom:100px}}@media(max-width:1050px){.wrap{width:calc(100% - 48px)}.header.wrap{width:100%;padding-inline:24px}h1{font-size:51px}.hero{gap:32px}.hero-actions{flex-wrap:wrap;gap:22px}.hero-image{height:390px}.adventure{left:-15px}.memory{right:-10px}.values{flex-wrap:wrap;justify-content:center;gap:24px 35px}.package{padding:24px}.planner-section{padding:40px;gap:35px}.header nav{gap:20px}.destination-image{height:200px}.hand-note{display:none}.package-grid,.destination-grid{gap:18px}}
 @media(max-width:767px){html{scroll-padding-top:106px}.wrap{width:calc(100% - 36px)}.header.wrap{width:100%;padding-inline:18px}.header{height:82px;gap:12px;flex-wrap:wrap}.brand{font-size:22px}.nav-cta{display:none}.mobile-menu{display:grid;place-items:center;border:1px solid #e9dfcf;width:44px;height:44px;border-radius:13px;background:#f7e9d4;color:#4c503d}.header nav,.liquid-glass-nav{display:none;position:absolute;top:75px;left:18px;right:18px;z-index:10;padding:18px;background:#fff9ee;border:1px solid #e9dfcf;border-radius:18px;box-shadow:var(--clay)}.header nav.open,.liquid-glass-nav.open{display:flex;flex-direction:column;gap:8px}.header nav a,.liquid-nav-link{padding:12px;width:100%;justify-content:flex-start}.liquid-glass-nav.open .liquid-glass-indicator{display:none}.hero{grid-template-columns:1fr;padding-top:26px;padding-bottom:50px;gap:45px}h1{font-size:51px;letter-spacing:-2px;max-width:480px}.underline{right:30px;width:170px}.hero-copy>p{font-size:14px}.hero-actions{gap:25px}.hero-art{max-width:500px;width:calc(100% - 20px);margin:auto;padding:15px 10px 26px}.hero-image{height:370px}.hero-proof{margin-top:28px}.sun-clay{width:74px;height:74px;right:-6px}.sun-clay svg{width:43px}.memory{right:-10px;bottom:110px;padding:13px}.memory strong{font-size:14px}.adventure{left:-8px}.values{justify-content:flex-start;padding:22px 10px;gap:20px;width:calc(100% - 36px)}.values span{width:calc(50% - 10px);font-size:10px;gap:7px}.values svg{width:19px}.section{padding-block:52px}h2{font-size:31px}.eyebrow{font-size:9px;letter-spacing:1.4px}.section-head{align-items:flex-start;flex-direction:column;gap:8px}.section-head p,.center p{font-size:12px}.filters{gap:8px;margin-bottom:24px}.filters button{padding:10px 15px;font-size:11px}.saved-count{width:100%;margin-top:8px}.destination-grid,.package-grid,.testimonial-grid{grid-template-columns:1fr}.destination-image{height:260px}.destination-body p{min-height:0;font-size:13px}.destination-body>small{font-size:11px}.destination-card{max-width:500px;width:100%;margin:auto}.destination-body{padding:20px}.package-grid{gap:30px}.package{padding:30px}.package p{min-height:0;font-size:13px}.package ul{font-size:12px}.package{max-width:500px;width:100%;margin:auto}.gallery{grid-template-columns:1fr 1fr;gap:16px}.gallery figure{height:220px}.gallery figure:first-child{grid-column:1/-1;height:280px}.gallery figcaption{font-size:10px}.planner-section{grid-template-columns:1fr;padding:28px 20px;gap:25px}.planner-copy h2{font-size:34px}.planner-decoration{display:none}.planner-form{padding:23px 18px}.form-row{gap:10px}.planner-copy>small{line-height:1.7}.testimonial-grid{gap:18px}.testimonial blockquote{font-size:13px}.final-cta{flex-direction:column;align-items:flex-start;padding:30px 24px}.final-cta h2{font-size:28px}.footer{gap:10px;padding-block:30px}.footer p{width:100%;margin:5px 0}.footer>span{margin:10px 0 0}.center{margin-bottom:28px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}.destination-card:hover img{transform:none}}
+
+/* ==========================================================================
+   SmartTravel VN Unified Application & Operational Panel Styles
+   ========================================================================== */
+.travel-status{font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:6px;min-height:20px}
+.travel-error{background:#fdf2f0;border:1px solid #f7c5bd;border-radius:16px;padding:14px 20px;color:#9c2e22;font-size:13.5px;display:flex;align-items:center;gap:12px;margin-bottom:20px;box-shadow:var(--clay)}
+.page-section-banner{padding-top:40px;padding-bottom:24px}
+.page-heading-h1{font-size:42px;line-height:1.2;letter-spacing:-1px;margin:12px 0 8px;font-weight:900;color:#2b332b}
+.page-subheading{font-size:15px;color:var(--muted);max-width:650px;margin:0 0 24px}
+
+.clay-form-card,.travel-panel{background:#fffaf0;padding:26px 30px;border-radius:28px;box-shadow:var(--clay);border:1px solid #f1eadd;margin-bottom:28px}
+.clay-form-card h2,.travel-panel h2{font-size:24px;margin-top:0;margin-bottom:18px}
+.clay-form{display:flex;flex-direction:column;gap:14px}
+
+.btn-primary{border:0;display:inline-flex;align-items:center;justify-content:center;gap:10px;background:#f8b182;color:#482b1b;min-height:46px;padding:12px 20px;border-radius:14px;font-weight:700;font-size:13px;box-shadow:inset 2px 3px 5px #ffe9d9aa,inset -2px -3px 5px #b56a4233,0 4px 0 #df976b;cursor:pointer}
+.btn-primary:hover{background:#ffc49e}
+.btn-secondary{border:1px solid #ded8cb;display:inline-flex;align-items:center;justify-content:center;gap:10px;background:#fffdf7;color:#434b3e;min-height:46px;padding:12px 20px;border-radius:14px;font-weight:700;font-size:13px;box-shadow:var(--clay);cursor:pointer}
+.btn-secondary:hover{background:#fbf8f0}
+.btn-outline{border:1px solid #e1d8ca;background:transparent;color:#434b3e;min-height:40px;padding:8px 16px;border-radius:12px;font-weight:600;font-size:12.5px;cursor:pointer}
+.btn-outline:hover{background:#f6efe3;color:var(--orange)}
+.btn-subtle{border:0;background:transparent;color:var(--muted);font-size:12px;cursor:pointer;padding:6px 12px;border-radius:8px}
+.btn-subtle:hover{background:#eee8db;color:#333c32}
+.btn-destructive{border:1px solid #f3c2bc;background:#fbeae8;color:#a42c20;min-height:44px;padding:10px 18px;border-radius:12px;font-weight:700;font-size:13px;cursor:pointer}
+.btn-destructive:hover{background:#f9dbd7}
+
+.catalog-search-clay{display:flex;gap:14px;align-items:flex-end;margin-bottom:28px;flex-wrap:wrap}
+.catalog-search-clay label{flex:1;min-width:240px;margin:0}
+.catalog-search-clay input{background:#fff;border:1.5px solid #e5dfd2;border-radius:14px}
+.catalog-search-clay .button{flex-shrink:0}
+
+.auth-nav-btn{background:transparent;border:0;cursor:pointer;font-size:13.5px;font-weight:700;color:#333c32}
+.auth-nav-btn:hover{color:var(--orange)}
+.logout-btn{background:transparent;border:0;cursor:pointer;font-size:13px;font-weight:600;color:#784534;margin-left:8px}
+.user-profile-btn{background:#f7ede1;border:1px solid #edd5c1;padding:6px 14px;border-radius:9999px;font-size:13px;font-weight:700;color:#684320;box-shadow:var(--clay);display:inline-flex;align-items:center;gap:7px}
+
+.clay-auth-card{background:#fffaf0;border:1.5px solid #f2e7d5;border-radius:28px;box-shadow:var(--clay);padding:28px 32px;margin-bottom:36px}
+.clay-auth-card h3{margin-top:0;margin-bottom:6px}
+.clay-auth-card>p{font-size:13px;margin-bottom:18px}
+.clay-auth-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr)) auto;gap:14px;align-items:flex-end}
+.clay-auth-details{margin-top:18px;border-top:1px solid #eae2d3;padding-top:14px}
+.clay-auth-details summary{font-size:12.5px;font-weight:700;color:#735b43;cursor:pointer}
+
+.clay-detail-panel{background:#fffaf0;border:1.5px solid #eee2cf;border-radius:28px;box-shadow:var(--clay);padding:28px 32px;margin-block:30px}
+.panel-header-actions{display:flex;justify-content:space-between;align-items:center;gap:16px;border-bottom:1px solid #e8decb;padding-bottom:14px;margin-bottom:20px}
+.panel-header-actions h2{margin:0}
+.place-dl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;background:#fffdf7;padding:18px;border-radius:18px;border:1px solid #ede3d2;margin-bottom:24px}
+.place-dl-grid dt{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase}
+.place-dl-grid dd{margin:4px 0 0;font-size:13.5px;font-weight:600;color:#333c32}
+.reviews-and-actions-section{margin-top:24px}
+.reviews-list{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
+.review-quote{background:#fffdf7;border:1px solid #ede4d4;border-radius:16px;padding:14px 18px;margin:0}
+.stars-pill{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;color:#a95425;background:#fdeede;padding:3px 8px;border-radius:8px;margin-bottom:6px}
+.review-forms-box{display:flex;flex-direction:column;gap:16px;background:#fffdf7;padding:20px;border-radius:20px;border:1px solid #ede4d4}
+.favorite-btn{align-self:flex-start}
+.write-review-form{display:flex;flex-direction:column;gap:12px}
+
+.status-toast{background:#edf3e2;border:1px solid #b4c49c;border-radius:14px;padding:12px 18px;font-size:13px;font-weight:600;color:#3d5237;margin-bottom:16px;box-shadow:var(--clay)}
+.account-hero-card{display:flex;align-items:center;gap:18px;margin-bottom:24px}
+.account-avatar-circle{width:64px;height:64px;border-radius:50%;background:#f5e0cb;display:grid;place-items:center;color:#684320;box-shadow:var(--clay)}
+.account-email-subtext{font-size:12.5px;color:var(--muted);margin:2px 0 0}
+.metrics-dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;background:#fffdf7;padding:16px;border-radius:16px;margin-block:16px}
+.metrics-dl dt{font-size:11px;color:var(--muted)}
+.metrics-dl dd{font-size:14px;font-weight:700;margin:2px 0 0}
+.recommendation-badge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:#70531a;background:#fef7e6;padding:4px 10px;border-radius:10px;margin-top:6px}
+.status-pill{display:inline-block;padding:2px 8px;border-radius:6px;background:#eee8db;font-size:11px;font-weight:700}
+.card-footer-actions{display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap}
+.danger-zone-details{margin-top:24px;border:1px solid #f6cfca;background:#fff5f4;padding:16px;border-radius:16px}
+.danger-zone-details summary{font-weight:700;color:#a42c20;cursor:pointer}
+.danger-text{font-size:12px;color:#a42c20;margin:10px 0}

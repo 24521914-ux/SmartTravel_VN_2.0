@@ -28,7 +28,13 @@ const idle = async () => {
   assert.equal(await alert.count() ? await alert.first().textContent() : '', '');
 };
 async function navigate(name) {
-  await page.getByRole('navigation').getByRole('button', { name, exact: true }).click();
+  const button = page.getByRole('navigation').getByRole('button', { name, exact: true });
+  if (!await button.isVisible()) {
+    const mobile = page.getByRole('button', { name: 'Mở menu', exact: true });
+    if (await mobile.isVisible()) await mobile.click();
+    else await page.locator('.more-toggle').click();
+  }
+  await button.click();
   await page.getByRole('heading', { name, exact: true, level: 1 }).waitFor();
   await idle();
 }
@@ -44,12 +50,14 @@ async function createdArticle(name) {
   return article;
 }
 async function login(alias) {
+  await navigate('Tài khoản');
   await page.getByLabel('Email', { exact: true }).first().fill('fixture-' + alias + '@example.invalid');
   await page.getByLabel('Mật khẩu', { exact: true }).fill(secrets.IDENTITY_FIXTURE_PASSWORD);
-  await page.getByRole('button', { name: 'Đăng nhập', exact: true }).focus();
+  await page.locator('form').getByRole('button', { name: 'Đăng nhập', exact: true }).focus();
   await page.keyboard.press('Enter');
   await page.getByRole('button', { name: 'Đăng xuất', exact: true }).waitFor();
   await idle();
+  await navigate('Khám phá');
 }
 async function logout() {
   await page.getByRole('button', { name: 'Đăng xuất', exact: true }).click();
