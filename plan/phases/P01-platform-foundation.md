@@ -1,6 +1,6 @@
 # P01 Nền tảng chạy và delivery
 
-Trạng thái (20/10/2026): **Nền tảng P01 đã có trên `main`** — sáu service, Gateway (`backend/platform/api-gateway`), contracts, `backend/infra/` (P01/P02) và CI `p00-template.yml`/`p01-services.yml`/`p02-integration.yml`; xem [progress](../../PROGRESS.md). Checklist bên dưới là mã cũ, giữ làm yêu cầu tham chiếu.yml`; evidence và các phần chưa đủ tại [progress](../../PROGRESS.md). Các checklist tổng bên dưới chưa đóng. Checklist nền tảng dùng trong P00/P01/P02 theo [lộ trình hiện hành](README.md): template tối thiểu bàn giao tại P00; sáu owner hoàn thiện runtime/CI service mình song song trong P01; platform chuẩn bị môi trường kết nối P02. Mục tiêu: sáu service có build, credential, migration và deploy độc lập.
+Trạng thái (20/10/2026): **Nền tảng P01 đã có trên `main`** — sáu service, Gateway (`backend/platform/api-gateway`), contracts, `backend/infra/` (P01/P02) và CI `p00-template.yml`/`p01-services.yml`/`p02-integration.yml`; xem [progress](../../progress_be.md). Checklist bên dưới là mã cũ, giữ làm yêu cầu tham chiếu.yml`; evidence và các phần chưa đủ tại [progress](../../progress_be.md). Các checklist tổng bên dưới chưa đóng. Checklist nền tảng dùng trong P00/P01/P02 theo [lộ trình hiện hành](README.md): template tối thiểu bàn giao tại P00; sáu owner hoàn thiện runtime/CI service mình song song trong P01; platform chuẩn bị môi trường kết nối P02. Mục tiêu: sáu service có build, credential, migration và deploy độc lập.
 
 ## Công việc
 

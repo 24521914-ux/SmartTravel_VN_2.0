@@ -1,6 +1,6 @@
 # P00 Chuẩn bị để sáu nhóm phát triển độc lập
 
-Trạng thái: **READY_FOR_REVIEW — triển khai kỹ thuật hoàn tất**. Tiến độ thực tế xem [checklist chung](../../PROGRESS.md); artifact và evidence local tại `backend/platform/P00_HANDOFF.md`. Hai người N1/N2 phụ trách sáu gói, không cần GitHub username. Contract candidate, fixture, sáu skeleton/stub/JWKS/harness đã đủ và test local PASS. Gate bàn giao còn chờ N1/N2 nhận gói/phê duyệt và điều phối freeze revision; không ghi nhận chữ ký chưa có. Người điều phối và sáu owner cùng chốt đầu vào. Chưa kết nối các service nghiệp vụ thật.
+Trạng thái: **READY_FOR_REVIEW — triển khai kỹ thuật hoàn tất**. Tiến độ thực tế xem [checklist chung](../../progress_be.md); artifact và evidence local tại `backend/platform/P00_HANDOFF.md`. Hai người N1/N2 phụ trách sáu gói, không cần GitHub username. Contract candidate, fixture, sáu skeleton/stub/JWKS/harness đã đủ và test local PASS. Gate bàn giao còn chờ N1/N2 nhận gói/phê duyệt và điều phối freeze revision; không ghi nhận chữ ký chưa có. Người điều phối và sáu owner cùng chốt đầu vào. Chưa kết nối các service nghiệp vụ thật.
 
 ## Công việc
 

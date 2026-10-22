@@ -2,7 +2,7 @@
 
 > **Quyết định P00:** MongoDB cho UGC; collections/index/schema validation/transaction/domain invariant theo thiết kế mới. Task P01-CO-01 đã đổi từ baseline Flyway/FK/DEFERRABLE sang MongoDB. Không đánh dấu hoàn thành bằng cách chạy DDL PostgreSQL. Xem [P00-DECISIONS.md](../../P00-DECISIONS.md).
 
-Trạng thái (20/10/2026): **10/11 task LOCAL_VERIFIED; CO-11 (handoff/reviewer N1) còn PARTIAL**. Code đã merge vào `main` (PR #11, merge `0d46262`); người dùng chấp nhận P01 ngày 11/10/2026, chưa có chữ ký reviewer. Evidence chính thức tại [progress](../../../PROGRESS.md); checkbox trong file này là yêu cầu, không phải trạng thái. Dependency: P00, không chờ Identity/Catalog. Scope F06/F07, collections/contributions/moderation. Reviewer: D.
+Trạng thái (20/10/2026): **10/11 task LOCAL_VERIFIED; CO-11 (handoff/reviewer N1) còn PARTIAL**. Code đã merge vào `main` (PR #11, merge `0d46262`); người dùng chấp nhận P01 ngày 11/10/2026, chưa có chữ ký reviewer. Evidence chính thức tại [progress](../../../progress_be.md); checkbox trong file này là yêu cầu, không phải trạng thái. Dependency: P00, không chờ Identity/Catalog. Scope F06/F07, collections/contributions/moderation. Reviewer: D.
 
 [Database Community](../../database/community.md) · [DDL](../../database/sql/community.sql) · [Contract](../../04-api-events.md) · [Gate](README.md). Owner: `backend/services/community-service/**`.
 

@@ -1,5 +1,7 @@
 # Frontend P00 scaffold
 
+Tiến độ frontend: [progress_fe.md](../progress_fe.md). Trạng thái kết nối từng API với backend: [progress_be.md mục 9](../progress_be.md#9-kết-nối-be--fe).
+
 React/TypeScript/Vite. Owner cấu hình chung N2, reviewer N1; màn theo phân công service.
 
 ```bash

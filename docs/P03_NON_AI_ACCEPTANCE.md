@@ -1,4 +1,4 @@
-> Ghi chú đồng bộ 21/10/2026: tài liệu giữ checkpoint local trước `15e9004`. Tuyên bố nghiệm thu bên dưới không thay trạng thái **PARTIAL** tại [checklist](../PROGRESS.md) hoặc chữ ký owner/reviewer.
+> Ghi chú đồng bộ 21/10/2026: tài liệu giữ checkpoint local trước `15e9004`. Tuyên bố nghiệm thu bên dưới không thay trạng thái **PARTIAL** tại [checklist](../progress_be.md) hoặc chữ ký owner/reviewer.
 
 # Bàn giao P03 không AI — 20/10/2026
 

@@ -1,6 +1,6 @@
 # P01-CA Catalog Service — nhóm B
 
-Trạng thái (20/10/2026): **11/12 task LOCAL_VERIFIED; CA-12 (handoff/reviewer N2) còn PARTIAL; finding F-03 (seed homestay), F-04 (index alias)**. Code đã merge vào `main` (PR #10, merge `d799fa2`); người dùng chấp nhận P01 ngày 11/10/2026, chưa có chữ ký reviewer. Evidence chính thức tại [progress](../../../PROGRESS.md); checkbox trong file này là yêu cầu, không phải trạng thái. Dependency: P00; không chờ Identity/Community/Ingestion. Scope: F02/F03/F04, geo/place/search/offering/business và canonical data. Reviewer: C.
+Trạng thái (20/10/2026): **11/12 task LOCAL_VERIFIED; CA-12 (handoff/reviewer N2) còn PARTIAL; finding F-03 (seed homestay), F-04 (index alias)**. Code đã merge vào `main` (PR #10, merge `d799fa2`); người dùng chấp nhận P01 ngày 11/10/2026, chưa có chữ ký reviewer. Evidence chính thức tại [progress](../../../progress_be.md); checkbox trong file này là yêu cầu, không phải trạng thái. Dependency: P00; không chờ Identity/Community/Ingestion. Scope: F02/F03/F04, geo/place/search/offering/business và canonical data. Reviewer: C.
 
 [Database Catalog](../../database/catalog.md) · [DDL](../../database/sql/catalog.sql) · [Contract](../../04-api-events.md) · [Gate](README.md). Owner: `backend/services/catalog-service/**`.
 

@@ -1,7 +1,7 @@
 # Identity — P01 independent service
 
 Owner N1; reviewer N2. **Kiểm chứng kỹ thuật local hoàn tất; chờ review và xác nhận bàn giao N2**.
-Tiến độ/evidence chung: [checklist](../../../PROGRESS.md).
+Tiến độ/evidence chung: [checklist](../../../progress_be.md).
 Contract candidate giữ nguyên: [OpenAPI](../../contracts/openapi/identity.yaml), revision `1.0.0-candidate`.
 
 ## Cấu trúc source

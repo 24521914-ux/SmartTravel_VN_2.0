@@ -1,8 +1,8 @@
-# Tiến độ dự án SmartTravel VN
+# Tiến độ Backend (BE) — SmartTravel VN
 
-Cập nhật: **22/10/2026 16:25** (GMT+7)
+Cập nhật: **22/10/2026 16:50** (GMT+7)
 
-File này là **nguồn trạng thái duy nhất** của dự án. Mọi tiến độ, bằng chứng kiểm thử, vấn đề mở và lịch sử cập nhật đều ghi ở đây, sắp xếp theo phase P00 → P04. Yêu cầu chi tiết của từng phase vẫn nằm trong `plan/phases/`; file này chỉ ghi **đã làm tới đâu, kiểm bằng gì, làm gì tiếp**.
+Progress gồm **hai file**: file này (`progress_be.md`) cho backend, Gateway, hạ tầng và **trạng thái kết nối BE ↔ FE**; [`progress_fe.md`](progress_fe.md) cho frontend web. Mỗi file sắp theo phase P00 → P04. Yêu cầu chi tiết của từng phase vẫn nằm trong `plan/phases/`; file này chỉ ghi **đã làm tới đâu, kiểm bằng gì, làm gì tiếp**.
 
 ## Mục lục
 
@@ -14,9 +14,10 @@ File này là **nguồn trạng thái duy nhất** của dự án. Mọi tiến 
 6. [P02 — Kết nối các service](#6-p02--kết-nối-các-service)
 7. [P03 — Kiểm thử hệ thống](#7-p03--kiểm-thử-hệ-thống)
 8. [P04 — Phát hành](#8-p04--phát-hành)
-9. [Vấn đề đang mở](#9-vấn-đề-đang-mở)
-10. [Lệnh chạy kiểm thử](#10-lệnh-chạy-kiểm-thử)
-11. [Lịch sử cập nhật](#11-lịch-sử-cập-nhật)
+9. [Kết nối BE ↔ FE](#9-kết-nối-be--fe)
+10. [Vấn đề đang mở](#10-vấn-đề-đang-mở)
+11. [Lệnh chạy kiểm thử backend](#11-lệnh-chạy-kiểm-thử-backend)
+12. [Lịch sử cập nhật](#12-lịch-sử-cập-nhật)
 
 ---
 
@@ -29,8 +30,9 @@ File này là **nguồn trạng thái duy nhất** của dự án. Mọi tiến 
 | **P02** Kết nối thật | Gateway, HTTP, broker giữa 6 service, frontend qua Gateway | `PARTIAL` 12/15 task | Local + CI `connected` PASS | P02-01, P02-08, P02-14; chữ ký | Làm F-01 (consumer Identity), object storage/tracing, test schema evolution |
 | **P03** Kiểm thử hệ thống | E2E, bảo mật, lỗi phụ thuộc, tải, restore, browser | `PARTIAL`, phạm vi **không AI** đã đạt gate local; AI `DEFERRED` | Local (checkout dirty) + CI tooling/connected PASS | Chạy lại gate trên commit sạch của `main`; chữ ký; phần AI | Chạy `p03_gate.py --scope non-ai` trên `main` sạch; N1/N2 ký |
 | **P04** Phát hành | Triển khai mới, rollback, bàn giao vận hành | `NOT_STARTED` | — | Toàn bộ; bị chặn bởi gate P03 | Chuẩn bị target triển khai, domain, credential provider |
+| **Kết nối BE ↔ FE** | Mỗi API public/admin có màn FE gọi qua Gateway và được test | 27 ✅ · 17 🟡 · 1 ❌ · 112 ⚪ · 14 ⏸️ (mục 9) | CI `connected` (gateway-smoke + browser) | 112 API chưa có màn FE; 17 API đã nối nhưng chưa có test | Sửa ❌ media (F-14); thêm test cho 17 API 🟡; làm màn theo mục 9 |
 
-**Tóm tắt một dòng:** backend 6 service và Gateway đã code xong, nối với nhau và qua kiểm thử hệ thống phạm vi không AI ở local; chưa phase nào được đóng gate chính thức vì thiếu chữ ký N1/N2. Phần AI (recommendation, lịch sử tương tác, ML) đang tạm hoãn theo quyết định người dùng.
+**Tóm tắt một dòng:** backend 6 service và Gateway đã code xong, nối với nhau và qua kiểm thử hệ thống phạm vi không AI ở local; chưa phase nào được đóng gate chính thức vì thiếu chữ ký N1/N2. Phần AI (recommendation, lịch sử tương tác, ML) đang tạm hoãn theo quyết định người dùng. Frontend mới nối 44/157 API không AI (mục 9).
 
 **Phân công:** N1 sở hữu Identity, Catalog, Ingestion, platform/Gateway/CI. N2 sở hữu Community, Trip, Intelligence, frontend. Hai người review chéo cho nhau; không tự duyệt phần mình.
 
@@ -54,20 +56,33 @@ File này là **nguồn trạng thái duy nhất** của dự án. Mọi tiến 
 
 Trạng thái cấp service/phase: `READY_FOR_INTEGRATION` (qua P01) → `CONNECTED` (qua P02) → `SYSTEM_VERIFIED` (qua P03; phạm vi không AI ghi `P03_NON_AI_VERIFIED`) → `RELEASED` (qua P04). Chỉ ghi khi gate có đủ bằng chứng **và** chữ ký.
 
-### 2.2. Một lần test được tính là PASS khi
+### 2.2. Trạng thái kết nối BE ↔ FE (dùng ở mục 9)
+
+| Ký hiệu | Ý nghĩa | Điều kiện |
+|---|---|---|
+| ✅ Hoàn thiện | FE gọi API qua Gateway và được test FE thật kiểm | Có trong `npm run test:gateway` hoặc `npm run test:browser`, và lần chạy gần nhất PASS (local hoặc CI có run ID) |
+| 🟡 Đã nối, chưa kiểm | FE có màn hình gọi API nhưng chưa có test FE nào chạy qua | Cần thêm bước vào `browser-nonai.mjs` hoặc `gateway-smoke.mjs` |
+| ❌ Lỗi | FE gọi hoặc cần gọi nhưng thất bại: test FAIL, API trả sai, contract lệch làm FE không dùng được | Bắt buộc ghi vấn đề `F-xx` |
+| ⚪ Chưa thực hiện | BE đã có API, FE chưa có màn hình gọi | Ghi việc cần làm ở `progress_fe.md` |
+| ⏸️ Hoãn | Phạm vi đang `DEFERRED` (AI) | Bật lại khi người dùng tiếp tục phần AI |
+| ➖ Không áp dụng | API không dành cho FE (ví dụ JWKS) | Ghi lý do |
+
+Khi nối thêm hoặc sửa một API: đổi ký hiệu ở dòng API trong mục 9, cập nhật bảng tổng, cập nhật màn hình tương ứng trong `progress_fe.md`.
+
+### 2.3. Một lần test được tính là PASS khi
 
 - 0 failure, 0 error. Một test fail thì cả suite FAIL.
-- **Skip không phải pass.** `mvnw verify` thường sẽ skip suite DB/broker; chỉ tính DB/broker khi chạy `test-local.py` với Docker (mục 10).
+- **Skip không phải pass.** `mvnw verify` thường sẽ skip suite DB/broker; chỉ tính DB/broker khi chạy `test-local.py` với Docker (mục 11).
 - Ghi đủ: lệnh, số run/fail/error/skip, commit SHA, checkout sạch hay dirty, môi trường (Java 21, Docker…). Kết quả trên checkout dirty chỉ đủ cho `LOCAL_VERIFIED` kèm ghi chú "dirty".
 - CI phải có run ID. Test flaky không được chạy lại tới khi pass rồi ghi PASS.
 - Không suy trạng thái từ: PR đã merge, số endpoint, README, lời dev khác chưa có bằng chứng.
 
-### 2.3. Cách cập nhật file này
+### 2.4. Cách cập nhật progress
 
 1. Sửa dòng task trong phase tương ứng theo mẫu:
    `- [x] P0x-yy: <nội dung> — **TRẠNG_THÁI** · Bằng chứng: <test/lệnh, số liệu, SHA> · Next: <việc tiếp theo>`
-2. Cập nhật bảng mục 1 nếu trạng thái phase đổi; cập nhật mục 9 nếu có vấn đề mới hoặc vừa đóng.
-3. Thêm một dòng lên đầu mục 11 và sửa dòng **Cập nhật** ở đầu file (ngày giờ GMT+7).
+2. Cập nhật bảng mục 1 nếu trạng thái phase đổi; cập nhật mục 9 khi kết nối BE ↔ FE đổi; cập nhật mục 10 nếu có vấn đề mới hoặc vừa đóng.
+3. Thêm một dòng lên đầu mục "Lịch sử cập nhật" và sửa dòng **Cập nhật** ở đầu file (ngày giờ GMT+7). Việc của frontend ghi ở `progress_fe.md`.
 4. Commit riêng: `docs(progress): <tóm tắt>`; không gộp với commit code. PR đổi chức năng phải cập nhật file này trong cùng PR.
 5. Không ghi password, token, key, connection string có credential, email/PII thật.
 6. Agent không tự đặt `ACCEPTED`, không đóng gate, không ký thay N1/N2.
@@ -232,11 +247,11 @@ Mã task: ID = Identity, CA = Catalog, CO = Community, TR = Trip, IG = Ingestion
 - [x] P01-IN-11: Không đếm đôi, dataset bị cấm, checksum, kích hoạt đồng thời, tái lập — **LOCAL_VERIFIED**. P03: DEFERRED.
 - [ ] P01-ID-10 / CA-12 / CO-11 / TR-11 / IG-11 / IN-12: Bàn giao image, migration, API, event, báo cáo test, runbook của 6 service — **PARTIAL** · Đã có README + runbook từng service, image, số test · Thiếu: chữ ký reviewer (N2 cho ID/CA/IG, N1 cho CO/TR/IN). README Ingestion ghi "18 operations" nhưng contract có 17.
 
-### 5.5. Gateway và frontend
+### 5.5. Gateway
 
 - [x] Gateway route, security, đổi token — **LOCAL_VERIFIED** · 18 test (20/10); CI PASS trong run 39540804296.
-- [x] Frontend API client + refresh xoay vòng — **LOCAL_VERIFIED** · `npm run test:contracts` 7/7, build PASS, audit 0 lỗ hổng.
-- [ ] Review platform và frontend — **NOT_STARTED**.
+- [ ] Review platform — **NOT_STARTED**.
+- Frontend P01 (API client, refresh xoay vòng): xem `progress_fe.md`.
 - [ ] **Gate P01** (6/6 `READY_FOR_INTEGRATION` có chữ ký) — **PARTIAL** · Thiếu: chữ ký N1/N2 cho 6 gói.
 
 ---
@@ -256,7 +271,7 @@ Yêu cầu: `plan/phases/P02-service-integration.md` · Trạng thái phase: **`
 - [x] P02-06: Đầu vào Intelligence snapshot + delta, thu hồi — **LOCAL_VERIFIED** · Chỉ local; AI DEFERRED.
 - [x] P02-07: Recommendation → Trip → lịch sử đúng một lần — **LOCAL_VERIFIED** · Chỉ local; AI DEFERRED.
 - [ ] P02-08: Thông báo và xóa dữ liệu — **PARTIAL** · Đã có: thông báo từ event, email Mailpit, đủ 6 ack, thiếu ack Trip thì vẫn chờ · Thiếu: thông báo kết quả đóng góp và `model.deployed` (F-01).
-- [x] P02-09: Frontend gọi Gateway thật; provider sandbox ghi rõ — **LOCAL_VERIFIED** · CI browser PASS · Mailpit sandbox, nguồn tổng hợp, routing fallback.
+- [x] P02-09: Frontend gọi Gateway thật; provider sandbox ghi rõ — **LOCAL_VERIFIED** · CI browser PASS · Mailpit sandbox, nguồn tổng hợp, routing fallback. Trạng thái từng API: mục 9.
 - [x] P02-10: Route Gateway, chặn internal/actuator, đổi token theo service đích — **LOCAL_VERIFIED** · `GatewayRoutingTests`, `PrincipalExchangeFilterTests`.
 - [x] P02-11: Snapshot + watermark + delta + chống trùng — **LOCAL_VERIFIED** · `SnapshotRebuildTests` · Chỉ local; AI DEFERRED.
 - [x] P02-12: Outbox/inbox/retry/DLQ/replay, crash sau commit — **LOCAL_VERIFIED** · CI resilience PASS.
@@ -283,7 +298,7 @@ Yêu cầu: `plan/phases/P03-system-verification.md` và `plan/phases/P03-non-ai
 - [x] P03-04: Phân quyền toàn endpoint, BOLA/IDOR, dùng lại refresh, thu hồi session/claim, upload, rate limit, che PII trong log — **LOCAL_VERIFIED** (dirty) · 532 request PASS.
 - [x] P03-05: Tải — **LOCAL_VERIFIED** (dirty) · Dữ liệu: 10.000 địa điểm, 2.009 tài khoản, 20.001 review, 1.000 trip, 50 tài khoản đăng nhập riêng · 60 giây, 1.200/1.200 HTTP 200, 19,96 req/s, 0 lỗi · p95: đọc Catalog 242 ms, đọc Trip 99 ms, ghi 72 ms (ngưỡng 500/500/800 ms) · có EXPLAIN ANALYZE truy vấn nóng.
 - [x] P03-06: Backup/restore 6 DB + object có dữ liệu, watermark, retention, xóa dữ liệu, thu hồi license — **LOCAL_VERIFIED** (dirty) · Restore storage + ứng dụng 183,92 s; checkpoint 265,5 s (mục tiêu RPO ≤ 24 giờ, RTO ≤ 4 giờ).
-- [x] P03-07: Browser user/business/admin ở 320/390/768/1280 px, bàn phím, loading/error/empty, bản đồ, trạng thái chờ ack — **LOCAL_VERIFIED** (dirty) · 8 nhóm, 36 case responsive, 0 request AI · CI browser PASS. Độ phủ thao tác còn hẹp: F-18.
+- [x] P03-07: Browser user/business/admin — **LOCAL_VERIFIED** (dirty) · Chi tiết ở `progress_fe.md` mục P03. Độ phủ thao tác còn hẹp: F-18.
 - [x] P03-08: Ràng buộc source/JAR/image, review độc lập, dashboard, runbook, cảnh báo — **LOCAL_VERIFIED** (dirty) · review APPROVE, 0 critical/high · Cảnh báo chỉ tới dashboard local.
 - [ ] P03-09: Dữ liệu thực có quyền dùng, đánh giá holdout — **DEFERRED** (người dùng, 20/10/2026).
 - [ ] P03-10: So model với Basic — **DEFERRED** (người dùng, 20/10/2026).
@@ -309,7 +324,228 @@ Cần chuẩn bị trước P04: target triển khai và domain; credential prov
 
 ---
 
-## 9. Vấn đề đang mở
+## 9. Kết nối BE ↔ FE
+
+Bảng dưới là trạng thái nối giữa từng API public/admin của backend và frontend web, theo định nghĩa ở mục 2.2. Nguồn API: `backend/contracts/openapi/*.yaml` (171 operation không tính 12 API `/internal`, thêm 1 API media ngoài contract). Test FE dùng để xác nhận ✅: `frontend/scripts/gateway-smoke.mjs` và `frontend/scripts/browser-nonai.mjs`, PASS trong CI `connected` run 39540804333 (21/10/2026).
+
+**Ưu tiên tiếp theo:**
+1. Sửa ❌ `GET /media/{id}` (F-14) để FE hiển thị được ảnh.
+2. Thêm test FE cho 17 API 🟡 (đăng ký, xác minh email, viết review, thêm item vào collection, duyệt review/xác minh doanh nghiệp, import job…).
+3. Làm màn cho các nhóm ⚪ quan trọng với người dùng: quên/đổi mật khẩu, danh sách favorite, sửa/xóa review, chặng và di chuyển trong trip, taxonomy/destination cho bộ lọc, đóng góp dữ liệu.
+
+| Service | ✅ Hoàn thiện | 🟡 Đã nối, chưa kiểm | ❌ Lỗi | ⚪ Chưa thực hiện | ⏸️ Hoãn | ➖ Không áp dụng | Tổng |
+|---|---|---|---|---|---|---|---|
+| Identity | 6 | 6 | 0 | 9 | 0 | 1 | 22 |
+| Catalog | 7 | 4 | 1 | 51 | 0 | 0 | 63 |
+| Community | 5 | 5 | 0 | 20 | 0 | 0 | 30 |
+| Trip | 8 | 0 | 0 | 21 | 0 | 0 | 29 |
+| Ingestion | 1 | 2 | 0 | 11 | 0 | 0 | 14 |
+| Intelligence | 0 | 0 | 0 | 0 | 14 | 0 | 14 |
+| **Tổng** | **27** | **17** | **1** | **112** | **14** | **1** | **172** |
+
+#### Identity
+
+| API | Trạng thái kết nối | Màn hình FE / ghi chú |
+|---|---|---|
+| `POST /auth/register` | 🟡 Đã nối, chưa kiểm | Tài khoản: Đăng ký |
+| `POST /auth/login` | ✅ Hoàn thiện | Đăng nhập |
+| `POST /auth/refresh` | ✅ Hoàn thiện | Tự động khi token hết hạn |
+| `POST /auth/logout` | ✅ Hoàn thiện | Đăng xuất |
+| `POST /auth/verify-email` | 🟡 Đã nối, chưa kiểm | Tài khoản: Xác minh email |
+| `POST /auth/forgot-password` | ⚪ Chưa thực hiện | — |
+| `POST /auth/reset-password` | ⚪ Chưa thực hiện | — |
+| `GET /me` | ✅ Hoàn thiện | Tài khoản |
+| `PATCH /me` | 🟡 Đã nối, chưa kiểm | Tài khoản: đổi tên hiển thị |
+| `PUT /me/password` | ⚪ Chưa thực hiện | — |
+| `GET /me/preferences` | ✅ Hoàn thiện | Tài khoản |
+| `PUT /me/preferences` | 🟡 Đã nối, chưa kiểm | Tài khoản: chỉ có ô consent; chưa chọn category/ngân sách |
+| `GET /preference-options` | ⚪ Chưa thực hiện | — |
+| `GET /me/sessions` | ⚪ Chưa thực hiện | — |
+| `DELETE /me/sessions/{session_id}` | ⚪ Chưa thực hiện | — |
+| `GET /me/notifications` | ✅ Hoàn thiện | Thông báo |
+| `PATCH /me/notifications/{notification_id}/read` | 🟡 Đã nối, chưa kiểm | Thông báo: Đánh dấu đã đọc |
+| `POST /me/deletion-requests` | 🟡 Đã nối, chưa kiểm | Tài khoản: Yêu cầu xóa dữ liệu |
+| `GET /admin/users` | ⚪ Chưa thực hiện | — |
+| `PATCH /admin/users/{user_id}/status` | ⚪ Chưa thực hiện | — |
+| `PUT /admin/users/{user_id}/roles` | ⚪ Chưa thực hiện | — |
+| `GET /.well-known/jwks.json` | ➖ Không áp dụng | Gateway dùng nội bộ, FE không gọi |
+
+#### Catalog
+
+| API | Trạng thái kết nối | Màn hình FE / ghi chú |
+|---|---|---|
+| `GET /admin/places` | 🟡 Đã nối, chưa kiểm | Kiểm duyệt: chế độ địa điểm |
+| `POST /admin/places` | ⚪ Chưa thực hiện | — |
+| `GET /admin/places/{place_id}` | ⚪ Chưa thực hiện | — |
+| `PATCH /admin/places/{place_id}` | ⚪ Chưa thực hiện | — |
+| `DELETE /admin/places/{place_id}` | ⚪ Chưa thực hiện | — |
+| `GET /places` | ✅ Hoàn thiện | Khám phá, Bản đồ (F-15) |
+| `GET /places/{place_id}` | ✅ Hoàn thiện | Chi tiết địa điểm (F-15) |
+| `PUT /admin/places/{place_id}/status` | 🟡 Đã nối, chưa kiểm | Kiểm duyệt: đổi trạng thái địa điểm |
+| `GET /admin/geographic-units` | ⚪ Chưa thực hiện | — |
+| `POST /admin/geographic-units` | ⚪ Chưa thực hiện | — |
+| `GET /admin/geographic-units/{id}` | ⚪ Chưa thực hiện | — |
+| `PATCH /admin/geographic-units/{id}` | ⚪ Chưa thực hiện | — |
+| `DELETE /admin/geographic-units/{id}` | ⚪ Chưa thực hiện | — |
+| `GET /geographic-units` | ⚪ Chưa thực hiện | — |
+| `GET /admin/destinations` | ⚪ Chưa thực hiện | — |
+| `POST /admin/destinations` | ⚪ Chưa thực hiện | — |
+| `GET /admin/destinations/{destination_id}` | ⚪ Chưa thực hiện | — |
+| `PATCH /admin/destinations/{destination_id}` | ⚪ Chưa thực hiện | — |
+| `DELETE /admin/destinations/{destination_id}` | ⚪ Chưa thực hiện | — |
+| `GET /destinations` | ⚪ Chưa thực hiện | — |
+| `GET /admin/categories` | ⚪ Chưa thực hiện | — |
+| `POST /admin/categories` | ⚪ Chưa thực hiện | — |
+| `GET /admin/categories/{id}` | ⚪ Chưa thực hiện | — |
+| `PATCH /admin/categories/{id}` | ⚪ Chưa thực hiện | — |
+| `DELETE /admin/categories/{id}` | ⚪ Chưa thực hiện | — |
+| `GET /categories` | ⚪ Chưa thực hiện | — |
+| `GET /admin/tags` | ⚪ Chưa thực hiện | — |
+| `POST /admin/tags` | ⚪ Chưa thực hiện | — |
+| `GET /admin/tags/{id}` | ⚪ Chưa thực hiện | — |
+| `PATCH /admin/tags/{id}` | ⚪ Chưa thực hiện | — |
+| `DELETE /admin/tags/{id}` | ⚪ Chưa thực hiện | — |
+| `GET /tags` | ⚪ Chưa thực hiện | — |
+| `GET /admin/amenities` | ⚪ Chưa thực hiện | — |
+| `POST /admin/amenities` | ⚪ Chưa thực hiện | — |
+| `GET /admin/amenities/{id}` | ⚪ Chưa thực hiện | — |
+| `PATCH /admin/amenities/{id}` | ⚪ Chưa thực hiện | — |
+| `DELETE /admin/amenities/{id}` | ⚪ Chưa thực hiện | — |
+| `GET /amenities` | ⚪ Chưa thực hiện | — |
+| `GET /admin/offerings` | ⚪ Chưa thực hiện | — |
+| `POST /admin/offerings` | ⚪ Chưa thực hiện | — |
+| `GET /admin/offerings/{offering_id}` | ⚪ Chưa thực hiện | — |
+| `PATCH /admin/offerings/{offering_id}` | ⚪ Chưa thực hiện | — |
+| `DELETE /admin/offerings/{offering_id}` | ⚪ Chưa thực hiện | — |
+| `GET /offerings` | ⚪ Chưa thực hiện | — |
+| `GET /places/{place_id}/offerings` | ⚪ Chưa thực hiện | — |
+| `GET /businesses` | ✅ Hoàn thiện | Doanh nghiệp |
+| `POST /businesses` | ✅ Hoàn thiện | Doanh nghiệp: Tạo |
+| `GET /businesses/{business_id}` | ✅ Hoàn thiện | Doanh nghiệp: Quản lý |
+| `PATCH /businesses/{business_id}` | ⚪ Chưa thực hiện | — |
+| `DELETE /businesses/{business_id}` | ⚪ Chưa thực hiện | — |
+| `GET /businesses/{business_id}/members` | ✅ Hoàn thiện | Doanh nghiệp: Quản lý |
+| `POST /businesses/{business_id}/members` | ⚪ Chưa thực hiện | — |
+| `GET /businesses/{business_id}/members/{member_id}` | ⚪ Chưa thực hiện | — |
+| `PATCH /businesses/{business_id}/members/{member_id}` | ⚪ Chưa thực hiện | — |
+| `DELETE /businesses/{business_id}/members/{member_id}` | ⚪ Chưa thực hiện | — |
+| `POST /businesses/{business_id}/verification` | ✅ Hoàn thiện | Doanh nghiệp: Gửi hồ sơ xác minh |
+| `POST /businesses/{business_id}/claims` | 🟡 Đã nối, chưa kiểm | Doanh nghiệp: Yêu cầu quản lý địa điểm |
+| `POST /claims/{claim_id}/change-requests` | ⚪ Chưa thực hiện | — |
+| `POST /admin/claims/{id}/review` | ⚪ Chưa thực hiện | — |
+| `POST /admin/change-requests/{id}/review` | ⚪ Chưa thực hiện | — |
+| `POST /admin/business-verifications/{id}/review` | 🟡 Đã nối, chưa kiểm | Kiểm duyệt: nhập ID tay (F-16) |
+| `POST /admin/media/{id}/review` | ⚪ Chưa thực hiện | — |
+| `GET /media/{id}` (ngoài contract) | ❌ Lỗi | Ảnh cần JWT qua Gateway, `<img>` không tải được (F-14) |
+
+#### Community
+
+| API | Trạng thái kết nối | Màn hình FE / ghi chú |
+|---|---|---|
+| `GET /places/{place_id}/reviews` | ✅ Hoàn thiện | Chi tiết địa điểm |
+| `POST /places/{place_id}/reviews` | 🟡 Đã nối, chưa kiểm | Chi tiết địa điểm: Viết đánh giá; chưa có ảnh (F-14) |
+| `PATCH /reviews/{review_id}` | ⚪ Chưa thực hiện | — |
+| `DELETE /reviews/{review_id}` | ⚪ Chưa thực hiện | — |
+| `POST /reviews/{review_id}/reports` | ⚪ Chưa thực hiện | — |
+| `GET /me/favorites` | ⚪ Chưa thực hiện | — |
+| `PUT /me/favorites/{place_id}` | ✅ Hoàn thiện | Chi tiết địa điểm: Lưu yêu thích |
+| `DELETE /me/favorites/{place_id}` | ⚪ Chưa thực hiện | — |
+| `GET /me/collections` | ✅ Hoàn thiện | Bộ sưu tập |
+| `POST /me/collections` | ✅ Hoàn thiện | Bộ sưu tập: Tạo |
+| `GET /me/collections/{collection_id}` | 🟡 Đã nối, chưa kiểm | Bộ sưu tập: Chi tiết |
+| `PATCH /me/collections/{collection_id}` | ⚪ Chưa thực hiện | — |
+| `DELETE /me/collections/{collection_id}` | ⚪ Chưa thực hiện | — |
+| `GET /collections/{collection_id}` | ⚪ Chưa thực hiện | — |
+| `GET /collections/{collection_id}/items` | 🟡 Đã nối, chưa kiểm | Bộ sưu tập: Chi tiết |
+| `POST /collections/{collection_id}/items` | 🟡 Đã nối, chưa kiểm | Bộ sưu tập: Thêm địa điểm |
+| `GET /collections/{collection_id}/items/{item_id}` | ⚪ Chưa thực hiện | — |
+| `PATCH /collections/{collection_id}/items/{item_id}` | ⚪ Chưa thực hiện | — |
+| `DELETE /collections/{collection_id}/items/{item_id}` | ⚪ Chưa thực hiện | — |
+| `PUT /collections/{collection_id}/items/order` | ⚪ Chưa thực hiện | — |
+| `POST /contributions` | ⚪ Chưa thực hiện | — |
+| `GET /me/contributions` | ⚪ Chưa thực hiện | — |
+| `PATCH /contributions/{contribution_id}` | ⚪ Chưa thực hiện | — |
+| `POST /contributions/{contribution_id}/withdraw` | ⚪ Chưa thực hiện | — |
+| `GET /admin/reviews` | ✅ Hoàn thiện | Kiểm duyệt: đánh giá |
+| `POST /admin/reviews/{id}/moderate` | 🟡 Đã nối, chưa kiểm | Kiểm duyệt: duyệt/ẩn đánh giá |
+| `GET /admin/contributions` | ⚪ Chưa thực hiện | — |
+| `POST /admin/contributions/{id}/moderate` | ⚪ Chưa thực hiện | — |
+| `GET /admin/reports` | ⚪ Chưa thực hiện | — |
+| `POST /admin/reports/{id}/moderate` | ⚪ Chưa thực hiện | — |
+
+#### Trip
+
+| API | Trạng thái kết nối | Màn hình FE / ghi chú |
+|---|---|---|
+| `GET /me/trips` | ✅ Hoàn thiện | Chuyến đi |
+| `POST /me/trips` | ✅ Hoàn thiện | Chuyến đi: Tạo |
+| `GET /trips/{trip_id}` | ✅ Hoàn thiện | Chuyến đi: Chi tiết |
+| `PATCH /trips/{trip_id}` | ⚪ Chưa thực hiện | — |
+| `DELETE /trips/{trip_id}` | ⚪ Chưa thực hiện | — |
+| `PUT /trips/{trip_id}/state` | ⚪ Chưa thực hiện | — |
+| `GET /trips/{trip_id}/destinations` | ⚪ Chưa thực hiện | — |
+| `POST /trips/{trip_id}/destinations` | ⚪ Chưa thực hiện | — |
+| `GET /trips/{trip_id}/destinations/{segment_id}` | ⚪ Chưa thực hiện | — |
+| `PATCH /trips/{trip_id}/destinations/{segment_id}` | ⚪ Chưa thực hiện | — |
+| `DELETE /trips/{trip_id}/destinations/{segment_id}` | ⚪ Chưa thực hiện | — |
+| `GET /trips/{trip_id}/days` | ✅ Hoàn thiện | Chuyến đi: Ngày |
+| `POST /trips/{trip_id}/days` | ✅ Hoàn thiện | Chuyến đi: Thêm ngày |
+| `GET /trips/{trip_id}/days/{day_id}` | ⚪ Chưa thực hiện | — |
+| `PATCH /trips/{trip_id}/days/{day_id}` | ⚪ Chưa thực hiện | — |
+| `DELETE /trips/{trip_id}/days/{day_id}` | ⚪ Chưa thực hiện | — |
+| `GET /trips/{trip_id}/days/{day_id}/items` | ✅ Hoàn thiện | Chuyến đi: Địa điểm trong ngày |
+| `POST /trips/{trip_id}/days/{day_id}/items` | ✅ Hoàn thiện | Chuyến đi: Thêm địa điểm |
+| `GET /trips/{trip_id}/days/{day_id}/items/{item_id}` | ⚪ Chưa thực hiện | — |
+| `PATCH /trips/{trip_id}/days/{day_id}/items/{item_id}` | ✅ Hoàn thiện | Chuyến đi: Khóa/mở khóa |
+| `DELETE /trips/{trip_id}/days/{day_id}/items/{item_id}` | ⚪ Chưa thực hiện | — |
+| `PUT /trips/{trip_id}/days/{day_id}/items/order` | ⚪ Chưa thực hiện | — |
+| `GET /trips/{trip_id}/transfers` | ⚪ Chưa thực hiện | — |
+| `POST /trips/{trip_id}/transfers` | ⚪ Chưa thực hiện | — |
+| `GET /trips/{trip_id}/transfers/{transfer_id}` | ⚪ Chưa thực hiện | — |
+| `PATCH /trips/{trip_id}/transfers/{transfer_id}` | ⚪ Chưa thực hiện | — |
+| `DELETE /trips/{trip_id}/transfers/{transfer_id}` | ⚪ Chưa thực hiện | — |
+| `POST /trips/{trip_id}/route-estimates` | ⚪ Chưa thực hiện | — |
+| `POST /trips/{trip_id}/snapshots/refresh` | ⚪ Chưa thực hiện | — |
+
+#### Ingestion
+
+| API | Trạng thái kết nối | Màn hình FE / ghi chú |
+|---|---|---|
+| `GET /admin/data-sources` | ✅ Hoàn thiện | Quản trị: Nguồn dữ liệu |
+| `POST /admin/data-sources` | ⚪ Chưa thực hiện | — |
+| `GET /admin/data-sources/{source_id}` | ⚪ Chưa thực hiện | — |
+| `PATCH /admin/data-sources/{source_id}` | ⚪ Chưa thực hiện | — |
+| `DELETE /admin/data-sources/{source_id}` | ⚪ Chưa thực hiện | — |
+| `PATCH /admin/data-sources/{source_id}/policy` | ⚪ Chưa thực hiện | — |
+| `POST /admin/data-sources/{source_id}/import-jobs` | 🟡 Đã nối, chưa kiểm | Quản trị: Nhập dữ liệu |
+| `GET /admin/import-jobs/{job_id}` | 🟡 Đã nối, chưa kiểm | Quản trị: Tải lại trạng thái job |
+| `GET /admin/import-jobs/{job_id}/items` | ⚪ Chưa thực hiện | — |
+| `GET /admin/import-jobs/{job_id}/errors` | ⚪ Chưa thực hiện | — |
+| `GET /admin/import-jobs/{job_id}/candidates` | ⚪ Chưa thực hiện | — |
+| `POST /admin/import-jobs/{job_id}/retry` | ⚪ Chưa thực hiện | — |
+| `POST /admin/import-jobs/{job_id}/cancel` | ⚪ Chưa thực hiện | — |
+| `POST /admin/import-items/{item_id}/decision` | ⚪ Chưa thực hiện | — |
+
+#### Intelligence
+
+| API | Trạng thái kết nối | Màn hình FE / ghi chú |
+|---|---|---|
+| `POST /recommendations` | ⏸️ Hoãn (AI) | Ẩn khi `VITE_AI_ENABLED=false` |
+| `POST /interactions/batch` | ⏸️ Hoãn (AI) | Ẩn khi `VITE_AI_ENABLED=false` |
+| `GET /me/interactions` | ⏸️ Hoãn (AI) | Ẩn khi `VITE_AI_ENABLED=false` |
+| `DELETE /me/interactions` | ⏸️ Hoãn (AI) | Ẩn khi `VITE_AI_ENABLED=false` |
+| `POST /admin/datasets` | ⏸️ Hoãn (AI) | Ẩn khi `VITE_AI_ENABLED=false` |
+| `GET /admin/datasets/{dataset_id}` | ⏸️ Hoãn (AI) | Ẩn khi `VITE_AI_ENABLED=false` |
+| `POST /admin/training-jobs` | ⏸️ Hoãn (AI) | Ẩn khi `VITE_AI_ENABLED=false` |
+| `GET /admin/training-jobs/{job_id}` | ⏸️ Hoãn (AI) | Ẩn khi `VITE_AI_ENABLED=false` |
+| `POST /admin/training-jobs/{job_id}/cancel` | ⏸️ Hoãn (AI) | Ẩn khi `VITE_AI_ENABLED=false` |
+| `GET /admin/models` | ⏸️ Hoãn (AI) | Ẩn khi `VITE_AI_ENABLED=false` |
+| `GET /admin/models/{model_id}/metrics` | ⏸️ Hoãn (AI) | Ẩn khi `VITE_AI_ENABLED=false` |
+| `POST /admin/models/{model_id}/validate` | ⏸️ Hoãn (AI) | Ẩn khi `VITE_AI_ENABLED=false` |
+| `POST /admin/models/{model_id}/deploy` | ⏸️ Hoãn (AI) | Ẩn khi `VITE_AI_ENABLED=false` |
+| `POST /admin/models/{model_id}/rollback` | ⏸️ Hoãn (AI) | Ẩn khi `VITE_AI_ENABLED=false` |
+
+## 10. Vấn đề đang mở
 
 | ID | Mức | Phase | Vấn đề | Người xử lý | Trạng thái |
 |---|---|---|---|---|---|
@@ -325,14 +561,14 @@ Cần chuẩn bị trước P04: target triển khai và domain; credential prov
 | F-15 | Trung bình | P00 | Response Place trong contract thiếu `address`, `description`, `rating_avg`, `review_count`, `media`; code vẫn trả các trường này | N1 | OPEN |
 | F-16 | Trung bình | P00 | Thiếu API liệt kê hàng chờ duyệt cho admin (claim, yêu cầu sửa, xác minh doanh nghiệp, media) và cho doanh nghiệp (claim của mình); màn admin phải nhập ID tay | N1 | OPEN |
 | F-17 | Trung bình | — | Plan chưa có scope di động: push/device token, deep link email, lưu token trên thiết bị, ảnh thu nhỏ/CDN | Người dùng quyết định | OPEN |
-| F-18 | Trung bình | P03 | Frontend web mới gọi khoảng 38/171 operation public/admin; chưa có màn quên/đổi mật khẩu, phiên đăng nhập, đóng góp, report, sửa/xóa review, danh sách favorite, chặng/di chuyển trip, CRUD admin Catalog, chi tiết import | N2 + N1 | OPEN |
+| F-18 | Trung bình | P03 | Frontend web mới nối 44/157 API không AI (27 đã test, 17 chưa test); 112 API chưa có màn hình. Chi tiết mục 9 | N2 + N1 | OPEN |
 | F-19 | Thấp | — | Plan lệch: còn ô `[x]` trong `plan/`; "Reviewer: A–F" thay vì N1/N2; SLO Basic recommendation P03 (< 800 ms) khác P00 (≤ 1 giây) | Điều phối | OPEN |
 
 Đã đóng: F-08 (dòng trạng thái plan lỗi thời, PR #19), F-10 (PR #3/#4 đã ghi vào lịch sử), F-11 (môi trường thiếu Java 21/Docker; CI Linux đã chạy đủ), F-12 (MongoDB 8 lỗi với kernel runner ≥ 6.19; pin Ubuntu 22.04, PR #20), F-13 (kiểm phục hồi đường Community → Catalog bằng probe GET, PR #20).
 
 ---
 
-## 10. Lệnh chạy kiểm thử
+## 11. Lệnh chạy kiểm thử backend
 
 Yêu cầu: Java 21, Docker, Python 3, Node 24. Chạy từ thư mục gốc repo.
 
@@ -346,18 +582,19 @@ Yêu cầu: Java 21, Docker, Python 3, Node 24. Chạy từ thư mục gốc rep
 | Lỗi phụ thuộc P02 | `python backend/infra/p02_faults.py` | Cần stack P02 đang chạy |
 | Tooling P03 | `python backend/infra/p03_nonai_tests.py` | Windows skip 1 test symlink |
 | Gate P03 không AI | `python backend/infra/p03_gate.py --scope non-ai --release-id <id>` | Bằng chứng phải cùng release, dưới 24 giờ, khớp source |
-| Frontend | `npm --prefix frontend run test:contracts` · `build` · `test:gateway` · `test:browser` | Hai lệnh cuối cần stack P02 |
+| Test kết nối BE ↔ FE | `npm --prefix frontend run test:gateway` · `npm --prefix frontend run test:browser` | Cần stack P02 đang chạy; kết quả dùng để cập nhật mục 9. Lệnh FE khác: `progress_fe.md` |
 
 Lỗi môi trường Windows: nếu JVM báo `Unable to establish loopback connection`, đặt `JAVA_TOOL_OPTIONS=-Djdk.net.unixdomain.tmpdir=<thư mục ngắn, có quyền ghi>`.
 
 ---
 
-## 11. Lịch sử cập nhật
+## 12. Lịch sử cập nhật
 
 Mới nhất ở trên. Mỗi dòng: ngày giờ · thay đổi · PR/commit.
 
 | Thời điểm | Thay đổi | PR / commit |
 |---|---|---|
+| 22/10/2026 16:50 | Tách progress thành `progress_be.md` và `progress_fe.md`; thêm mục 9 trạng thái kết nối BE ↔ FE cho 172 API | Nhánh `docs/progress-be-fe-split` |
 | 22/10/2026 16:25 | Gộp toàn bộ progress vào một file `PROGRESS.md`, sắp theo phase; xóa thư mục `progress/`; thêm F-14…F-19; P03 ghi đúng `PARTIAL` theo từng task (bản cũ ghi `NOT_STARTED` trong thân) | Nhánh `docs/progress-single-file` |
 | 21/10/2026 11:00 | P03 phạm vi không AI, tooling P03, tắt AI mặc định; CI 11/11 PASS | PR #20, `c1e8e29` |
 | 20/10/2026 15:32 | Đối chiếu source với progress, thêm quy tắc ghi progress, findings F-01…F-11 | PR #19, `3e20d63` |

@@ -9,7 +9,7 @@
 - Kiểm parser PostgreSQL (`pglast`) cho **6 file SQL, 187 statement**: không lỗi cú pháp.
 - Kiểm **73 FK nội bộ**: bảng/cột đích tồn tại, số cột tương ứng và khóa đích là PK/UNIQUE; không có FK xuyên schema/service.
 - **97 bảng đặc tả**: Identity 18, Catalog 28, Community 16, Trip 11, Intelligence 14, Ingestion 10. Mỗi service gồm 4 bảng kỹ thuật; tổng nghiệp vụ/read model là 73. Đây là thiết kế đầy đủ có mở rộng chuẩn hóa, không phải 97 bảng đã có dữ liệu.
-- Kiểm các liên kết Markdown nội bộ và source-to-target mapping. Các đường dẫn `backend/services/...`, `contracts/...`, `PROGRESS.md` là đầu ra tương lai, không giả định đã tồn tại.
+- Kiểm các liên kết Markdown nội bộ và source-to-target mapping. Các đường dẫn `backend/services/...`, `contracts/...`, `progress_be.md`/`progress_fe.md` là đầu ra tương lai, không giả định đã tồn tại.
 - Thay đổi của lượt làm việc nằm trong `plan/`; không sửa source backend, frontend hoặc tài liệu Word nguồn.
 
 ## Còn phải kiểm chứng khi triển khai
