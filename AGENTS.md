@@ -165,18 +165,21 @@ Không dùng `--force` thuần nếu không có lý do đặc biệt.
 - Đã chạy test/build/lint phù hợp hoặc ghi rõ chưa chạy được.
 - Commit message đúng quy ước nếu có commit.
 - Nếu đã push/PR, cung cấp tên nhánh và link PR nếu có.
-- Nếu thay đổi làm đổi trạng thái task/phase, đã cập nhật `PROGRESS.md` theo mục 10.
+- Nếu thay đổi làm đổi trạng thái task/phase hoặc kết nối BE ↔ FE, đã cập nhật `progress_be.md`/`progress_fe.md` theo mục 10.
 
 ## 10. Quy tắc ghi progress
 
-Mục tiêu: mọi dev và agent đọc **một file duy nhất** là thấy cùng một trạng thái, trạng thái đó khớp source trên `main` và có bằng chứng kiểm lại được.
+Mục tiêu: mọi dev và agent đọc **hai file progress** (backend và frontend) là thấy cùng một trạng thái, trạng thái đó khớp source trên `main` và có bằng chứng kiểm lại được.
 
 ### 10.1. Cấu trúc và nguồn sự thật
 
-- `PROGRESS.md` ở thư mục gốc repo là **nguồn trạng thái duy nhất**: tổng quan, quy ước, bản đồ luồng, task P00–P04 xếp theo phase, vấn đề mở, lệnh kiểm thử và lịch sử cập nhật.
-- Không tạo file tiến độ, evidence hay báo cáo trạng thái riêng ở chỗ khác (thư mục `progress/`, README service, `backend/infra/*.md`, `docs/`, mô tả PR). Những nơi đó chỉ link về `PROGRESS.md`.
+- Progress gồm đúng **hai file** ở thư mục gốc repo, mỗi file sắp theo phase P00–P04:
+  - `progress_be.md`: backend, Gateway, hạ tầng; quy ước chung; bản đồ luồng; **trạng thái kết nối BE ↔ FE từng API** (hoàn thiện, đã nối chưa kiểm, lỗi, chưa thực hiện, hoãn); toàn bộ vấn đề mở `F-xx`.
+  - `progress_fe.md`: frontend web: màn hình, phase FE, việc FE còn thiếu, lệnh FE.
+- Trạng thái kết nối BE ↔ FE **chỉ** ghi ở `progress_be.md`. `progress_fe.md` chỉ tóm tắt số lượng và link về.
+- Không tạo file tiến độ, evidence hay báo cáo trạng thái riêng ở chỗ khác (thư mục `progress/`, README service, `backend/infra/*.md`, `docs/`, mô tả PR). Những nơi đó chỉ link về hai file progress.
 - Bằng chứng ghi ngắn gọn ngay trên dòng task: tên test hoặc lệnh, số liệu chính, run ID CI. Không chép log dài.
-- `plan/` chỉ chứa yêu cầu. **Không tích checkbox trong `plan/`**. Chỉ được sửa dòng "Trạng thái" cho khớp `PROGRESS.md`.
+- `plan/` chỉ chứa yêu cầu. **Không tích checkbox trong `plan/`**. Chỉ được sửa dòng "Trạng thái" cho khớp progress.
 
 ### 10.2. Thời điểm cập nhật
 
@@ -189,9 +192,10 @@ Mục tiêu: mọi dev và agent đọc **một file duy nhất** là thấy cù
 | Bị chặn | Đặt `BLOCKED`, ghi chặn bởi gì, ai xử lý, việc vẫn làm tiếp được |
 | Người dùng hoãn phạm vi | Đặt `DEFERRED`, ghi người quyết định và ngày |
 | Reviewer xác nhận bằng văn bản | Đặt `ACCEPTED`, ghi tên reviewer và ngày |
-| Phát hiện lệch giữa source, contract, plan và progress | Thêm vấn đề `F-xx` vào mục "Vấn đề đang mở" |
+| Phát hiện lệch giữa source, contract, plan và progress | Thêm vấn đề `F-xx` vào mục "Vấn đề đang mở" của `progress_be.md` |
+| FE nối thêm API, test FE PASS/FAIL, hoặc API đổi contract | Cập nhật ký hiệu kết nối của API đó và bảng tổng trong `progress_be.md`; cập nhật màn hình trong `progress_fe.md`. Lỗi kết nối bắt buộc kèm `F-xx` |
 
-- Mỗi lần sửa phải cập nhật dòng **Cập nhật** đầu file: `DD/MM/YYYY HH:mm (GMT+7)`. Không ghi "hôm qua", "tuần trước".
+- Mỗi lần sửa phải cập nhật dòng **Cập nhật** đầu file được sửa: `DD/MM/YYYY HH:mm (GMT+7)`. Không ghi "hôm qua", "tuần trước".
 
 ### 10.3. Bộ trạng thái chuẩn
 
@@ -218,7 +222,7 @@ Trạng thái cấp service/phase: `READY_FOR_INTEGRATION`, `CONNECTED`, `SYSTEM
 - Kết quả trên checkout dirty chỉ đủ cho `PARTIAL` hoặc `LOCAL_VERIFIED` kèm ghi chú "dirty". Muốn đóng gate thì phải chạy lại trên commit đã có trên `main` hoặc nhánh PR.
 - Test flaky: không retry tới khi pass rồi ghi PASS. Ghi số lần chạy, số lần fail và mở vấn đề `F-xx`.
 - CI: "CI xanh" không có run ID thì không được nâng `CI_VERIFIED`.
-- Kết quả trong file bị ignore (`.local/`, `*-report.json`) không tự là bằng chứng; phải chép số liệu đã lọc secret vào `PROGRESS.md`.
+- Kết quả trong file bị ignore (`.local/`, `*-report.json`) không tự là bằng chứng; phải chép số liệu đã lọc secret vào file progress.
 - Build pass, app khởi động được, hay số endpoint/số test đủ **không** chứng minh chức năng đạt.
 
 ### 10.5. Không đánh dấu hàng loạt
@@ -229,12 +233,16 @@ Trạng thái cấp service/phase: `READY_FOR_INTEGRATION`, `CONNECTED`, `SYSTEM
 - Hạ trạng thái khi phát hiện thiếu là bắt buộc; ghi lý do và vấn đề `F-xx`.
 - Agent **không** tự đặt `ACCEPTED`, không đóng gate, không ký thay N1/N2 hay người dùng.
 
-### 10.6. Mẫu dòng task
+### 10.6. Mẫu dòng task và kết nối
 
 ```text
 - [x] P01-CA-04: <mô tả ngắn> — **LOCAL_VERIFIED** · Bằng chứng: <test/lệnh, số liệu, SHA> · Next: <việc tiếp theo>
 - [ ] P02-01: <mô tả ngắn> — **PARTIAL** · Đã có: … · Thiếu: … (F-06) · Người xử lý: N1
+
+| `POST /places/{place_id}/reviews` | 🟡 Đã nối, chưa kiểm | Chi tiết địa điểm: Viết đánh giá |
 ```
+
+Ký hiệu kết nối: ✅ Hoàn thiện (FE gọi qua Gateway và test FE PASS) · 🟡 Đã nối, chưa kiểm · ❌ Lỗi (bắt buộc có `F-xx`) · ⚪ Chưa thực hiện · ⏸️ Hoãn · ➖ Không áp dụng.
 
 ### 10.7. Gate và chữ ký
 
@@ -245,14 +253,14 @@ Trạng thái cấp service/phase: `READY_FOR_INTEGRATION`, `CONNECTED`, `SYSTEM
 ### 10.8. Đồng bộ giữa các dev
 
 - Owner chỉ sửa dòng task của mình. Bảng tổng quan, gate và vấn đề mở do điều phối cập nhật, hoặc owner sửa kèm review chéo.
-- Mọi PR đổi chức năng phải cập nhật `PROGRESS.md` trong cùng PR. Reviewer từ chối PR thiếu phần này.
+- Mọi PR đổi chức năng phải cập nhật file progress liên quan (BE, FE hoặc cả hai) trong cùng PR. Reviewer từ chối PR thiếu phần này.
 - Commit chỉ sửa progress dùng `docs(progress): <summary>`. Không gộp chung với commit code.
-- Conflict trong `PROGRESS.md`: rebase lên `origin/main`, giữ bằng chứng của cả hai phía, giữ trạng thái **thấp hơn** nếu hai phía mâu thuẫn, ghi vấn đề cho phần mâu thuẫn. Không chọn "ours"/"theirs" cho cả file.
-- Lịch sử chi tiết trước 22/10/2026 nằm trong Git (`git log -- progress/`), không chép lại vào `PROGRESS.md`.
+- Conflict trong file progress: rebase lên `origin/main`, giữ bằng chứng của cả hai phía, giữ trạng thái **thấp hơn** nếu hai phía mâu thuẫn, ghi vấn đề cho phần mâu thuẫn. Không chọn "ours"/"theirs" cho cả file.
+- Lịch sử chi tiết trước 22/10/2026 nằm trong Git (`git log -- progress/`), không chép lại vào file progress.
 
 ### 10.9. Vấn đề đang mở
 
-- Mỗi vấn đề có ID `F-xx` tăng dần (không dùng lại ID), mức Cao/Trung bình/Thấp, phase, người xử lý, trạng thái `OPEN`/`PARTIAL`.
+- Vấn đề ghi trong `progress_be.md`. Mỗi vấn đề có ID `F-xx` tăng dần (không dùng lại ID), mức Cao/Trung bình/Thấp, phase, người xử lý, trạng thái `OPEN`/`PARTIAL`.
 - Vấn đề đã xử lý chuyển xuống dòng "Đã đóng" kèm PR hoặc commit sửa.
 
 ### 10.10. Nội dung, an toàn và định dạng
@@ -269,4 +277,5 @@ Trạng thái cấp service/phase: `READY_FOR_INTEGRATION`, `CONNECTED`, `SYSTEM
 - Skip, checkout dirty và version môi trường lệch đã được ghi rõ.
 - Bảng tổng quan, gate và vấn đề mở khớp với các task bên dưới.
 - Dòng "Trạng thái" trong `plan/` liên quan đã khớp.
-- Không có secret/PII. `git grep "progress/"` không trỏ tới file đã xóa.
+- Bảng tổng kết nối BE ↔ FE khớp số dòng từng ký hiệu.
+- Không có secret/PII. `git grep "progress/"` và `git grep "PROGRESS.md"` không trỏ tới file đã xóa.
