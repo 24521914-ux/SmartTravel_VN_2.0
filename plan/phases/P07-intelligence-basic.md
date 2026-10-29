@@ -1,6 +1,6 @@
 # P07 Intelligence và Basic Recommendation
 
-Trạng thái: **Chưa triển khai**. Luồng chức năng thuộc P01-IN; dependency để bắt đầu là P00 và contract/fixture. Phát triển, kiểm thử Basic độc lập với event/snapshot fixtures song song cùng các nhóm khác; không cần chờ Community, Trip hay Ingestion chạy thật. Kết nối runtime thật tại P02 sau gate 6/6; catalog thủ công đủ chạy baseline. Chức năng: F05/F08. Mã task bên dưới không phải phase nối tiếp Trip hoặc Community.
+Trạng thái (29/10/2026): **P01 Basic có code và bằng chứng LOCAL_VERIFIED trên fixture theo [progress BE](../../progress_be.md); bàn giao/reviewer còn PARTIAL; kiểm nhận P03 AI vẫn DEFERRED**. Luồng chức năng thuộc P01-IN (F05/F08), không phải phase nối tiếp Trip/Community. Hướng dẫn chi tiết dưới đây là yêu cầu, không là trạng thái. [Master plan modular](../../docs/recommendation/00-readme.md) mới chỉ là thiết kế, chưa triển khai; giữ thứ tự Basic trước ML theo P00.
 
 ## Công việc
 

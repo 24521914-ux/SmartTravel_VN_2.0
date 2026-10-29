@@ -1,6 +1,6 @@
 # P08 Dataset training model và Intelligence nâng cao
 
-Trạng thái: **Chưa triển khai**. Luồng chức năng thuộc P01-IN; có thể phát triển song song sau P00 trên dataset fixture hợp lệ và adapter/stub có policy. Không chờ P06/P07 chạy runtime thật để hoàn thiện pipeline. Dataset/model quality gate trên dữ liệu thật được kiểm tra ở P03 sau kết nối; nếu dữ liệu chưa đủ điều kiện thì giữ Basic Recommendation hoạt động và ghi QUALITY_PENDING. Mục tiêu: hoàn thiện vòng đời ML trong bảng nguồn. Các task dưới đây không phải phase nối tiếp.
+Trạng thái (29/10/2026): **Cơ chế dataset/training/model P01 có code và bằng chứng LOCAL_VERIFIED trên fixture theo [progress BE](../../progress_be.md); bàn giao/reviewer còn PARTIAL; quality trên dữ liệu thật và P03 AI vẫn DEFERRED**. Fixture SGD/vector3 không chứng minh Content/CF/Hybrid ML đạt chất lượng thực. Các task dưới là yêu cầu thuộc P01-IN, không phải phase nối tiếp. [Master plan modular](../../docs/recommendation/00-readme.md) chỉ là thiết kế chưa triển khai; giữ Basic trước ML theo P00, không dùng hướng dẫn song song cũ để bỏ qua nghiệm thu Basic.
 
 ## Công việc
 
