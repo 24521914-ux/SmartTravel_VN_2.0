@@ -1,6 +1,6 @@
 # Tiến độ Backend (BE) — SmartTravel VN
 
-Cập nhật: **23/10/2026 01:05** (GMT+7)
+Cập nhật: **29/10/2026 15:07** (GMT+7)
 
 Progress gồm **hai file**: file này (`progress_be.md`) cho backend, Gateway, hạ tầng và **trạng thái kết nối BE ↔ FE**; [`progress_fe.md`](progress_fe.md) cho frontend web. Mỗi file sắp theo phase P00 → P04. Yêu cầu chi tiết của từng phase vẫn nằm trong `plan/phases/`; file này chỉ ghi **đã làm tới đâu, kiểm bằng gì, làm gì tiếp**.
 
@@ -156,6 +156,7 @@ Yêu cầu: `plan/phases/P00-scope-architecture.md` · Trạng thái phase: **`R
 - [x] P00-07: Java 21 / Spring Boot 3.5.13, image non-root, health, log correlation, CI template — **LOCAL_VERIFIED** · CI P00 PASS run 39540804336.
 - [x] P00-08: Chốt frontend, triển khai mới, Basic trước ML, baseline SLO/RPO/RTO/retention — **LOCAL_VERIFIED** · Bằng chứng: `plan/P00-DECISIONS.md`.
 - [ ] P00-09: Bàn giao gói cho 6 owner cùng revision — **PARTIAL** · Thiếu: N1/N2 xác nhận nhận gói.
+- [x] P00-RC-PLAN: Phân tích và lập master plan Unified Modular Recommendation (chỉ tài liệu) — **LOCAL_VERIFIED** · Người làm: Codex, nhánh `docs/intelligence-modular-recommendation-plan` · Bằng chứng: Python stdlib, 11 nhóm kiểm tra tĩnh / 0 lỗi / 0 bỏ qua: [13 file](docs/recommendation/00-readme.md), 33 JSON, 171 link nội bộ, 60 task đủ 15 trường, DAG không vòng, tổng 115 ngày-người, phép tính 5 ví dụ khớp; baseline `89eb8cb`, commit `0df6399`, Python 3.14/Windows, không dùng Java/DB/broker vì chỉ tài liệu. 10 Mermaid đã rà văn bản, chưa render (không có CLI/package sẵn); không chạy test nghiệp vụ/CI, không đóng gate. Next: N2/N1 review contract/purpose và RC-G1-01/02 trước code; AI và trạng thái kết nối giữ nguyên.
 - [ ] **Gate P00** — **PARTIAL** · Thiếu: chữ ký N1/N2 và freeze contract. Ghi chú: P01–P03 đã chạy trước khi gate P00 đóng (F-05).
 
 ---
@@ -569,13 +570,15 @@ Bảng dưới là trạng thái nối giữa từng API public/admin của back
 | F-16 | Trung bình | P00 | Thiếu API liệt kê hàng chờ duyệt cho admin (claim, yêu cầu sửa, xác minh doanh nghiệp, media) và cho doanh nghiệp (claim của mình); màn admin phải nhập ID tay | N1 | OPEN |
 | F-17 | Trung bình | — | Plan chưa có scope di động: push/device token, deep link email, lưu token trên thiết bị, ảnh thu nhỏ/CDN | Người dùng quyết định | OPEN |
 | F-18 | Trung bình | P03 | UI mới gọi 36/157 API không AI (27 🟡, 9 ❌); 121 API chưa có màn; 12 API UI cũ đã dùng nay bị mất. Chi tiết mục 9 | N2 + N1 | OPEN |
-| F-19 | Thấp | — | Plan lệch: còn ô `[x]` trong `plan/`; "Reviewer: A–F" thay vì N1/N2; SLO Basic recommendation P03 (< 800 ms) khác P00 (≤ 1 giây) | Điều phối | OPEN |
+| F-19 | Thấp | — | Plan lệch: còn ô `[x]` trong `plan/`; "Reviewer: A–F" thay vì N1/N2; SLO Basic recommendation P03 (< 800 ms) khác P00 (≤ 1 giây). Đã đồng bộ riêng dòng Trạng thái P07/P08 theo progress ngày 29/10/2026; hướng dẫn song song cũ cần đọc theo quyết định Basic trước ML tại P00 | Điều phối | OPEN |
 
 | F-20 | Trung bình | P03 | Danh mục public ở Gateway local chỉ có bản ghi kiểm thử P02/P03; cần dữ liệu du lịch thật và media có giấy phép. FE giữ tên gốc kèm nhãn dữ liệu kiểm thử (nhánh FE ghi là F-14, đánh số lại vì trùng ID) | N1 (Catalog) | OPEN |
 | F-21 | Trung bình | P03 | Lighthouse preview production local: Performance 80, LCP 4,0 s (mục tiêu < 2,5 s) trên UI editorial (nhánh FE ghi là F-15, đánh số lại vì trùng ID) | N2 | OPEN |
 | F-22 | Cao | P02/P03 | UI mới gọi sai contract: `POST /businesses` gửi `registration_number`, `contact_*`; `POST /me/trips` gửi `budget_estimate`, thiếu `timezone`, `currency`; `POST .../items` gửi `start_time`, thiếu `locked`, `recommendation_request_id`; import job gọi `.../jobs` với `run_mode`/`dry_run` thay vì `.../import-jobs` với `mode`. Form đổi mật khẩu, gửi xác minh, claim, duyệt KYC báo thành công nhưng không gọi API | N2 + N1 | OPEN |
 | F-23 | Cao | P02/P03 | Khi API lỗi, UI mới tạo bản ghi giả (`mockBiz`, `mockCol`, `mockTrip`, `mockItem`, `mockDay`, `mockJob`) hoặc đảo trạng thái và vẫn báo thành công (doanh nghiệp, collection, trip, ngày, item, import, kiểm duyệt, favorite ở trang chi tiết). Người dùng tưởng đã lưu nhưng dữ liệu không có trên server | N2 | OPEN |
 | F-24 | Thấp | P03 | Code FE cũ không còn dùng (`TravelApp.tsx`, `OperationalPanels.tsx`, `TripEditor.tsx`, `ScreenGuide.tsx`, `LiquidGlassNav.tsx`/`Icon.tsx` ở gốc `src`, `clay.css`, `travel.css`, `styles.css`, `tokens.css` ở gốc `src`); `browser-nonai.mjs`, `clay-ui-check.mjs` chưa khớp UI mới | N2 | OPEN |
+| F-25 | Trung bình | P00/P01 | OpenAPI `POST /api/v1/interactions/batch` khai báo `security: []` nhưng `SecurityConfiguration` Intelligence yêu cầu `intelligence:write`; chưa thống nhất contract/provider security. Khảo sát tĩnh tại `89eb8cb`, chưa thay code/quyền | N2 + N1 review contract | OPEN |
+| F-26 | Trung bình | P01/P03 (AI) | `BasicRepository.candidates` lấy 1.000 PUBLISHED theo UUID trước bộ lọc, có thể bỏ sót ứng viên hợp lệ; `persist` lấy `data_as_of` max trên candidate pool, chưa phản ánh freshness bảo thủ của kết quả thực dùng. Khảo sát tĩnh `BasicRepository.java:86,115` tại `89eb8cb`; cần regression >1.000 place và mixed freshness trong RC-G1-08/11, chưa có runtime evidence | N2 + N1 review | OPEN |
 
 Đã đóng: F-08 (dòng trạng thái plan lỗi thời, PR #19), F-10 (PR #3/#4 đã ghi vào lịch sử), F-11 (môi trường thiếu Java 21/Docker; CI Linux đã chạy đủ), F-12 (MongoDB 8 lỗi với kernel runner ≥ 6.19; pin Ubuntu 22.04, PR #20), F-13 (kiểm phục hồi đường Community → Catalog bằng probe GET, PR #20).
 
@@ -607,6 +610,7 @@ Mới nhất ở trên. Mỗi dòng: ngày giờ · thay đổi · PR/commit.
 
 | Thời điểm | Thay đổi | PR / commit |
 |---|---|---|
+| 29/10/2026 15:07 | Hoàn thành master plan Unified Modular Recommendation (chỉ tài liệu), 13 file/60 task; kiểm lại 11 nhóm tĩnh sau khi đồng bộ dataset/model/policy JSON examples; thêm F-25/F-26 từ đối chiếu source/contract; đồng bộ dòng Trạng thái P07/P08, giữ AI DEFERRED và trạng thái kết nối hiện hữu | Nhánh `docs/intelligence-modular-recommendation-plan`, commit `0df6399` |
 | 23/10/2026 01:05 | Merge frontend v4 (`feature/frontend-floria-v4-refinement`) vào cấu trúc progress BE/FE; xóa `progress/` cũ còn trong nhánh FE; đối chiếu lại kết nối BE ↔ FE trên UI mới: 0 ✅, 27 🟡, 9 ❌; hạ P02-09, P03-07 xuống `PARTIAL`; thêm F-20…F-24. Sửa giờ hai dòng 22/10 bên dưới (trước ghi nhầm giờ UTC) | Merge `eed140a`, nhánh `docs/progress-frontend-v4-merge` |
 | 22/10/2026 23:50 | Tách progress thành `progress_be.md` và `progress_fe.md`; thêm mục 9 trạng thái kết nối BE ↔ FE cho 172 API | Nhánh `docs/progress-be-fe-split` |
 | 22/10/2026 23:25 | Gộp toàn bộ progress vào một file `PROGRESS.md`, sắp theo phase; xóa thư mục `progress/`; thêm F-14…F-19; P03 ghi đúng `PARTIAL` theo từng task (bản cũ ghi `NOT_STARTED` trong thân) | Nhánh `docs/progress-single-file` |
