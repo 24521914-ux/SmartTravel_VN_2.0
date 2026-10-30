@@ -1,6 +1,6 @@
 # Tiến độ Backend (BE) — SmartTravel VN
 
-Cập nhật: **29/10/2026 15:07** (GMT+7)
+Cập nhật: **30/10/2026 21:16** (GMT+7)
 
 Progress gồm **hai file**: file này (`progress_be.md`) cho backend, Gateway, hạ tầng và **trạng thái kết nối BE ↔ FE**; [`progress_fe.md`](progress_fe.md) cho frontend web. Mỗi file sắp theo phase P00 → P04. Yêu cầu chi tiết của từng phase vẫn nằm trong `plan/phases/`; file này chỉ ghi **đã làm tới đâu, kiểm bằng gì, làm gì tiếp**.
 
@@ -272,7 +272,7 @@ Yêu cầu: `plan/phases/P02-service-integration.md` · Trạng thái phase: **`
 - [x] P02-06: Đầu vào Intelligence snapshot + delta, thu hồi — **LOCAL_VERIFIED** · Chỉ local; AI DEFERRED.
 - [x] P02-07: Recommendation → Trip → lịch sử đúng một lần — **LOCAL_VERIFIED** · Chỉ local; AI DEFERRED.
 - [ ] P02-08: Thông báo và xóa dữ liệu — **PARTIAL** · Đã có: thông báo từ event, email Mailpit, đủ 6 ack, thiếu ack Trip thì vẫn chờ · Thiếu: thông báo kết quả đóng góp và `model.deployed` (F-01).
-- [ ] P02-09: Frontend gọi Gateway thật; lỗi/pending có UI rõ; provider sandbox ghi rõ — **PARTIAL** (hạ từ `LOCAL_VERIFIED` ngày 23/10/2026) · Bằng chứng cũ: `test:gateway`, `test:browser` PASS trên UI cũ, CI run 39540804333 · Lý do hạ: UI mới (merge FE v4) báo thành công khi API lỗi và gửi sai body/path ở 5 API (F-22, F-23); test FE chưa chạy lại · Next: sửa F-22/F-23, chạy lại hai test. Trạng thái từng API: mục 9.
+- [ ] P02-09: Frontend gọi Gateway thật; lỗi/pending có UI rõ; provider sandbox ghi rõ — **IN_PROGRESS** · Người làm: Codex, nhánh `fix/frontend-backend-integration` · Đang sửa F-22/F-23, khôi phục chức năng mất và kiểm thử UI mới qua Gateway; chưa đóng gate. Người dùng xác nhận ngày 30/10/2026 tiếp tục với dữ liệu P02, chưa có nguồn du lịch có giấy phép hoặc scanner ảnh. Trạng thái từng API: mục 9.
 - [x] P02-10: Route Gateway, chặn internal/actuator, đổi token theo service đích — **LOCAL_VERIFIED** · `GatewayRoutingTests`, `PrincipalExchangeFilterTests`.
 - [x] P02-11: Snapshot + watermark + delta + chống trùng — **LOCAL_VERIFIED** · `SnapshotRebuildTests` · Chỉ local; AI DEFERRED.
 - [x] P02-12: Outbox/inbox/retry/DLQ/replay, crash sau commit — **LOCAL_VERIFIED** · CI resilience PASS.

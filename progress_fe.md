@@ -1,6 +1,6 @@
 # Tiến độ Frontend (FE) — SmartTravel VN
 
-Cập nhật: **23/10/2026 01:05** (GMT+7)
+Cập nhật: **30/10/2026 21:16** (GMT+7)
 
 Progress gồm **hai file**: file này (`progress_fe.md`) cho frontend web; [`progress_be.md`](progress_be.md) cho backend và **trạng thái kết nối BE ↔ FE từng API** (mục 9 của file đó). Quy ước trạng thái, tiêu chuẩn PASS và cách cập nhật dùng chung: `progress_be.md` mục 2.
 
@@ -98,7 +98,7 @@ Phạm vi FE hiện tại: **chỉ web** (React). Ứng dụng di động chưa 
 - [ ] FE-P02-01: Màn nghiệp vụ gọi Gateway thật; lỗi và trạng thái chờ hiện rõ — **PARTIAL** (hạ từ `LOCAL_VERIFIED` ngày 23/10/2026) · Bằng chứng cũ: `test:gateway` PASS 11/10/2026 và CI `connected` run 39540804333 trên UI cũ · Lý do hạ: UI mới báo thành công khi API lỗi (F-23) và gọi sai contract (F-22) · Tương ứng P02-09 bên BE.
 - [ ] FE-P02-02: Hiển thị trạng thái chờ ack (xác minh doanh nghiệp, import job) — **PARTIAL** (hạ 23/10/2026) · UI mới báo "đã gửi"/"đã tiếp nhận" mà không gọi API hoặc khi API lỗi.
 - [ ] FE-P02-03: Nối đủ API không AI của backend — **PARTIAL** · UI mới gọi 36/157 API (27 🟡, 9 ❌); 12 API UI cũ từng dùng nay bị mất · Next: mục 9.
-- [ ] FE-P02-04: Bỏ fallback dữ liệu giả, hiện lỗi thật, sửa body/path theo contract — **NOT_STARTED** · F-22, F-23 · Người xử lý: N2.
+- [ ] FE-P02-04: Bỏ fallback dữ liệu giả, hiện lỗi thật, sửa body/path theo contract — **IN_PROGRESS** · Người làm: Codex, nhánh `fix/frontend-backend-integration` · Đang sửa F-22/F-23, khôi phục chức năng mất và kiểm thử trình duyệt qua Gateway thật; chưa đóng gate.
 
 ## 7. P03 — Kiểm thử và thiết kế lại giao diện
 
