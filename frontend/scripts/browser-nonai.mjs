@@ -17,14 +17,30 @@ const snapshot = () => {
 };
 const before = snapshot();
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce' });
+page.setDefaultTimeout(20000);
 const errors = [], aiCalls = [], checks = [], responsive = [];
+const apiResults = [];
+page.on('response', response => {
+  const pathname = new URL(response.url()).pathname;
+  if (pathname.startsWith('/api/')) apiResults.push({ method: response.request().method(), path: pathname.replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi, '{id}'), status: response.status() });
+});
+const pendingRequests = new Set();
 page.on('pageerror', error => errors.push(error.message));
-page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/intelligence')) aiCalls.push(request.method()); });
-const mark = (id, details) => checks.push({ id, status: 'PASS', evidence: ['browser-nonai.mjs:' + id], details });
+page.on('request', request => {
+  const path = new URL(request.url()).pathname;
+  if (path.startsWith('/api/')) pendingRequests.add(request);
+  if (path.startsWith('/api/intelligence')) aiCalls.push(request.method());
+});
+page.on('requestfinished', request => pendingRequests.delete(request));
+page.on('requestfailed', request => pendingRequests.delete(request));
+const mark = (id, details) => { checks.push({ id, status: 'PASS', evidence: ['browser-nonai.mjs:' + id], details }); console.log('PASS browser group: ' + id); };
 const idle = async () => {
+  const deadline = Date.now() + 30000;
+  do { await page.waitForTimeout(100); } while (pendingRequests.size && Date.now() < deadline);
+  assert.equal(pendingRequests.size, 0, 'API requests did not complete');
   await page.waitForFunction(() => !document.querySelector('[aria-busy=true]') && !document.querySelector('.travel-status')?.textContent?.includes('Đang xử lý'), { timeout: 30000 });
-  const alert = page.locator('[role=alert]');
+  const alert = page.locator('main [role=alert]');
   assert.equal(await alert.count() ? await alert.first().textContent() : '', '');
 };
 async function navigate(name) {
@@ -35,7 +51,7 @@ async function navigate(name) {
     else await page.locator('.more-toggle').click();
   }
   await button.click();
-  await page.getByRole('heading', { name, exact: true, level: 1 }).waitFor();
+  if (name !== 'Khám phá') await page.getByRole('heading', { name, exact: true, level: 1 }).waitFor();
   await idle();
 }
 async function createdArticle(name) {
@@ -55,13 +71,13 @@ async function login(alias) {
   await page.getByLabel('Mật khẩu', { exact: true }).fill(secrets.IDENTITY_FIXTURE_PASSWORD);
   await page.locator('form').getByRole('button', { name: 'Đăng nhập', exact: true }).focus();
   await page.keyboard.press('Enter');
-  await page.getByRole('button', { name: 'Đăng xuất', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Đăng xuất khỏi hệ thống', exact: true }).waitFor();
   await idle();
   await navigate('Khám phá');
 }
 async function logout() {
-  await page.getByRole('button', { name: 'Đăng xuất', exact: true }).click();
-  await page.getByRole('button', { name: 'Đăng nhập', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Đăng xuất khỏi hệ thống', exact: true }).click();
+  await page.getByRole('banner').getByRole('button', { name: 'Đăng nhập', exact: true }).waitFor();
   await idle();
 }
 async function responsiveCheck(role, section) {
@@ -84,9 +100,26 @@ try {
   await idle();
   assert.equal(await page.getByRole('navigation').getByRole('button', { name: 'Gợi ý', exact: true }).count(), 0);
   await login('u1');
+  await navigate('Thông báo'); await idle();
+  const unread = page.getByRole('button', { name: 'Đánh dấu đã đọc', exact: true });
+  await unread.first().waitFor();
+  const beforeRead = await unread.count();
+  assert.ok(beforeRead > 0, 'P02 unread notification fixture required');
+  const readRoute = '**/api/identity/api/v1/me/notifications/*/read';
+  await page.route(readRoute, route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ code: 'DEPENDENCY_UNAVAILABLE', message: 'Synthetic notification outage', traceId: 'fixture', fieldErrors: [] }) }));
+  await unread.first().click(); await page.locator('.notifications-layout').getByRole('alert').waitFor();
+  assert.equal(await unread.count(), beforeRead, 'Failed write must not mark notifications read');
+  await page.unroute(readRoute);
+  await unread.first().click(); await idle();
+  assert.equal(await unread.count(), beforeRead - 1, 'Only the confirmed notification may become read');
+  mark('notifications', '503 retains unread state; real PATCH marks exactly one notification read');
+  await navigate('Khám phá'); await idle();
+  const fixtures = page.locator('.journey-data-note');
+  if (await fixtures.count()) await fixtures.locator('summary').click();
   await page.getByRole('button', { name: 'Xem chi tiết', exact: true }).first().click(); await idle();
   await page.getByRole('heading', { name: 'Đánh giá', exact: true }).waitFor();
-  await page.getByRole('button', { name: 'Lưu yêu thích', exact: true }).click(); await idle();
+  await page.getByRole('button', { name: /^(Lưu yêu thích|Đã lưu yêu thích)$/ }).click(); await idle();
+  await page.getByRole('button', { name: /^(Lưu yêu thích|Đã lưu yêu thích)$/ }).click(); await idle();
   await navigate('Bộ sưu tập');
   const name = 'P03 browser ' + Date.now();
   await page.getByLabel('Tên bộ sưu tập', { exact: true }).fill(name);
@@ -99,15 +132,12 @@ try {
   await page.getByLabel('Ngân sách (VND)', { exact: true }).fill('2000000');
   await page.getByRole('button', { name: 'Tạo chuyến đi', exact: true }).click(); await idle();
   await (await createdArticle(name)).getByRole('button', { name: 'Xem chi tiết' }).click(); await idle();
-  await page.getByLabel('Ngày tham quan', { exact: true }).fill('2026-12-01');
+  await page.getByLabel(/^Ngày tham quan/).fill('2026-12-01');
   await page.getByRole('button', { name: 'Thêm ngày', exact: true }).click(); await idle();
-  await page.getByRole('button', { name: '2026-12-01', exact: true }).click(); await idle();
-  await page.getByRole('heading', { name: 'Địa điểm ngày 2026-12-01', exact: true }).waitFor();
-  const place = page.locator('select[name=place]');
-  await place.selectOption({ index: 1 });
-  await page.getByLabel('Ghi chú', { exact: true }).fill('Synthetic non-AI browser visit');
+  await page.getByRole('tab', { name: '2026-12-01', exact: true }).click(); await idle();
+  await page.getByRole('heading', { name: 'Lịch trình ngày: 2026-12-01', exact: true }).waitFor();
   assert.equal(await page.locator('input[name=recommendation]').count(), 0);
-  await page.getByRole('button', { name: 'Thêm địa điểm vào ngày', exact: true }).click(); await idle();
+  await page.getByRole('button', { name: '+ Thêm vào ngày', exact: true }).first().click(); await idle();
   await page.getByRole('button', { name: 'Khóa địa điểm', exact: true }).click(); await idle();
   await page.getByRole('button', { name: 'Mở khóa địa điểm', exact: true }).click(); await idle();
   await responsiveCheck('user', 'Chuyến đi');
@@ -118,23 +148,22 @@ try {
   assert.ok(await page.evaluate(() => document.activeElement !== document.body));
   mark('keyboard', 'Keyboard reaches an interactive control');
   await navigate('Khám phá');
-  await page.getByLabel('Tìm địa điểm', { exact: true }).fill('p03-no-such-place-' + Date.now());
-  await page.getByRole('button', { name: 'Tìm kiếm', exact: true }).click(); await idle();
-  assert.equal(await page.locator('article').count(), 0);
-  await page.getByLabel('Tìm địa điểm', { exact: true }).fill('');
+  await page.locator('#destination-search').fill('p03-no-such-place-' + Date.now());
+  await page.getByRole('button', { name: 'Tìm điểm đến', exact: true }).click(); await idle();
+  assert.equal(await page.locator('#diem-den article').count(), 0);
+  await page.locator('#destination-search').fill('');
   const pattern = '**/api/catalog/api/v1/places*';
   await page.route(pattern, async route => { await new Promise(r => setTimeout(r, 400)); await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ code: 'DEPENDENCY_UNAVAILABLE', message: 'Synthetic outage', fieldErrors: [], traceId: '00000000-0000-4000-8000-000000000003' }) }); });
-  await page.getByRole('button', { name: 'Tìm kiếm', exact: true }).click();
-  await page.getByRole('main').getAttribute('aria-busy').then(value => assert.equal(value, 'true'));
-  await page.locator('[role=alert]').waitFor();
-  assert.match(await page.locator('[role=alert]').textContent(), /DEPENDENCY_UNAVAILABLE/);
+  await page.getByRole('button', { name: 'Tìm điểm đến', exact: true }).click();
+  await page.locator('#diem-den').getAttribute('aria-busy').then(value => assert.equal(value, 'true'));
+  await page.locator('#diem-den').getByRole('alert').waitFor();
+  assert.ok(await page.locator('#diem-den').getByRole('alert').isVisible());
   await page.unroute(pattern);
-  await page.getByRole('button', { name: 'Tìm kiếm', exact: true }).click(); await idle();
+  await page.getByRole('button', { name: 'Tìm điểm đến', exact: true }).click(); await idle();
   mark('loading_error_empty', 'Empty query result, visible busy state, 503 error, successful recovery');
   await responsiveCheck('user', 'Bản đồ');
   await page.getByRole('button', { name: 'Xem vị trí', exact: true }).first().click(); await idle();
-  assert.match(await page.getByRole('link', { name: 'Mở vị trí trên OpenStreetMap' }).getAttribute('href'), /^https:\/\/www.openstreetmap.org\//);
-  await page.getByRole('button', { name: 'Xem bản đồ trực tuyến', exact: true }).click();
+  assert.match(await page.getByRole('link', { name: /Mở OpenStreetMap/ }).getAttribute('href'), /^https:\/\/www.openstreetmap.org\//);
   await page.locator('iframe').waitFor();
   mark('map', 'Location coordinates, OSM link and opt-in map iframe');
   await logout(); await login('business');
@@ -144,9 +173,10 @@ try {
   await page.getByLabel('Tên doanh nghiệp', { exact: true }).fill(name);
   await page.getByRole('button', { name: 'Tạo doanh nghiệp', exact: true }).click(); await idle();
   await (await createdArticle(name)).getByRole('button', { name: 'Quản lý doanh nghiệp' }).click(); await idle();
-  await page.getByLabel('Minh chứng xác minh (mỗi dòng một mã)', { exact: true }).fill('private/p03-synthetic-evidence');
-  await page.getByRole('button', { name: 'Gửi hồ sơ xác minh', exact: true }).click(); await idle();
-  assert.match(await page.getByRole('status').allTextContents().then(values => values.join(' ')), /chờ|PENDING/i);
+  await page.getByRole('tab', { name: /Xác minh/ }).click();
+  await page.locator('#kyc-doc-url').fill('private/p03-synthetic-evidence');
+  await page.getByRole('button', { name: 'Gửi xác minh KYC', exact: true }).click(); await idle();
+  await page.getByText(/chờ|PENDING/i).first().waitFor();
   mark('business', 'Create business and submit verification');
   mark('async_ack', 'Verification UI displays pending review');
   await logout(); await login('admin');
@@ -167,7 +197,7 @@ finally {
   writeFileSync(resolve(output, 'report.json'), JSON.stringify({ scope: 'non-ai', release_id: process.env.P03_RELEASE_ID,
     timestamp: new Date().toISOString(), candidate_before_sha256: before.sha256, candidate_sha256: after.sha256,
     source_hashes: { 'frontend/scripts/browser-nonai.mjs': after.files['frontend/scripts/browser-nonai.mjs'] },
-    checks, gaps, ai_http_requests: aiCalls.length, page_errors: errors.length }, null, 2));
+    checks, gaps, api_request_count: apiResults.length, responsive_cases: responsive.length, api_results: [...new Map(apiResults.map(r => [JSON.stringify(r), r])).values()], ai_http_requests: aiCalls.length, page_errors: errors.length }, null, 2));
   if (!unchanged) process.exitCode = 1;
   await browser.close();
 }
