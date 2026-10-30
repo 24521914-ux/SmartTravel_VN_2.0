@@ -86,6 +86,11 @@ class GatewayRoutingTests {
                 .jsonPath("$.cookie").isEqualTo("").jsonPath("$.forwarded_user").isEqualTo("")
                 .jsonPath("$.trace").isEqualTo("fixture-trace");
     }
+    @Test void approvedMediaReadsCanReachCatalogAnonymouslyButUploadStaysProtected() {
+        client.get().uri("/api/catalog/api/v1/media/"+UUID.randomUUID()).exchange()
+                .expectStatus().isOk().expectBody().jsonPath("$.path").value(path -> org.assertj.core.api.Assertions.assertThat(path.toString()).startsWith("/api/v1/media/"));
+        client.post().uri("/api/catalog/api/v1/admin/media").exchange().expectStatus().isUnauthorized();
+    }
     @Test void signedJwtAudienceIsBoundToDestinationAndInternalRoutesAreDenied() throws Exception {
         String token=token("trip","trip:read trip:write");
         client.get().uri("/api/trip/api/v1/me/trips").headers(h -> h.setBearerAuth(token)).exchange()

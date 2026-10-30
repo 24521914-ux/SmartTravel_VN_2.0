@@ -18174,6 +18174,32 @@
                           "version": {
                             "type": "integer",
                             "minimum": 1
+                          },
+                          "review_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "reason": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024
+                          },
+                          "report_status": {
+                            "type": "string",
+                            "enum": [
+                              "OPEN",
+                              "RESOLVED",
+                              "DISMISSED"
+                            ]
+                          },
+                          "review_content": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024
+                          },
+                          "place_id": {
+                            "type": "string",
+                            "format": "uuid"
                           }
                         },
                         "required": [

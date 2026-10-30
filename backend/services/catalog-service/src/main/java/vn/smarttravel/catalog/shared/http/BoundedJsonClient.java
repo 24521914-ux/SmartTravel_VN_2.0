@@ -37,6 +37,8 @@ public final class BoundedJsonClient {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Dependency unavailable");
         } catch (Exception error) {
             // Do not expose credential-bearing request headers or provider response details.
+            org.slf4j.LoggerFactory.getLogger(BoundedJsonClient.class)
+                    .warn("Dependency request failed ({})", error.getClass().getSimpleName());
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Dependency unavailable");
         }
     }

@@ -41,8 +41,41 @@ class CommunityProviderTests {
         if(body!=null)request.contentType("application/json").content(JSON.writeValueAsBytes(body));if(version!=null)request.header("If-Match",version);if(method.equals("POST"))request.header("Idempotency-Key",UUID.randomUUID().toString());
         var response=mvc.perform(request).andReturn().getResponse();assertThat(response.getStatus()).as(method+" "+path+" "+response.getContentAsString()).isEqualTo(expected);if(expected==204)assertThat(response.getContentAsString()).isEmpty();
         var result=expected==204?JSON.createObjectNode():JSON.readTree(response.getContentAsString());var contract=JSON.readTree(Files.readString(Path.of("../../contracts/openapi/community.yaml")));
-        for(var it=contract.path("paths").fields();it.hasNext();){var entry=it.next();if(path.matches(entry.getKey().replaceAll("\\{[^}]+}","[^/]+"))&&entry.getValue().has(method.toLowerCase())){seen.add(entry.getValue().path(method.toLowerCase()).path("operationId").asText());var schema=entry.getValue().path(method.toLowerCase()).path("responses").path(""+expected).path("content").path("application/json").path("schema");if(!schema.isMissingNode())assertThat(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012).getSchema(schema).validate(result)).as("frozen provider "+path).isEmpty();}}
+        for(var it=contract.path("paths").fields();it.hasNext();){var entry=it.next();if(path.split("\\?",2)[0].matches(entry.getKey().replaceAll("\\{[^}]+}","[^/]+"))&&entry.getValue().has(method.toLowerCase())){seen.add(entry.getValue().path(method.toLowerCase()).path("operationId").asText());var schema=entry.getValue().path(method.toLowerCase()).path("responses").path(""+expected).path("content").path("application/json").path("schema");if(!schema.isMissingNode())assertThat(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012).getSchema(schema).validate(result)).as("frozen provider "+path).isEmpty();}}
         return result;
+    }
+    @Test void reportedReviewQueuePreservesAckAndExposesActualReviewForAdmin()throws Exception{
+        String content="Actual reported review body",reason="Specific reported business concern";
+        String review=http("POST","/api/v1/places/"+PLACE+"/reviews",Map.of("rating",3,"content",content,"media_keys",List.of()),201,null).path("review_id").asText();
+        http("POST","/api/v1/admin/reviews/"+review+"/moderate",Map.of("action","APPROVE","reason","Reviewed fixture"),202,1L);
+        String report=http("POST","/api/v1/reviews/"+review+"/reports",Map.of("reason",reason),202,null).path("request_id").asText();
+        var item=http("GET","/api/v1/admin/reports",null,200,null).path("items").get(0);
+        assertThat(item.path("request_id").asText()).isEqualTo(report);assertThat(item.path("status").asText()).isEqualTo("COMPLETED");assertThat(item.path("version").asLong()).isEqualTo(1);
+        assertThat(item.path("review_id").asText()).isEqualTo(review);assertThat(item.path("reason").asText()).isEqualTo(reason);assertThat(item.path("report_status").asText()).isEqualTo("OPEN");
+        assertThat(item.path("review_content").asText()).isEqualTo(content);assertThat(item.path("place_id").asText()).isEqualTo(PLACE);assertThat(item.has("reporter_id")).isFalse();
+        var nonAdmin=MockMvcRequestBuilders.get("/api/v1/admin/reports").with(jwt().jwt(j->j.subject(OTHER).claim("roles",List.of("USER")).claim("scope","community:read community:write")));
+        assertThat(mvc.perform(nonAdmin).andReturn().getResponse().getStatus()).isEqualTo(403);
+        http("POST","/api/v1/admin/reports/"+report+"/moderate",Map.of("action","REJECT","reason","Inspected real content"),202,1L);
+        assertThat(http("GET","/api/v1/admin/reports",null,200,null).path("items").size()).isZero();
+    }
+    @Test void cursorListsExposeEveryRecordBeyondOneHundredWithoutDuplicates()throws Exception{
+        var reports=new ArrayList<org.bson.Document>();var reviews=new ArrayList<org.bson.Document>();var favorites=new ArrayList<org.bson.Document>();var collections=new ArrayList<org.bson.Document>();var contributions=new ArrayList<org.bson.Document>();Date now=new Date();
+        for(int index=0;index<101;index++){
+            String review=UUID.randomUUID().toString();
+            reviews.add(new org.bson.Document("_id",review).append("user_id",UUID.randomUUID().toString()).append("place_id",PLACE).append("rating",3).append("content","Visible review "+index).append("status","APPROVED").append("version",1L).append("created_at",now).append("updated_at",now));
+            reviews.add(new org.bson.Document("_id",UUID.randomUUID().toString()).append("user_id",UUID.randomUUID().toString()).append("place_id",PLACE).append("rating",4).append("content","Pending review "+index).append("status","PENDING").append("version",1L).append("created_at",now).append("updated_at",now));
+            reports.add(new org.bson.Document("_id",UUID.randomUUID().toString()).append("review_id",review).append("reporter_id",USER).append("reason","Report "+index).append("status","OPEN").append("version",1L).append("created_at",now));
+            favorites.add(new org.bson.Document("_id",UUID.randomUUID().toString()).append("user_id",USER).append("place_id",UUID.randomUUID().toString()).append("created_at",now));
+            collections.add(new org.bson.Document("_id",UUID.randomUUID().toString()).append("owner_id",USER).append("name","Collection "+index).append("visibility","PRIVATE").append("version",1L).append("created_at",now).append("updated_at",now));
+            contributions.add(new org.bson.Document("_id",UUID.randomUUID().toString()).append("user_id",USER).append("type","ADD_PLACE").append("payload",new org.bson.Document("name","Contribution "+index)).append("payload_schema_version",1L).append("status","PENDING").append("version",1L).append("created_at",now).append("updated_at",now));
+        }
+        mongo.insert(reviews,"reviews");mongo.insert(reports,"review_reports");mongo.insert(favorites,"favorites");mongo.insert(collections,"collections");mongo.insert(contributions,"contributions");
+        for(var endpoint:Map.of("/api/v1/admin/reports","request_id","/api/v1/admin/reviews","review_id","/api/v1/places/"+PLACE+"/reviews","review_id","/api/v1/me/favorites","place_id","/api/v1/me/collections","collection_id","/api/v1/me/contributions","contribution_id","/api/v1/admin/contributions","contribution_id").entrySet()){
+            var first=http("GET",endpoint.getKey()+"?limit=100",null,200,null);assertThat(first.path("items").size()).as(endpoint.getKey()).isEqualTo(100);
+            String cursor=first.path("next_cursor").asText();assertThat(cursor).isNotBlank().isNotEqualTo("null");
+            var second=http("GET",endpoint.getKey()+"?limit=100&cursor="+cursor,null,200,null);assertThat(second.path("items").size()).as(endpoint.getKey()).isEqualTo(1);assertThat(second.path("next_cursor").isNull()).isTrue();
+            Set<String> ids=new HashSet<>();first.path("items").forEach(item->ids.add(item.path(endpoint.getValue()).asText()));second.path("items").forEach(item->ids.add(item.path(endpoint.getValue()).asText()));assertThat(ids).hasSize(101);
+        }
     }
     @Test void allThirtyTwoFrozenOperationsReturnValidatedProviderResponses()throws Exception{
         String review=http("POST","/api/v1/places/"+PLACE+"/reviews",Map.of("rating",5,"content","Licensed synthetic review","media_keys",List.of()),201,null).path("review_id").asText();

@@ -23,12 +23,20 @@ public class RequestSizeFilter implements WebFilter {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        String path = exchange.getRequest().getPath().value();
+        var contentType = exchange.getRequest().getHeaders().getContentType();
+        boolean mediaUpload = exchange.getRequest().getMethod() == org.springframework.http.HttpMethod.POST
+                && (path.equals("/api/catalog/api/v1/media") || path.equals("/api/catalog/api/v1/admin/media"))
+                && contentType != null && org.springframework.http.MediaType.MULTIPART_FORM_DATA.isCompatibleWith(contentType);
+        // Catalog accepts a 10 MB file plus multipart framing. JSON endpoints
+        // retain the configured lower bound, including forged upload requests.
+        long requestLimit = mediaUpload ? 11L * 1024 * 1024 : maxBodyBytes;
         long length = exchange.getRequest().getHeaders().getContentLength();
-        if (length > maxBodyBytes) {
+        if (length > requestLimit) {
             exchange.getResponse().getHeaders().set(HttpHeaders.CONNECTION, "close");
             return GatewayErrors.write(exchange, 413, "REQUEST_TOO_LARGE", "Request body exceeds configured gateway limit");
         }
-        return DataBufferUtils.join(exchange.getRequest().getBody(), Math.toIntExact(maxBodyBytes))
+        return DataBufferUtils.join(exchange.getRequest().getBody(), Math.toIntExact(requestLimit))
                 .defaultIfEmpty(exchange.getResponse().bufferFactory().wrap(new byte[0]))
                 .flatMap(buffer -> {
                     byte[] bytes = new byte[buffer.readableByteCount()];

@@ -673,7 +673,12 @@
         {
           "request_id": "00000000-0000-4000-8000-000000000001",
           "status": "ACCEPTED",
-          "version": 1
+          "version": 1,
+          "review_id": "00000000-0000-4000-8000-000000000001",
+          "reason": "synthetic",
+          "report_status": "OPEN",
+          "review_content": "synthetic",
+          "place_id": "10000000-0000-4000-8000-000000000001"
         }
       ],
       "next_cursor": null,

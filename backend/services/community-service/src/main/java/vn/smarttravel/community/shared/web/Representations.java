@@ -11,6 +11,12 @@ public final class Representations {
     public static Map<String,Object> rating(Document row){var out=fields(row,"place_id","count","sum","version");out.put("as_of",row.getDate("as_of").toInstant().toString());return out;}
     public static Map<String,Object> favorite(Document row){return Map.of("place_id",row.getString("place_id"),"created_at",row.getDate("created_at").toInstant().toString());}
     public static Map<String,Object> accepted(String id,long version){return Map.of("request_id",id,"status","COMPLETED","version",version);}
+    public static Map<String,Object> report(Document row){
+        var out=new LinkedHashMap<String,Object>(accepted(row.getString("_id"),((Number)row.get("version")).longValue()));
+        out.put("review_id",row.getString("review_id"));out.put("reason",row.getString("reason"));out.put("report_status",row.getString("status"));
+        for(String field:List.of("review_content","place_id"))if(row.get(field)!=null)out.put(field,row.get(field));
+        return out;
+    }
     public static Map<String,Object> page(List<?> items){
         var attributes=org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();int limit=20,offset=0;long epoch=System.currentTimeMillis();String cursor=null,context="domain";
         if(attributes instanceof org.springframework.web.context.request.ServletRequestAttributes servlet){var request=servlet.getRequest();context=request.getRequestURI();cursor=request.getParameter("cursor");if(request.getParameter("limit")!=null)try{limit=Integer.parseInt(request.getParameter("limit"));}catch(NumberFormatException e){throw invalidCursor(400);} }

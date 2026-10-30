@@ -24,6 +24,7 @@ public class SecurityConfiguration {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/media/*").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/places", "/api/v1/places/**", "/api/v1/categories", "/api/v1/tags", "/api/v1/amenities", "/api/v1/destinations", "/api/v1/geographic-units", "/api/v1/offerings").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors
