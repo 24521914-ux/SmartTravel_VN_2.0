@@ -26,6 +26,7 @@ export function browserTokenStore(key = 'smarttravel.auth'): TokenStore {
       if (typeof localStorage === 'undefined') return;
       if (tokens) localStorage.setItem(key, JSON.stringify(tokens));
       else localStorage.removeItem(key);
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('smarttravel:session-changed'));
     }
   };
 }

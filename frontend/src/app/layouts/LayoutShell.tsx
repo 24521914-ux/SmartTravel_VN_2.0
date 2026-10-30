@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { LiquidGlassNav, Icon } from '../../shared/ui';
 import { useAuth } from '../providers/AuthProvider';
+import { useToast } from '../providers/ToastProvider';
 
 export interface LayoutProps {
   children?: ReactNode;
@@ -39,6 +40,7 @@ export function AppHeader({
   }, []);
 
   const { user, isAuthenticated, isAdmin, isBusiness, logout } = useAuth();
+  const { showToast } = useToast();
   const tabs = [
     { id: 'Khám phá', label: 'Khám phá', icon: 'compass' },
     { id: 'Bản đồ', label: 'Bản đồ', icon: 'map' },
@@ -46,7 +48,8 @@ export function AppHeader({
     { id: 'Chuyến đi', label: 'Chuyến đi', icon: 'route' },
     { id: 'Tài khoản', label: 'Tài khoản', icon: 'user' },
     ...(isAuthenticated ? [{ id: 'Thông báo', label: 'Thông báo', icon: 'bell' }] : []),
-    ...(isBusiness || isAdmin ? [{ id: 'Doanh nghiệp', label: 'Doanh nghiệp', icon: 'building' }] : []),
+    ...(isAuthenticated ? [{ id: 'Đóng góp', label: 'Đóng góp', icon: 'pin' }] : []),
+    ...(isBusiness ? [{ id: 'Doanh nghiệp', label: 'Doanh nghiệp', icon: 'building' }] : []),
     ...(isAdmin ? [{ id: 'Kiểm duyệt', label: 'Kiểm duyệt', icon: 'shield' }, { id: 'Quản trị', label: 'Quản trị', icon: 'database' }] : []),
   ];
 
@@ -125,7 +128,7 @@ export function AppHeader({
               <button
                 type="button"
                 className="btn-subtle"
-                onClick={() => void logout()}
+                onClick={() => void logout().catch(() => showToast('Đã thoát trên thiết bị này; chưa xác nhận được đăng xuất với máy chủ.', 'error'))}
                 aria-label="Đăng xuất khỏi hệ thống"
                 style={{ color: 'var(--color-destructive)' }}
               >

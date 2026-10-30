@@ -1,9 +1,12 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { ApiClient, IdentityClient, browserTokenStore, type AuthTokens } from '../../shared/api';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { ApiClient, IdentityClient, type AuthTokens } from '../../shared/api';
+import { apiClient, identityClient, tokenStore } from '../../api/session';
 
 export interface UserProfile {
-  id: string;
-  email: string;
+  user_id: string;
+  id?: string;
+  email?: string;
+  version: number;
   display_name?: string;
   roles?: string[];
   status?: string;
@@ -25,18 +28,16 @@ interface AuthContextType {
   identityClient: IdentityClient;
 }
 
-const tokenStore = browserTokenStore();
-const apiClient = new ApiClient({ tokenStore });
-const identityClient = new IdentityClient(apiClient, tokenStore);
-
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [tokens, setTokens] = useState<AuthTokens | null>(() => tokenStore.get());
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const profileRequest = useRef(0);
 
-  async function fetchCurrentUser() {
+  async function fetchCurrentUser(throwOnError = false) {
+    const request = ++profileRequest.current;
     const curTokens = tokenStore.get();
     if (!curTokens) {
       setUser(null);
@@ -45,20 +46,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     try {
       const profile = await apiClient.request<UserProfile>('identity', '/api/v1/me');
-      setUser(profile);
-    } catch {
-      // In case session has expired, attempt refresh
-      try {
-        await identityClient.refresh();
-        const profile = await apiClient.request<UserProfile>('identity', '/api/v1/me');
-        setUser(profile);
-      } catch {
-        tokenStore.set(null);
-        setTokens(null);
-        setUser(null);
-      }
+      if (request === profileRequest.current && tokenStore.get()) setUser(profile);
+    } catch (error) {
+      // The shared API client already refreshes once on 401. An outage must
+      // not revoke a valid session or consume a second refresh token.
+      if (request === profileRequest.current) setUser(null);
+      if (throwOnError) throw error;
     } finally {
-      setIsLoading(false);
+      if (request === profileRequest.current) setIsLoading(false);
     }
   }
 
@@ -66,12 +61,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void fetchCurrentUser();
   }, [tokens?.access_token]);
 
+  useEffect(() => {
+    const sync = () => setTokens(tokenStore.get());
+    window.addEventListener('smarttravel:session-changed', sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener('smarttravel:session-changed', sync);
+      window.removeEventListener('storage', sync);
+    };
+  }, []);
+
   async function handleLogin(email: string, pass: string) {
     setIsLoading(true);
     try {
       const pair = await identityClient.login(email, pass);
       setTokens(pair);
-      await fetchCurrentUser();
+      await fetchCurrentUser(true);
       return pair;
     } finally {
       setIsLoading(false);
@@ -79,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function handleLogout() {
+    ++profileRequest.current;
     setIsLoading(true);
     try {
       await identityClient.logout();

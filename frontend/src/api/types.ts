@@ -26,6 +26,7 @@ export interface AuthTokens {
 }
 
 export interface RequestOptions<TBody = unknown> {
+  multipart?: FormData;
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: TBody;
   ifMatch?: string | number;

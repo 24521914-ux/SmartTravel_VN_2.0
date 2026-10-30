@@ -2,11 +2,8 @@ import { lazy, Suspense, useState, useEffect, useTransition } from 'react';
 import { AuthProvider, ToastProvider } from './providers';
 import { AppHeader, AppFooter } from './layouts/LayoutShell';
 import { ExploreSection } from '../features/places/ExploreSection';
-import { ApiClient, TravelClient, browserTokenStore } from '../shared/api';
-
-const tokenStore = browserTokenStore();
-const apiClient = new ApiClient({ tokenStore });
-const travelClient = new TravelClient(apiClient);
+import { travelClient, apiClient } from '../api/session';
+import type { Resource } from '../shared/api';
 const MapPanel = lazy(() => import('../features/places/MapPanel').then(m => ({ default: m.MapPanel })));
 const CollectionsPanel = lazy(() => import('../features/collections/CollectionsPanel').then(m => ({ default: m.CollectionsPanel })));
 const TripPlanner = lazy(() => import('../features/trips/TripPlanner').then(m => ({ default: m.TripPlanner })));
@@ -15,17 +12,22 @@ const AccountPanel = lazy(() => import('../features/account/AccountPanel').then(
 const BusinessPortal = lazy(() => import('../features/businesses/BusinessPortal').then(m => ({ default: m.BusinessPortal })));
 const ModerationConsole = lazy(() => import('../features/moderation/ModerationConsole').then(m => ({ default: m.ModerationConsole })));
 const AdminIngestionConsole = lazy(() => import('../features/ingestion/AdminIngestionConsole').then(m => ({ default: m.AdminIngestionConsole })));
+const AdminCatalogManager = lazy(() => import('../features/catalog/AdminCatalogManager').then(m => ({ default: m.AdminCatalogManager })));
+const ContributionsPanel = lazy(() => import('../features/contributions/ContributionsPanel').then(m => ({ default: m.ContributionsPanel })));
+const AdminUsersPanel = lazy(() => import('../features/account/AdminUsersPanel').then(m => ({ default: m.AdminUsersPanel })));
+const AdminMediaPanel = lazy(() => import('../features/catalog/AdminMediaPanel').then(m => ({ default: m.AdminMediaPanel })));
 
 export function AppContent() {
   const [activeSection, setActiveSection] = useState<string>('Khám phá');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [suggestedPlace, setSuggestedPlace] = useState<Resource | null>(null);
   const [isPending, startTransition] = useTransition();
 
   // URL hash / path synchronization
   useEffect(() => {
     function syncFromUrl() {
       const hash = decodeURIComponent(window.location.hash.replace(/^#\/?/, ''));
-      const validSections = ['Khám phá', 'Bản đồ', 'Bộ sưu tập', 'Chuyến đi', 'Thông báo', 'Tài khoản', 'Doanh nghiệp', 'Kiểm duyệt', 'Quản trị'];
+      const validSections = ['Khám phá', 'Bản đồ', 'Bộ sưu tập', 'Chuyến đi', 'Thông báo', 'Tài khoản', 'Doanh nghiệp', 'Kiểm duyệt', 'Quản trị', 'Đóng góp'];
       if (validSections.includes(hash)) {
         setActiveSection(hash);
       }
@@ -67,7 +69,7 @@ export function AppContent() {
           <ExploreSection
             travel={travelClient}
             onNavigate={handleNavigate}
-            onNavigateToTrip={() => handleNavigate('Chuyến đi')}
+            onNavigateToTrip={place => { setSuggestedPlace(place ?? null); handleNavigate('Chuyến đi'); }}
           />
         )}
 
@@ -80,7 +82,7 @@ export function AppContent() {
         )}
 
         {activeSection === 'Chuyến đi' && (
-          <TripPlanner travel={travelClient} />
+          <TripPlanner travel={travelClient} suggestedPlace={suggestedPlace} />
         )}
 
         {activeSection === 'Thông báo' && (
@@ -100,8 +102,9 @@ export function AppContent() {
         )}
 
         {activeSection === 'Quản trị' && (
-          <AdminIngestionConsole travel={travelClient} />
+          <><AdminIngestionConsole travel={travelClient} /><AdminCatalogManager travel={travelClient} /><AdminMediaPanel apiClient={apiClient} /><AdminUsersPanel travel={travelClient} /></>
         )}
+        {activeSection === 'Đóng góp' && <ContributionsPanel travel={travelClient} />}
         </Suspense>
       </main>
 

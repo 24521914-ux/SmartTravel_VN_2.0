@@ -1,6 +1,7 @@
 import { ApiClient } from './client';
 import type { TokenStore } from './auth';
 import type { AuthTokens } from './types';
+import { ApiError } from './types';
 
 /** Refresh calls share one flight because each refresh token is single-use. */
 export class IdentityClient {
@@ -48,6 +49,10 @@ export class IdentityClient {
         body: { refresh_token: current.refresh_token }, authenticated: false,
         headers: { Authorization: `Bearer ${current.access_token}` }
       });
+    } catch (error) {
+      // Password changes and session revocation may already have invalidated
+      // the departing session. Its server-side logout is then complete.
+      if (!(error instanceof ApiError && error.status === 401)) throw error;
     } finally { if (generation === this.generation) this.tokens.set(null); }
   }
 }

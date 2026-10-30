@@ -1,0 +1,49 @@
+.trip-planner-layout,
+.collections-layout,
+.map-view-layout,
+.place-detail-container {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.trip-planner-layout input,
+.trip-planner-layout select,
+.trip-planner-layout textarea,
+.collections-layout input,
+.collections-layout select {
+  min-width: 0;
+  max-width: 100%;
+}
+.trip-planner-layout .trip-editor-3col > *,
+.trip-planner-layout .timeline-item > *,
+.trip-planner-layout form,
+.collections-layout form {
+  min-width: 0;
+}
+.trip-planner-layout .trip-studio-header,
+.trip-planner-layout .add-day-form,
+.trip-planner-layout .add-day-form label {
+  flex-wrap: wrap;
+}
+@media (max-width: 768px) {
+  .trip-planner-layout .trip-editor-3col {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .trip-planner-layout .trip-studio {
+    padding: 12px;
+  }
+  .trip-planner-layout .timeline-item {
+    padding: 8px;
+    gap: 8px;
+  }
+  .trip-planner-layout .trip-studio-header {
+    gap: 12px;
+  }
+  .map-view-layout > div {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .map-view-layout input {
+    min-width: 0;
+    max-width: 100%;
+  }
+}

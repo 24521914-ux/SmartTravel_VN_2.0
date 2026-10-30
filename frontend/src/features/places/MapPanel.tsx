@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Icon, Button } from '../../shared/ui';
+import { Icon, ErrorState } from '../../shared/ui';
 import type { TravelClient, Resource, Page } from '../../shared/api';
+import '../trips/integration-layout.css';
 
 export interface MapPanelProps {
   travel: TravelClient;
@@ -14,18 +15,19 @@ export function MapPanel({ travel, busy = false }: MapPanelProps) {
   const [selected, setSelected] = useState<Resource | null>(null);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showIframe, setShowIframe] = useState(false);
+  const [error, setError] = useState('');
 
   async function loadPlaces(search = '') {
     setLoading(true);
+    setError('');
     try {
       const data = await travel.places(search);
       setPlaces(data.items ?? []);
-      if (data.items?.length && !selected) {
-        setSelected(data.items[0]);
-      }
-    } catch {
-      // Fallback
+      setSelected(data.items?.[0] ?? null);
+    } catch (error) {
+      setError((error as Error).message);
+      setPlaces([]);
+      setSelected(null);
     } finally {
       setLoading(false);
     }
@@ -36,9 +38,9 @@ export function MapPanel({ travel, busy = false }: MapPanelProps) {
   }, [travel]);
 
   const activePlace = selected ?? places[0] ?? null;
-  const lat = Number(activePlace?.latitude ?? VIETNAM_CENTER.lat);
-  const lon = Number(activePlace?.longitude ?? VIETNAM_CENTER.lon);
-  const valid = Number.isFinite(lat) && Number.isFinite(lon);
+  const lat = Number(activePlace?.latitude);
+  const lon = Number(activePlace?.longitude);
+  const valid = activePlace?.latitude != null && activePlace?.longitude != null && Number.isFinite(lat) && Number.isFinite(lon);
 
   const delta = 0.04;
   const bbox = `${lon - delta},${lat - delta},${lon + delta},${lat + delta}`;
@@ -47,6 +49,7 @@ export function MapPanel({ travel, busy = false }: MapPanelProps) {
 
   return (
     <div className="map-view-layout" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {error && <ErrorState message={error} onRetry={() => void loadPlaces(query)} />}
       {/* Search and control bar */}
       <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
@@ -78,7 +81,7 @@ export function MapPanel({ travel, busy = false }: MapPanelProps) {
         {/* Destination List with "Xem vị trí" buttons */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '680px', overflowY: 'auto' }}>
           {places.map(p => {
-            const isCurrent = activePlace && (p.id === activePlace.id || p.name === activePlace.name);
+            const isCurrent = activePlace && String(p.id ?? p.place_id) === String(activePlace.id ?? activePlace.place_id);
             return (
               <div
                 key={String(p.id ?? p.place_id ?? p.name)}
@@ -97,7 +100,7 @@ export function MapPanel({ travel, busy = false }: MapPanelProps) {
                   <h3 style={{ fontSize: '1.05rem', margin: 0 }}>{String(p.name ?? 'Điểm đến')}</h3>
                 </div>
                 <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', margin: 0 }}>
-                  {String(p.address ?? 'Việt Nam')}
+                  {String(p.address ?? 'Chưa có địa chỉ')}
                 </p>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
                   <button
@@ -105,7 +108,6 @@ export function MapPanel({ travel, busy = false }: MapPanelProps) {
                     className="btn-secondary"
                     onClick={() => {
                       setSelected(p);
-                      setShowIframe(true);
                     }}
                   >
                     Xem vị trí
@@ -127,12 +129,12 @@ export function MapPanel({ travel, busy = false }: MapPanelProps) {
                   </h2>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
                     <Icon name="pin" size={16} />
-                    <span>Vĩ độ {lat.toFixed(4)} · Kinh độ {lon.toFixed(4)}</span>
+                    <span>{valid ? `Vĩ độ ${lat.toFixed(4)} · Kinh độ ${lon.toFixed(4)}` : 'Chưa có tọa độ'}</span>
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <a
+                  {valid && <a
                     href={osmExternalUrl}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -140,7 +142,7 @@ export function MapPanel({ travel, busy = false }: MapPanelProps) {
                     style={{ fontSize: '0.875rem' }}
                   >
                     <Icon name="map" size={16} /> Mở OpenStreetMap ↗
-                  </a>
+                  </a>}
                 </div>
               </div>
 
