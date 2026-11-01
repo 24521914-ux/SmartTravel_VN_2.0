@@ -12,6 +12,20 @@ class Source(BaseHTTPRequestHandler):
             'latitude': 16.047079, 'longitude': 108.20623, 'currency': 'VND', 'price': '25000',
             'category_ids': ['20000000-0000-0000-0000-000000000001'], 'opening_hours': []}],
             'next_cursor': None, 'checkpoint': 'p02-source-v1'}
+        if run_id == 'demo-vietnam':
+            # Explicit manual-demo feed. Existing integration fixtures stay stable.
+            body = {'records': [
+                {'external_id': 'demo-son-tra', 'name': 'Bán đảo Sơn Trà',
+                 'latitude': 16.1175, 'longitude': 108.2734, 'price': '0'},
+                {'external_id': 'demo-my-khe', 'name': 'Bãi biển Mỹ Khê',
+                 'latitude': 16.0544, 'longitude': 108.2470, 'price': '0'},
+                {'external_id': 'demo-thanh-ha', 'name': 'Làng gốm Thanh Hà',
+                 'latitude': 15.8795, 'longitude': 108.3073, 'price': '35000'},
+                {'external_id': 'demo-invalid-coordinate', 'name': 'Hồ sơ cần sửa tọa độ · Vườn dừa Cẩm Thanh',
+                 'latitude': 999, 'longitude': 108.3733, 'price': '30000'},
+            ], 'next_cursor': None, 'checkpoint': 'demo-vietnam-v1'}
+            for record in body['records']:
+                record.update(currency='VND', category_ids=['20000000-0000-0000-0000-000000000001'], opening_hours=[])
         data = json.dumps(body).encode()
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
