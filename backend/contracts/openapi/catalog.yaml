@@ -24694,7 +24694,10 @@
                             "maxLength": 1024
                           },
                           "price": {
-                            "type": "number",
+                            "type": [
+                              "number",
+                              "null"
+                            ],
                             "minimum": 0
                           },
                           "currency": {
@@ -25332,7 +25335,10 @@
                       "maxLength": 1024
                     },
                     "price": {
-                      "type": "number",
+                      "type": [
+                        "number",
+                        "null"
+                      ],
                       "minimum": 0
                     },
                     "currency": {
@@ -25990,7 +25996,10 @@
                       "maxLength": 1024
                     },
                     "price": {
-                      "type": "number",
+                      "type": [
+                        "number",
+                        "null"
+                      ],
                       "minimum": 0
                     },
                     "currency": {
@@ -26622,7 +26631,10 @@
                       "maxLength": 1024
                     },
                     "price": {
-                      "type": "number",
+                      "type": [
+                        "number",
+                        "null"
+                      ],
                       "minimum": 0
                     },
                     "currency": {
@@ -27879,7 +27891,10 @@
                             "maxLength": 1024
                           },
                           "price": {
-                            "type": "number",
+                            "type": [
+                              "number",
+                              "null"
+                            ],
                             "minimum": 0
                           },
                           "currency": {
@@ -28540,7 +28555,10 @@
                             "maxLength": 1024
                           },
                           "price": {
-                            "type": "number",
+                            "type": [
+                              "number",
+                              "null"
+                            ],
                             "minimum": 0
                           },
                           "currency": {

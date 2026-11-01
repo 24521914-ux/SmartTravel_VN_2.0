@@ -9,6 +9,7 @@ export interface ApiClientOptions {
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
   correlationId?: () => string;
+  refreshSession?: () => Promise<unknown>;
 }
 
 export class ApiClient {
@@ -17,6 +18,9 @@ export class ApiClient {
   private readonly fetchImpl: typeof fetch;
   private readonly timeoutMs: number;
   private readonly correlationId: () => string;
+  private readonly refreshSession?: () => Promise<unknown>;
+  private refreshFlight?: Promise<unknown>;
+  private refreshFlightAuth?: string;
 
   constructor(options: ApiClientOptions = {}) {
     this.baseUrl = (options.baseUrl ?? '/api').replace(/\/$/, '');
@@ -24,9 +28,11 @@ export class ApiClient {
     this.fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
     this.timeoutMs = options.timeoutMs ?? 10_000;
     this.correlationId = options.correlationId ?? (() => crypto.randomUUID());
+    this.refreshSession = options.refreshSession;
   }
 
   async request<TResponse, TBody = unknown>(service: ServiceName, path: string, options: RequestOptions<TBody> = {}): Promise<TResponse> {
+    if (options.multipart && options.body !== undefined) throw new Error('Use either JSON body or multipart, not both');
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     const abort = () => controller.abort();
@@ -44,14 +50,34 @@ export class ApiClient {
     if (options.idempotencyKey) headers['Idempotency-Key'] = options.idempotencyKey;
 
     try {
-      const response = await this.fetchImpl(`${this.baseUrl}/${service}${path.startsWith('/') ? path : `/${path}`}`, {
-        method: options.method ?? (options.body === undefined ? 'GET' : 'POST'),
+      const send = () => this.fetchImpl(`${this.baseUrl}/${service}${path.startsWith('/') ? path : `/${path}`}`, {
+        method: options.method ?? (options.body === undefined && !options.multipart ? 'GET' : 'POST'),
         headers,
-        body: options.body === undefined ? undefined : JSON.stringify(options.body),
+        body: options.multipart ?? (options.body === undefined ? undefined : JSON.stringify(options.body)),
         signal: controller.signal,
         credentials: 'same-origin',
         cache: 'no-store'
       });
+      let response = await send();
+      if (response.status === 401 && auth && options.authenticated !== false && this.refreshSession) {
+        if (!this.refreshFlight && bearer(this.tokenStore?.get() ?? null) === auth) {
+          const flight = this.refreshSession().finally(() => {
+            if (this.refreshFlight === flight) { this.refreshFlight = undefined; this.refreshFlightAuth = undefined; }
+          });
+          this.refreshFlight = flight;
+          this.refreshFlightAuth = auth;
+        }
+        const flight = this.refreshFlight;
+        if (flight && this.refreshFlightAuth === auth) {
+          const pair = await flight;
+          const current = this.tokenStore?.get();
+          const refreshed = bearer(current ?? null);
+          // A login during the refresh owns a different session. Never replay
+          // an old user's write using that new user's credentials.
+          const rotatedAccess = pair && typeof pair === 'object' && 'access_token' in pair ? pair.access_token : current?.access_token;
+          if (refreshed && current?.access_token === rotatedAccess) { headers.Authorization = refreshed; response = await send(); }
+        }
+      }
       if (response.status === 204) return undefined as TResponse;
       const text = await response.text();
       let json: unknown;

@@ -9,6 +9,20 @@ export class TravelClient {
   read<T = Resource>(service: ServiceName, path: string): Promise<T> {
     return this.api.request<T>(service, `/api/v1${path}`);
   }
+  async readAll(service: ServiceName, path: string): Promise<Page> {
+    const items: Resource[] = [];
+    const seen = new Set<string>();
+    let cursor: string | null | undefined;
+    do {
+      const separator = path.includes('?') ? '&' : '?';
+      const page: Page = await this.read<Page>(service, `${path}${separator}limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`);
+      items.push(...page.items);
+      cursor = page.next_cursor;
+      if (cursor && seen.has(cursor)) throw new Error('API returned a repeated pagination cursor');
+      if (cursor) seen.add(cursor);
+    } while (cursor);
+    return { items, next_cursor: null };
+  }
   mutate<T = Resource>(service: ServiceName, path: string, body: unknown, method: RequestOptions['method'] = 'POST', version?: number): Promise<T> {
     return this.api.request<T>(service, `/api/v1${path}`, { method, body, ifMatch: version, idempotencyKey: crypto.randomUUID() });
   }
@@ -22,8 +36,8 @@ export class TravelClient {
   }
   place(id: string) { return this.read('catalog', `/places/${encodeURIComponent(id)}`); }
   reviews(id: string) { return this.read<Page>('community', `/places/${encodeURIComponent(id)}/reviews`); }
-  review(id: string, rating: number, content: string) {
-    return this.mutate('community', `/places/${encodeURIComponent(id)}/reviews`, { rating, content, media_keys: [] });
+  review(id: string, rating: number, content: string, mediaKeys: string[] = []) {
+    return this.mutate('community', `/places/${encodeURIComponent(id)}/reviews`, { rating, content, media_keys: mediaKeys });
   }
   recommend() { return this.mutate<Page>('intelligence', '/recommendations', { topN: 10, currency: 'VND' }); }
 }

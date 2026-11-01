@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { Resource, TravelClient } from '../../shared/api';
 import { Icon } from '../../shared/ui';
+import { placeImage } from './media';
 
-const photo = (p: Resource) => typeof p.image_url === 'string' ? p.image_url : typeof p.cover_image === 'string' ? p.cover_image : '';
+const photo = placeImage;
 export function DestinationShowcase({ places, onSelect }: { places: Resource[]; onSelect: (place: Resource) => void }) {
   const items = places.filter(p => photo(p)).slice(0, 4);
   const [selected, setSelected] = useState('');

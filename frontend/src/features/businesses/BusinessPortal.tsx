@@ -20,9 +20,8 @@ export function BusinessPortal({ travel, busy = false }: BusinessPortalProps) {
 
   // Create Business form
   const [name, setName] = useState('');
-  const [registrationNumber, setRegistrationNumber] = useState('');
-  const [contactEmail, setContactEmail] = useState('');
-  const [contactPhone, setContactPhone] = useState('');
+  const [error, setError] = useState('');
+  const [submission, setSubmission] = useState<Resource | null>(null);
 
   // Claim Place state
   const [claimPlaceId, setClaimPlaceId] = useState('');
@@ -31,13 +30,21 @@ export function BusinessPortal({ travel, busy = false }: BusinessPortalProps) {
   // Verification KYC state
   const [kycDocs, setKycDocs] = useState('');
 
+  async function act(action: () => Promise<void>) {
+    setLoading(true); setError('');
+    try { await action(); }
+    catch (error) { setError(error instanceof Error ? error.message : 'Không thực hiện được yêu cầu.'); }
+    finally { setLoading(false); }
+  }
+
   async function loadBusinesses() {
+    setError('');
     setLoading(true);
     try {
-      const data = await travel.read<Page>('catalog', '/businesses');
+      const data = await travel.readAll('catalog', '/businesses');
       setBusinesses(data.items ?? []);
-    } catch {
-      setBusinesses([]);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Không tải được doanh nghiệp.');
     } finally {
       setLoading(false);
     }
@@ -45,14 +52,18 @@ export function BusinessPortal({ travel, busy = false }: BusinessPortalProps) {
 
   async function openBusinessManagement(b: Resource) {
     setSelected(b);
+    setActiveTab('profile');
+    setSubmission(null);
+    setMembers([]);
+    setError('');
     setLoading(true);
     try {
       const bId = resourceId(b);
-      const membersData = await travel.read<Page>('catalog', `/businesses/${encodeURIComponent(bId)}/members`).catch(() => ({ items: [] }));
+      setSelected(await travel.read<Resource>('catalog', `/businesses/${encodeURIComponent(bId)}`));
+      const membersData = await travel.readAll('catalog', `/businesses/${encodeURIComponent(bId)}/members`);
       setMembers(membersData.items ?? []);
-      setActiveTab('profile');
-    } catch {
-      setMembers([]);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Không tải được thành viên.');
     } finally {
       setLoading(false);
     }
@@ -65,38 +76,38 @@ export function BusinessPortal({ travel, busy = false }: BusinessPortalProps) {
   async function handleCreateBusiness(e: FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
+    setError('');
     setLoading(true);
     try {
-      const created = await travel.mutate<Resource>('catalog', '/businesses', {
-        name: name.trim(),
-        registration_number: registrationNumber,
-        contact_email: contactEmail,
-        contact_phone: contactPhone
-      });
+      const created = await travel.mutate<Resource>('catalog', '/businesses', { name: name.trim() });
       setBusinesses(prev => [created, ...prev]);
       setName('');
-      setRegistrationNumber('');
-      setContactEmail('');
-      setContactPhone('');
-      showToast(`Đã tạo doanh nghiệp "${name.trim()}"!`, 'success');
-    } catch {
-      const mockBiz = {
-        id: `biz-${Date.now()}`,
-        name: name.trim(),
-        status: 'ACTIVE',
-        registration_number: registrationNumber,
-        version: 1
-      };
-      setBusinesses(prev => [mockBiz, ...prev]);
-      setName('');
-      showToast(`Đã tạo doanh nghiệp "${mockBiz.name}"!`, 'success');
+      showToast('Đã tạo doanh nghiệp.', 'success');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Không tạo được doanh nghiệp.');
     } finally {
       setLoading(false);
     }
   }
 
+  async function submitEvidence(e: FormEvent, claim: boolean) {
+    e.preventDefault();
+    if (!selected) return;
+    setError(''); setLoading(true);
+    try {
+      const evidence_keys = (claim ? claimEvidence : kycDocs).split(/[,\n]/).map(v => v.trim()).filter(Boolean);
+      const result = await travel.mutate<Resource>('catalog', `/businesses/${encodeURIComponent(resourceId(selected))}/${claim ? 'claims' : 'verification'}`,
+        claim ? { place_id: claimPlaceId.trim(), evidence_keys } : { evidence_keys });
+      setSubmission(result);
+      showToast('Đã gửi hồ sơ; chờ quản trị viên xét duyệt.', 'success');
+    } catch (error) { setError(error instanceof Error ? error.message : 'Không gửi được hồ sơ.'); }
+    finally { setLoading(false); }
+  }
+
   return (
     <div className="business-portal-layout" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {error && <p role="alert">{error}</p>}
+      {submission && <p role="status">Mã hồ sơ: {String(submission.request_id ?? submission.verification_id ?? submission.claim_id ?? submission.id)} ? Trạng thái: {String(submission.status)}</p>}
       {/* Create Business Form */}
       <section className="travel-panel" aria-label="Đăng ký tổ chức hoặc doanh nghiệp">
         <h2 style={{ fontSize: '1.35rem', fontWeight: 700, marginBottom: '14px' }}>
@@ -112,28 +123,6 @@ export function BusinessPortal({ travel, busy = false }: BusinessPortalProps) {
               placeholder="Công ty TNHH Du lịch..."
               value={name}
               onChange={e => setName(e.target.value)}
-            />
-          </div>
-
-          <div className="form-group" style={{ margin: 0 }}>
-            <label htmlFor="biz-reg">Mã ĐKKD</label>
-            <input
-              id="biz-reg"
-              type="text"
-              placeholder="0101234567"
-              value={registrationNumber}
-              onChange={e => setRegistrationNumber(e.target.value)}
-            />
-          </div>
-
-          <div className="form-group" style={{ margin: 0 }}>
-            <label htmlFor="biz-email">Email liên hệ</label>
-            <input
-              id="biz-email"
-              type="email"
-              placeholder="contact@business.com"
-              value={contactEmail}
-              onChange={e => setContactEmail(e.target.value)}
             />
           </div>
 
@@ -207,6 +196,10 @@ export function BusinessPortal({ travel, busy = false }: BusinessPortalProps) {
           {activeTab === 'profile' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '540px' }}>
               <h3>Thông tin pháp lý</h3>
+              <form className="clay-form" key={String(selected.version)} onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void act(async () => { const result = await travel.mutate<Resource>('catalog', `/businesses/${encodeURIComponent(resourceId(selected))}`, { name: String(data.get('name')).trim() }, 'PATCH', Number(selected.version)); setSelected(result); await loadBusinesses(); }); }}>
+                <label>Tên doanh nghiệp mới<input name="name" required defaultValue={String(selected.name)} /></label><Button type="submit" disabled={loading || busy}>Lưu tên doanh nghiệp</Button>
+              </form>
+              <Button type="button" disabled={loading || busy} onClick={() => { if (window.confirm('Xóa doanh nghiệp này?')) void act(async () => { await travel.mutate('catalog', `/businesses/${encodeURIComponent(resourceId(selected))}`, undefined, 'DELETE', Number(selected.version)); setSelected(null); await loadBusinesses(); }); }}>Xóa doanh nghiệp</Button>
               <div>
                 <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>Tên pháp nhân:</span>
                 <p style={{ fontWeight: 600 }}>{String(selected.name)}</p>
@@ -221,12 +214,16 @@ export function BusinessPortal({ travel, busy = false }: BusinessPortalProps) {
           {activeTab === 'members' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <h3>Danh sách thành viên quản trị</h3>
+              <form className="clay-form" onSubmit={e => { e.preventDefault(); void act(async () => { await travel.mutate('catalog', `/businesses/${encodeURIComponent(resourceId(selected))}/members`, { role: 'OWNER' }); await openBusinessManagement(selected); setActiveTab('members'); }); }}><p>Xác nhận lại quyền chủ sở hữu của tài khoản đang đăng nhập.</p><Button type="submit" disabled={loading || busy}>Xác nhận quyền chủ sở hữu</Button></form>
               {members.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {members.map((m, i) => (
                     <div key={i} style={{ padding: '12px', background: 'var(--color-surface-subtle)', borderRadius: 'var(--radius-sm)', display: 'flex', justifyContent: 'space-between' }}>
-                      <span>{String(m.email ?? m.name ?? 'Thành viên')}</span>
+                      <span>{String(m.user_id ?? m.member_id)}</span>
                       <Badge variant="primary">{String(m.role ?? 'MANAGER')}</Badge>
+                      <Button type="button" disabled={loading || busy} onClick={() => void act(async () => { const member = await travel.read<Resource>('catalog', `/businesses/${encodeURIComponent(resourceId(selected))}/members/${encodeURIComponent(String(m.member_id ?? m.id))}`); setMembers(previous => previous.map(row => row === m ? member : row)); })}>Tải lại thành viên</Button>
+                      <select aria-label={`Vai trò ${String(m.user_id ?? m.member_id ?? m.id)}`} value={String(m.role)} disabled={loading || busy} onChange={e => { const role = e.target.value; void act(async () => { await travel.mutate('catalog', `/businesses/${encodeURIComponent(resourceId(selected))}/members/${encodeURIComponent(String(m.member_id ?? m.id))}`, { role }, 'PATCH', Number(m.version)); await openBusinessManagement(selected); setActiveTab('members'); }); }}><option value="OWNER">OWNER</option><option value="EDITOR">EDITOR</option></select>
+                      <Button type="button" disabled={loading || busy} onClick={() => { if (window.confirm('Xóa membership này?')) void act(async () => { await travel.mutate('catalog', `/businesses/${encodeURIComponent(resourceId(selected))}/members/${encodeURIComponent(String(m.member_id ?? m.id))}`, undefined, 'DELETE', Number(m.version)); await openBusinessManagement(selected); setActiveTab('members'); }); }}>Xóa membership</Button>
                     </div>
                   ))}
                 </div>
@@ -242,19 +239,19 @@ export function BusinessPortal({ travel, busy = false }: BusinessPortalProps) {
               <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '14px' }}>
                 Cung cấp bản chụp giấy chứng nhận đăng ký kinh doanh và giấy phép lữ hành (nếu có).
               </p>
-              <form onSubmit={e => { e.preventDefault(); showToast('Đã gửi hồ sơ xác minh tới Quản trị viên.', 'success'); }} className="clay-form">
+              <form onSubmit={e => void submitEvidence(e, false)} className="clay-form">
                 <div className="form-group">
-                  <label htmlFor="kyc-doc-url">Đường dẫn tài liệu xác minh (URL / Drive)</label>
+                  <label htmlFor="kyc-doc-url">Mã tài liệu đã tải lên (phân cách bằng dấu phẩy)</label>
                   <input
                     id="kyc-doc-url"
                     type="text"
                     required
-                    placeholder="https://..."
+                    placeholder="private/giay-phep.pdf"
                     value={kycDocs}
                     onChange={e => setKycDocs(e.target.value)}
                   />
                 </div>
-                <Button type="submit" icon="shield">
+                <Button type="submit" disabled={loading || busy} icon="shield">
                   Gửi xác minh KYC
                 </Button>
               </form>
@@ -267,14 +264,15 @@ export function BusinessPortal({ travel, busy = false }: BusinessPortalProps) {
               <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '14px' }}>
                 Nếu doanh nghiệp là đơn vị chủ quản hoặc đối tác vận hành của một địa điểm trong danh mục, gửi yêu cầu claim tại đây.
               </p>
-              <form onSubmit={e => { e.preventDefault(); showToast('Đã gửi yêu cầu quản lý địa điểm.', 'success'); }} className="clay-form">
+              <form onSubmit={e => void submitEvidence(e, true)} className="clay-form">
                 <div className="form-group">
                   <label htmlFor="claim-place-id">Mã địa điểm muốn quản lý</label>
                   <input
                     id="claim-place-id"
                     type="text"
                     required
-                    placeholder="Ví dụ: place-demo hoặc UUID địa điểm"
+                    pattern="[0-9a-fA-F-]{36}"
+                    placeholder="UUID địa điểm"
                     value={claimPlaceId}
                     onChange={e => setClaimPlaceId(e.target.value)}
                   />
@@ -285,12 +283,12 @@ export function BusinessPortal({ travel, busy = false }: BusinessPortalProps) {
                     id="claim-evidence"
                     type="text"
                     required
-                    placeholder="Đường dẫn tài liệu minh chứng..."
+                    placeholder="private/hop-dong.pdf"
                     value={claimEvidence}
                     onChange={e => setClaimEvidence(e.target.value)}
                   />
                 </div>
-                <Button type="submit" icon="check">
+                <Button type="submit" disabled={loading || busy} icon="check">
                   Gửi yêu cầu claim
                 </Button>
               </form>
@@ -300,6 +298,7 @@ export function BusinessPortal({ travel, busy = false }: BusinessPortalProps) {
       )}
 
       {/* Business Cards Grid */}
+      <details className="travel-panel"><summary>Đề nghị sửa địa điểm đã được claim</summary><form className="clay-form" onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void act(async () => { const fields: Resource = {}; if (String(data.get('name')).trim()) fields.name = String(data.get('name')).trim(); if (String(data.get('price')).trim()) { fields.price = Number(data.get('price')); fields.currency = 'VND'; } const result = await travel.mutate<Resource>('catalog', `/claims/${encodeURIComponent(String(data.get('claim_id')))}/change-requests`, { fields, expected_version: Number(data.get('version')) }); setSubmission(result); showToast('Đã gửi đề nghị thay đổi; chờ xử lý.', 'success'); }); }}><label>Mã claim được duyệt<input name="claim_id" required pattern="[0-9a-fA-F-]{36}" /></label><label>Phiên bản địa điểm<input name="version" type="number" min="1" step="1" required /></label><label>Tên địa điểm đề nghị<input name="name" /></label><label>Giá đề nghị (VND)<input name="price" type="number" min="0" /></label><Button type="submit" disabled={loading || busy}>Gửi đề nghị sửa địa điểm</Button></form></details>
       <div className="travel-grid">
         {businesses.map(b => {
           const bId = resourceId(b);
@@ -334,7 +333,7 @@ export function BusinessPortal({ travel, busy = false }: BusinessPortalProps) {
         })}
       </div>
 
-      {!loading && businesses.length === 0 && (
+      {!loading && !error && businesses.length === 0 && (
         <div className="empty-subtle">
           <Icon name="building" size={40} />
           <p>Bạn chưa có doanh nghiệp nào. Hãy tạo doanh nghiệp ở form phía trên để bắt đầu!</p>

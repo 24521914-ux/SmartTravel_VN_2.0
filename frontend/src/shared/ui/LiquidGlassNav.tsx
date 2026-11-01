@@ -98,7 +98,7 @@ export function LiquidGlassNav({
         className={`liquid-nav-link ${isActive ? 'active' : ''}`}
         onClick={() => handleTabClick(tab.id)}
       >
-        {tab.icon && <Icon name={tab.icon} size={16} />}
+        {tab.icon && <Icon name={tab.icon} size={14} />}
         <span>{tab.label}</span>
       </button>
     );
@@ -146,7 +146,7 @@ export function LiquidGlassNav({
             onClick={() => setMore(!more)}
           >
             <span>{secondary.find(t => t.id === activeTab)?.label ?? 'Thêm'}</span>
-            <Icon name="chevronDown" size={14} />
+            <Icon name="chevronDown" size={12} />
           </button>
           <div
             id="additional-navigation"

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Icon, Button, Badge } from '../../shared/ui';
+import { Icon, ErrorState } from '../../shared/ui';
 import type { TravelClient, Resource, Page } from '../../shared/api';
 
 export interface NotificationPanelProps {
@@ -10,14 +10,18 @@ export interface NotificationPanelProps {
 export function NotificationPanel({ travel, busy = false }: NotificationPanelProps) {
   const [notifications, setNotifications] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  const [cursor, setCursor] = useState<string | null>(null);
 
-  async function loadNotifications() {
+  async function loadNotifications(next?: string) {
     setLoading(true);
+    setError(false);
     try {
-      const data = await travel.read<Page>('identity', '/me/notifications');
-      setNotifications(data.items ?? []);
+      const data = await travel.read<Page>('identity', `/me/notifications${next ? `?cursor=${encodeURIComponent(next)}` : ''}`);
+      setNotifications(previous => next ? [...previous, ...data.items] : data.items);
+      setCursor(data.next_cursor ?? null);
     } catch {
-      setNotifications([]);
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -29,11 +33,15 @@ export function NotificationPanel({ travel, busy = false }: NotificationPanelPro
 
   async function handleMarkAsRead(notif: Resource) {
     const id = String(notif.id ?? notif.notification_id ?? '');
+    setLoading(true);
+    setError(false);
     try {
-      await travel.mutate('identity', `/me/notifications/${encodeURIComponent(id)}/read`, {}, 'PATCH');
-      setNotifications(prev => prev.map(n => (n.id === notif.id ? { ...n, read: true } : n)));
+      const updated = await travel.mutate('identity', `/me/notifications/${encodeURIComponent(id)}/read`, undefined, 'PATCH');
+      setNotifications(prev => prev.map(n => String(n.id ?? n.notification_id) === id ? updated : n));
     } catch {
-      setNotifications(prev => prev.map(n => (n.id === notif.id ? { ...n, read: true } : n)));
+      setError(true);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -53,13 +61,15 @@ export function NotificationPanel({ travel, busy = false }: NotificationPanelPro
         </button>
       </div>
 
+      {error && <ErrorState onRetry={() => void loadNotifications()} />}
+      {loading && <p role="status">Đang tải thông báo...</p>}
       {notifications.length > 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {notifications.map((notif, idx) => {
             const isRead = Boolean(notif.read ?? notif.is_read);
             return (
               <article
-                key={String(notif.id ?? idx)}
+                key={String(notif.notification_id ?? notif.id ?? idx)}
                 className="travel-panel"
                 style={{
                   padding: '16px 20px',
@@ -105,6 +115,7 @@ export function NotificationPanel({ travel, busy = false }: NotificationPanelPro
                       className="btn-subtle"
                       style={{ padding: '2px 8px', fontSize: '0.8125rem', color: 'var(--color-primary)' }}
                       onClick={() => void handleMarkAsRead(notif)}
+                      disabled={loading || busy}
                     >
                       Đánh dấu đã đọc
                     </button>
@@ -114,7 +125,7 @@ export function NotificationPanel({ travel, busy = false }: NotificationPanelPro
             );
           })}
         </div>
-      ) : (
+      ) : !loading && !error ? (
         /* Exact heading expected by clay-ui-check.mjs */
         <div className="empty-state" role="region" aria-label="Thông báo trống">
           <div style={{ color: 'var(--color-primary)', opacity: 0.85 }}>
@@ -127,7 +138,8 @@ export function NotificationPanel({ travel, busy = false }: NotificationPanelPro
             Hiện tại không có thông báo mới nào cần bạn xử lý. Mọi thay đổi về lịch trình sẽ hiển thị tại đây!
           </p>
         </div>
-      )}
+      ) : null}
+      {cursor && <button className="btn-secondary" disabled={loading || busy} onClick={() => void loadNotifications(cursor)}>Xem thêm thông báo</button>}
     </div>
   );
 }

@@ -81,9 +81,9 @@ try {
   await page.screenshot({ path: fileURLToPath(new URL('synthetic-cards.png', output)), fullPage: true });
   await page.getByRole('button', { name: 'Lưu Điểm đến kiểm tra giao diện', exact: true }).click();
   await page.getByRole('heading', { name: 'Tài khoản', level: 1, exact: true }).waitFor();
-  check('guest-favorite-opens-auth', page.url().includes(encodeURIComponent('Tài khoản')));
+  check('guest-favorite-opens-auth', new URL(page.url()).pathname === '/tai-khoan');
   await page.evaluate(() => localStorage.setItem('smarttravel.auth', JSON.stringify({ access_token: 'synthetic-token', refresh_token: 'synthetic-refresh', expires_in: 3600, token_type: 'Bearer' })));
-  await page.goto(base + '#/Kh%C3%A1m%20ph%C3%A1');
+  await page.goto(base + '/kham-pha');
   await page.reload();
   await page.getByRole('button', { name: 'Trang tài khoản cá nhân' }).waitFor();
   await page.locator('#diem-den[aria-busy="false"]').waitFor();

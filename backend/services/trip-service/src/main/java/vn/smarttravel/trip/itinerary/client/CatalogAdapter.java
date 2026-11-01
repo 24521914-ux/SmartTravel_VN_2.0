@@ -35,9 +35,25 @@ public class CatalogAdapter {
     }
     @SuppressWarnings("unchecked") public Map<String,Object> destination(UUID id) {
         try {
-            var req=HttpRequest.newBuilder(URI.create(base+"/api/v1/destinations/"+id)).timeout(Duration.ofSeconds(3)).header("Authorization","Bearer "+token).GET().build();
-            var res=http.send(req,new vn.smarttravel.trip.shared.http.LimitedBodyHandler(262144));require(res.statusCode()!=404,422,"DESTINATION_UNAVAILABLE");require(res.statusCode()==200,503,"CATALOG_UNAVAILABLE");
-            var p=json.readValue(res.body(),Map.class);require(id.toString().equals(p.get("destination_id")),503,"CATALOG_INVALID_RESPONSE");return p;
+            String cursor=null;var seen=new HashSet<String>();
+            do {
+                String path="/api/v1/destinations?limit=100"+(cursor==null?"":"&cursor="+java.net.URLEncoder.encode(cursor,java.nio.charset.StandardCharsets.UTF_8));
+                var req=HttpRequest.newBuilder(URI.create(base+path)).timeout(Duration.ofSeconds(3)).header("Authorization","Bearer "+token).GET().build();
+                var res=http.send(req,new vn.smarttravel.trip.shared.http.LimitedBodyHandler(262144));require(res.statusCode()==200,503,"CATALOG_UNAVAILABLE");
+                var page=json.readValue(res.body(),Map.class);require(page.get("items") instanceof List<?>,503,"CATALOG_INVALID_RESPONSE");
+                for(Object item:(List<?>)page.get("items")) {
+                    require(item instanceof Map<?,?>,503,"CATALOG_INVALID_RESPONSE");var destination=(Map<String,Object>)item;
+                    if(id.toString().equals(destination.get("destination_id"))) {
+                        require("ACTIVE".equals(destination.get("status")),422,"DESTINATION_UNAVAILABLE");
+                        require(destination.get("name") instanceof String&&!destination.get("name").toString().isBlank()&&number(destination.get("version"))>0,503,"CATALOG_INVALID_RESPONSE");
+                        return destination;
+                    }
+                }
+                Object next=page.get("next_cursor");require(next==null||next instanceof String,503,"CATALOG_INVALID_RESPONSE");
+                cursor=(String)next;
+                require(cursor==null||(!cursor.isBlank()&&cursor.length()<=1024&&seen.add(cursor)),503,"CATALOG_INVALID_RESPONSE");
+            } while(cursor!=null);
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY,"DESTINATION_UNAVAILABLE");
         }catch(org.springframework.web.server.ResponseStatusException e){throw e;}catch(Exception e){if(e instanceof InterruptedException)Thread.currentThread().interrupt();throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,"CATALOG_UNAVAILABLE");}
     }
 }

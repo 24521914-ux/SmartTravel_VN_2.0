@@ -1,0 +1,145 @@
+/* Shared controls and application layouts. Keep dark surfaces and readable text
+   consistent across user, business and administration screens. */
+:root {
+  color-scheme: dark;
+  --color-surface-sunken: #102019;
+  --color-border-strong: #60745f;
+  --color-primary-subtle: #1b3023;
+  --color-on-primary: #14231d;
+  --color-success: #acdeb6;
+  --color-success-bg: #213d2c;
+  --color-warning: #eed098;
+  --color-warning-bg: #3b321f;
+  --color-destructive: #f0a49b;
+  --color-destructive-bg: #3b2524;
+  --color-secondary-light: #223b30;
+  --color-accent-light: #393323;
+  --focus-ring: 0 0 0 3px #b4c5a32e;
+}
+
+/* Some existing forms omit type="text". They receive the same control style. */
+input:not([type]), input[type=text], input[type=email], input[type=password],
+input[type=search], input[type=number], input[type=date], input[type=url],
+input[type=tel], input[type=datetime-local], select, textarea {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  background-color: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 12px;
+  line-height: 1.5;
+}
+input::placeholder, textarea::placeholder { color: var(--color-text-muted); opacity: 1; }
+select option, select optgroup { color: var(--color-text-primary); background: var(--color-surface-elevated); }
+textarea { resize: vertical; min-height: 104px; }
+input:disabled, select:disabled, textarea:disabled { opacity: .65; cursor: not-allowed; }
+input[type=checkbox], input[type=radio] { width: 18px; height: 18px; flex: 0 0 18px; accent-color: var(--color-primary); }
+label:has(> input[type=checkbox]), label:has(> input[type=radio]) { flex-direction: row; align-items: flex-start; font-weight: 400; line-height: 1.6; }
+label > input[type=checkbox], label > input[type=radio] { margin-top: 3px; }
+input[type=file] { display: block; width: 100%; padding: 12px; border: 1px dashed var(--color-border-strong); border-radius: 12px; background: var(--color-surface-elevated); color: var(--color-text-secondary); }
+input[type=file]::file-selector-button { padding: 8px 12px; margin-right: 12px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-primary-light); color: var(--color-text-primary); font: inherit; cursor: pointer; }
+
+.main-content :where(button:not([class])) {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 40px; padding: 9px 14px; border: 1px solid var(--color-border-strong);
+  border-radius: 10px; background: var(--color-surface-elevated); color: var(--color-text-primary);
+  font-size: .875rem; font-weight: 500; line-height: 1.5; max-width: 100%;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+.main-content :where(button:not([class])):hover:not(:disabled) { background: var(--color-primary-light); border-color: var(--color-primary); }
+.main-content .btn-primary, .main-content .btn-submit {
+  background: var(--color-primary); color: var(--color-on-primary); box-shadow: none;
+  border: 1px solid transparent;
+}
+.main-content .btn-primary:hover:not(:disabled) { background: var(--color-primary-hover); box-shadow: none; }
+.main-content :is(.btn-primary, .btn-secondary, .btn-outline, .btn-subtle, .btn-danger) {
+  min-height: 44px; border-radius: 12px; line-height: 1.5; max-width: 100%;
+  justify-content: center; text-align: center; text-wrap: pretty;
+}
+.main-content .btn-size-sm { min-height: 36px; padding: 7px 12px; font-size: .8125rem; border-radius: 9px; }
+button:disabled { cursor: not-allowed; transform: none; box-shadow: none; }
+button > svg { flex-shrink: 0; }
+:is(button, a, input, select, textarea, summary):focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
+
+/* Form rhythm applies to both shared components and older native forms. */
+.main-content form { min-width: 0; }
+.main-content form:not([class]) { display: flex; flex-direction: column; gap: 16px; }
+.main-content form > :is(button, .btn-primary, .btn-secondary) { align-self: flex-start; justify-self: start; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 16px; align-items: end; }
+.travel-panel { min-width: 0; gap: 16px; }
+.travel-panel > :is(button, .badge) { align-self: flex-start; }
+.travel-panel > h3 { margin-top: 4px; }
+.main-content fieldset { display: grid; gap: 12px; padding: 18px; min-width: 0; border: 1px solid var(--color-border); border-radius: 12px; }
+.main-content legend { padding: 0 8px; font-size: .875rem; font-weight: 600; color: var(--color-text-secondary); }
+.main-content details { min-width: 0; padding: 12px 0; }
+.main-content summary { cursor: pointer; color: var(--color-primary); line-height: 1.6; }
+.main-content details[open] > summary { margin-bottom: 16px; }
+.main-content :is(code, pre) { overflow-wrap: anywhere; white-space: pre-wrap; font-size: .8125rem; }
+.main-content :is(label, .form-group, article) { min-width: 0; }
+.main-content .badge { width: fit-content; max-width: 100%; }
+.sub-tab-bar { flex-wrap: wrap; gap: 4px; margin-bottom: 0; }
+.sub-tab { min-height: 44px; white-space: normal; text-align: left; }
+
+.account-panel-container { display: flex; flex-direction: column; gap: 24px; }
+.account-summary { flex-direction: row; justify-content: space-between; align-items: flex-start; gap: 24px; }
+.account-summary-copy { min-width: 0; display: grid; gap: 12px; }
+.account-summary h2 { font-size: clamp(1.35rem, 3vw, 2rem); overflow-wrap: anywhere; }
+.section-eyebrow { font-size: .75rem; color: var(--color-primary); font-weight: 600; letter-spacing: .06em; }
+.account-role-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.account-identifier { font-size: .8125rem; }
+.account-identifier summary { color: var(--color-text-muted); }
+.account-identifier code { display: block; color: var(--color-text-secondary); }
+.collection-items { grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
+.collection-item { display: flex; flex-direction: column; gap: 12px; padding: 20px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface-subtle); }
+.collection-item h4 { line-height: 1.55; font-size: 1.0625rem; }
+.collection-item-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: auto; padding-top: 8px; }
+.collection-item-order { display: flex; gap: 8px; width: 100%; }
+.collection-detail-header, .collection-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.collection-detail-header { justify-content: space-between; }
+.collection-detail-header > div { min-width: 0; }
+.card-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 16px; border-top: 1px solid var(--color-border-subtle); }
+
+/* Fixed header: reserve actual space for brand, navigation and session actions. */
+.liquid-glass-container,
+.liquid-glass-header.is-immersive:not(.is-scrolled) .liquid-glass-container {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  width: min(1360px, calc(100% - 24px));
+  height: 64px; min-height: 64px; max-height: none;
+  padding: 0 20px; gap: 16px;
+}
+.brand-badge { flex-shrink: 0; white-space: nowrap; }
+.nav-actions { min-width: 0; grid-column: 3; }
+.header-session { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.header-account { min-width: 0; padding: 8px; white-space: nowrap; }
+.header-avatar { flex-shrink: 0; }
+.header-account-name { display: block; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .8125rem; font-weight: 500; }
+.header-logout { white-space: nowrap; flex-shrink: 0; padding: 8px; font-size: .8125rem; }
+.nav-auth-btn, .mobile-menu-btn { min-height: 40px; }
+.main-content:not(.main-content-landing) { padding-top: 112px; padding-bottom: 48px; }
+html { scroll-padding-top: 104px; }
+@media (min-width: 1025px) and (max-width: 1200px) {
+  .header-account-name { display: none; }
+  .liquid-glass-container { gap: 10px; padding-inline: 14px; }
+}
+@media (max-width: 1024px) {
+  .liquid-glass-container,
+  .liquid-glass-header.is-immersive:not(.is-scrolled) .liquid-glass-container { width: 100%; padding-inline: 14px; gap: 8px; }
+  .liquid-nav.open { max-height: calc(100dvh - 112px); overflow-y: auto; }
+  .liquid-nav.open .liquid-nav-link { height: auto; min-height: 44px; }
+}
+@media (max-width: 600px) {
+  .account-summary { flex-direction: column; gap: 12px; }
+  .main-content:not(.main-content-landing) { padding-inline: 16px; padding-top: 104px; }
+  .travel-panel { padding: 20px; }
+  .main-content .travel-grid { grid-template-columns: minmax(0, 1fr); }
+  .header-session { gap: 0; }
+  .header-account, .header-logout { padding: 8px 6px; }
+  .sub-tab { flex: 1 1 140px; padding: 10px; font-size: .8125rem; }
+}
+
+/* Detail views replace the landing hero and need clearance below the fixed nav. */
+.main-content-landing > .place-detail-container { padding: 112px 24px 48px; }
+@media (max-width: 600px) {
+  .main-content-landing > .place-detail-container { padding: 104px 16px 40px; }
+}

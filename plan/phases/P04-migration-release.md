@@ -1,6 +1,6 @@
 # P04 Migration cutover và phát hành
 
-Trạng thái: **NOT_STARTED**, bị chặn bởi P03 **IN_PROGRESS / NO_GO**; chưa có SYSTEM_VERIFIED. Dependency: P03; nếu DB monolith thật tồn tại, hoàn tất M01–M04 trong [migration-cutover](../05-migration-cutover.md).
+Trạng thái (30/10/2026): **NOT_STARTED**, bị chặn bởi gate P03 **PARTIAL**; chưa có SYSTEM_VERIFIED. Trạng thái chính thức tại [progress BE](../../progress_be.md). Dependency: P03; nếu DB monolith thật tồn tại, hoàn tất M01–M04 trong [migration-cutover](../05-migration-cutover.md).
 
 ## Công việc
 

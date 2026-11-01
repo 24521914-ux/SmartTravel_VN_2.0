@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { LiquidGlassNav, Icon } from '../../shared/ui';
 import { useAuth } from '../providers/AuthProvider';
+import { useToast } from '../providers/ToastProvider';
 
 export interface LayoutProps {
   children?: ReactNode;
@@ -39,6 +40,7 @@ export function AppHeader({
   }, []);
 
   const { user, isAuthenticated, isAdmin, isBusiness, logout } = useAuth();
+  const { showToast } = useToast();
   const tabs = [
     { id: 'Khám phá', label: 'Khám phá', icon: 'compass' },
     { id: 'Bản đồ', label: 'Bản đồ', icon: 'map' },
@@ -46,7 +48,8 @@ export function AppHeader({
     { id: 'Chuyến đi', label: 'Chuyến đi', icon: 'route' },
     { id: 'Tài khoản', label: 'Tài khoản', icon: 'user' },
     ...(isAuthenticated ? [{ id: 'Thông báo', label: 'Thông báo', icon: 'bell' }] : []),
-    ...(isBusiness || isAdmin ? [{ id: 'Doanh nghiệp', label: 'Doanh nghiệp', icon: 'building' }] : []),
+    ...(isAuthenticated ? [{ id: 'Đóng góp', label: 'Đóng góp', icon: 'pin' }] : []),
+    ...(isBusiness ? [{ id: 'Doanh nghiệp', label: 'Doanh nghiệp', icon: 'building' }] : []),
     ...(isAdmin ? [{ id: 'Kiểm duyệt', label: 'Kiểm duyệt', icon: 'shield' }, { id: 'Quản trị', label: 'Quản trị', icon: 'database' }] : []),
   ];
 
@@ -72,11 +75,11 @@ export function AppHeader({
           aria-label="SmartTravel VN Trang chủ"
         >
           <div className="brand-icon-wrapper">
-            <Icon name="compass" size={22} />
+            <Icon name="compass" size={16} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
             <span style={{ lineHeight: 1.1 }}>SmartTravel</span>
-            <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--color-primary)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: '7.5px', fontWeight: 600, color: 'var(--color-primary)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               Việt Nam
             </span>
           </div>
@@ -94,18 +97,18 @@ export function AppHeader({
         {/* Header Right Actions */}
         <div className="nav-actions">
           {isAuthenticated ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="header-session">
               <button
                 type="button"
-                className="btn-subtle"
+                className="btn-subtle header-account"
                 onClick={() => onNavigate('Tài khoản')}
                 aria-label="Trang tài khoản cá nhân"
-                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                title={user?.display_name ?? 'Tài khoản cá nhân'}
               >
-                <div
+                <div className="header-avatar"
                   style={{
-                    width: 32,
-                    height: 32,
+                    width: 26,
+                    height: 26,
                     borderRadius: '50%',
                     background: 'var(--color-primary-light)',
                     color: 'var(--color-primary)',
@@ -113,19 +116,19 @@ export function AppHeader({
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontWeight: 700,
-                    fontSize: '0.875rem'
+                    fontSize: '0.75rem'
                   }}
                 >
                   {(user?.display_name ?? user?.email ?? 'U')[0].toUpperCase()}
                 </div>
-                <span className="hide-mobile" style={{ fontSize: '0.875rem', fontWeight: 600 }}>
+                <span className="hide-mobile header-account-name">
                   {user?.display_name ?? user?.email?.split('@')[0]}
                 </span>
               </button>
               <button
                 type="button"
-                className="btn-subtle"
-                onClick={() => void logout()}
+                className="btn-subtle header-logout"
+                onClick={() => void logout().catch(() => showToast('Đã thoát trên thiết bị này; chưa xác nhận được đăng xuất với máy chủ.', 'error'))}
                 aria-label="Đăng xuất khỏi hệ thống"
                 style={{ color: 'var(--color-destructive)' }}
               >
@@ -143,7 +146,7 @@ export function AppHeader({
                   else onNavigate('Tài khoản');
                 }}
               >
-                <Icon name="user" size={15} />
+                <Icon name="user" size={13} />
                 <span>Đăng nhập</span>
               </button>
             </div>

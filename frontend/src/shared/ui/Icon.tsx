@@ -33,6 +33,7 @@ import {
   ShareNetwork,
   Tag,
   CurrencyCircleDollar,
+  ForkKnife,
   type Icon as PhosphorIcon
 } from '@phosphor-icons/react';
 
@@ -71,6 +72,7 @@ const icons: Record<string, PhosphorIcon> = {
   share: ShareNetwork,
   tag: Tag,
   price: CurrencyCircleDollar,
+  food: ForkKnife,
 };
 
 export interface IconProps {

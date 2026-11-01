@@ -48,6 +48,59 @@ class CatalogDatabaseTests {
     @AfterAll static void close(){if(context!=null)context.close();if(policyStub!=null)policyStub.stop(0);}
     Map<String,Object> input(String name){return new HashMap<>(Map.of("name_vi",name,"address","fixture address","geographic_unit_id",GEO.toString(),"lat",10.77,"lon",106.69));}
     UUID create(String name){return (UUID)places.create(input(name),USER).get("place_id");}
+    @Test void frontendPlacePatchBindsGeographicUuidAndPersistsReadAfterWrite(){
+        UUID id=create("Frontend place patch fixture"),updatedGeo=UUID.randomUUID();
+        db.update("INSERT INTO catalog.geographic_units(geographic_unit_id,unit_type,code,name_vi,version,valid_from,status) VALUES(?,'PROVINCE',?,'Other fixture',1,'2020-01-01','ACTIVE')",updatedGeo,updatedGeo.toString());
+        var body=new LinkedHashMap<String,Object>();body.put("name","Updated frontend place");body.put("latitude",10.8);body.put("longitude",106.7);body.put("geographic_unit_id",updatedGeo.toString());body.put("price",null);body.put("currency","VND");body.put("category_ids",List.of());body.put("tag_ids",List.of());body.put("amenity_ids",List.of());body.put("destination_ids",List.of());body.put("media_keys",List.of());
+        var saved=places.update(id,1,body,USER);
+        assertThat(saved.get("version")).isEqualTo(2L);
+        var actual=places.place(id,false);
+        assertThat(actual.get("name")).isEqualTo("Updated frontend place");assertThat(actual.get("geographic_unit_id")).isEqualTo(updatedGeo);
+        assertThat(((Number)actual.get("latitude")).doubleValue()).isEqualTo(10.8);assertThat(((Number)actual.get("longitude")).doubleValue()).isEqualTo(106.7);assertThat(actual.get("price")).isNull();
+        assertThat(db.queryForObject("SELECT count(*) FROM catalog.place_versions WHERE place_id=?",Integer.class,id)).isEqualTo(2);
+    }
+    @Test void offeringPaginationRetainsRecordsBeyondFirstHundred(){
+        UUID place=create("Offering cursor anchor");
+        db.update("INSERT INTO catalog.offerings(offering_id,place_id,item_type,name_vi) SELECT gen_random_uuid(),?,'SERVICE','Cursor offering '||i FROM generate_series(1,101) i",place);
+        var offerings=context.getBean(OfferingRepository.class);
+        var rows=offerings.list(place,false);
+        assertThat(rows).hasSize(101);
+        var request=new org.springframework.mock.web.MockHttpServletRequest("GET","/api/v1/admin/offerings");
+        request.setParameter("limit","100");
+        org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(new org.springframework.web.context.request.ServletRequestAttributes(request));
+        try{
+            var first=vn.smarttravel.catalog.shared.web.Representations.page(rows);
+            assertThat((List<?>)first.get("items")).hasSize(100);
+            request.setParameter("cursor",first.get("next_cursor").toString());
+            var second=vn.smarttravel.catalog.shared.web.Representations.page(rows);
+            assertThat((List<?>)second.get("items")).hasSize(1);
+            assertThat(second.get("next_cursor")).isNull();
+        }finally{org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();}
+    }
+    @Test void frontendOfferingPatchPersistsAnchorTypePriceAndPublication(){
+        UUID first=create("First offering frontend anchor"),second=create("Second offering frontend anchor");
+        places.update(first,1,Map.of("status","PUBLISHED"),USER);places.update(second,1,Map.of("status","PUBLISHED"),USER);
+        var offerings=context.getBean(OfferingRepository.class);
+        UUID id=(UUID)offerings.create(Map.of("place_id",first.toString(),"type","SERVICE","name","Frontend service","price",10000,"currency","VND"),USER).get("offering_id");
+        offerings.update(id,1,Map.of("place_id",second.toString(),"type","ACTIVITY","name","Updated frontend activity","price",0,"currency","VND","status","PUBLISHED"));
+        var actual=offerings.get(id,false);
+        assertThat(actual.get("place_id")).isEqualTo(second);assertThat(actual.get("item_type")).isEqualTo("ACTIVITY");assertThat(actual.get("name_vi")).isEqualTo("Updated frontend activity");
+        assertThat(((Number)actual.get("price_min")).doubleValue()).isZero();assertThat(actual.get("status")).isEqualTo("PUBLISHED");assertThat(((Number)actual.get("version")).longValue()).isEqualTo(2L);
+        assertThat(offerings.list(first,true)).isEmpty();assertThat(offerings.list(second,true)).extracting(row->row.get("offering_id")).containsExactly(id);
+        assertThatThrownBy(()->offerings.update(id,1,Map.of("name","Stale edit"))).isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        assertThat(offerings.get(id,false).get("name_vi")).isEqualTo("Updated frontend activity");
+    }
+    @Test void frontendTaxonomyPatchPersistsGeographicLevelAndInactiveCreation(){
+        var taxonomy=context.getBean(TaxonomyRepository.class);
+        UUID id=(UUID)taxonomy.create("geographic-units",Map.of("name","Frontend geography","level","PROVINCE"),USER).get("geographic_unit_id");
+        taxonomy.update("geographic-units",id,1L,Map.of("name","Updated geography","level","DISTRICT"),USER);
+        var actual=taxonomy.get("geographic-units",id);
+        assertThat(actual.get("name_vi")).isEqualTo("Updated geography");assertThat(actual.get("unit_type")).isEqualTo("DISTRICT");assertThat(((Number)actual.get("version")).longValue()).isEqualTo(2L);
+        for(String kind:List.of("tags","amenities")){
+            var created=taxonomy.create(kind,Map.of("name","Inactive "+kind,"active",false),USER);
+            assertThat(created.get("active")).isEqualTo(false);
+        }
+    }
     @Test void mutationHistoryOutboxVisibilityAndOldRating(){
         UUID id=create("Bảo tàng fixture");assertThat(places.search(Map.of("q","bao tang"))).isEmpty();
         places.update(id,1,Map.of("status","PUBLISHED","price_min",0,"price_max",0),USER);

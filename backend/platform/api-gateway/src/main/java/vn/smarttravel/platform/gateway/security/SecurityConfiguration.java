@@ -46,6 +46,7 @@ public class SecurityConfiguration {
                                 "/api/identity/api/v1/auth/reset-password",
                                 "/api/intelligence/api/v1/recommendations","/api/intelligence/api/v1/interactions/batch").permitAll()
                         .pathMatchers(HttpMethod.GET,"/api/identity/api/v1/preference-options",
+                                "/api/catalog/api/v1/media/*",
                                 "/api/catalog/api/v1/places","/api/catalog/api/v1/places/*",
                                 "/api/catalog/api/v1/geographic-units","/api/catalog/api/v1/destinations",
                                 "/api/catalog/api/v1/categories","/api/catalog/api/v1/tags","/api/catalog/api/v1/amenities",

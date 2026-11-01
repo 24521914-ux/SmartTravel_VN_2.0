@@ -30,7 +30,7 @@ async function navigate(name) {
   await waitIdle();
 }
 try {
-  await page.goto(`${process.env.P02_FRONTEND_URL ?? 'http://127.0.0.1:5173'}/app`);
+  await page.goto(`${process.env.P02_FRONTEND_URL ?? 'http://127.0.0.1:5173'}/kham-pha`);
   await waitIdle();
   await navigate('Tài khoản');
   await page.getByLabel('Email', { exact: true }).first().fill(process.env.P02_USER_EMAIL ?? 'fixture-u1@example.invalid');

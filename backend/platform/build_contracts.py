@@ -30,6 +30,7 @@ def batch(model): return obj({'items': arr(model), 'missing_ids': arr(U)})
 IDS = obj({'ids': dict(arr(U), minItems=1, uniqueItems=True)})
 ERROR = obj({'code': S, 'message': S, 'traceId': S, 'fieldErrors': arr(obj({'field': S, 'message': S}))})
 ACK = obj({'request_id': U, 'status': enum('ACCEPTED', 'PENDING', 'COMPLETED'), 'version': V})
+REPORT_QUEUE = obj({**ACK['properties'], 'review_id': U, 'reason': S, 'report_status': enum('OPEN','RESOLVED','DISMISSED'), 'review_content': S, 'place_id': U}, ACK['required'])
 POINT = obj({'latitude': {'type': 'number', 'minimum': -90, 'maximum': 90}, 'longitude': {'type': 'number', 'minimum': -180, 'maximum': 180}})
 PREF = obj({'category_ids': arr(U), 'travel_style_ids': arr(U), 'food_preference_ids': arr(U), 'budget_level': enum('LOW','MID','HIGH','CUSTOM'), 'budget_min': {'type':['number','null'],'minimum':0}, 'budget_max': {'type':['number','null'],'minimum':0}, 'currency': enum('VND'), 'personalization_enabled': B, 'consent_version': V, 'version': V})
 USER = obj({'user_id': U, 'display_name': S, 'status': enum('ACTIVE', 'DISABLED', 'DELETED'), 'roles': arr(enum('USER', 'BUSINESS', 'ADMIN')), 'version': V})
@@ -44,7 +45,7 @@ PLACE = obj({'place_id': U, 'name': S, 'status': enum('DRAFT','PUBLISHED','HIDDE
     'destination_ids': arr(U), 'price': {'type':['number','null'],'minimum':0}, 'currency': enum('VND'),
     'opening_hours': arr(HOURS, 28), 'media_keys': arr(S), 'source_version': V})
 PUBLIC_PLACE = obj({**PLACE['properties'], 'status': enum('PUBLISHED')})
-OFFER = obj({'offering_id':U,'place_id':U,'type':enum('SERVICE','TOUR','EVENT','ACTIVITY','EXPERIENCE'),'name':S,'price':N,'currency':enum('VND'),'version':V})
+OFFER = obj({'offering_id':U,'place_id':U,'type':enum('SERVICE','TOUR','EVENT','ACTIVITY','EXPERIENCE'),'name':S,'price':{'type':['number','null'],'minimum':0},'currency':enum('VND'),'version':V})
 BUSINESS = obj({'business_id':U,'name':S,'status':enum('PENDING','VERIFIED','SUSPENDED'),'version':V})
 CLAIM = obj({'claim_id':U,'business_id':U,'place_id':U,'owner_user_id':U,'status':enum('PENDING','APPROVED','REJECTED','REVOKED'),'version':V})
 REVIEW = obj({'review_id':U,'user_id':U,'place_id':U,'rating':{'type':'integer','minimum':1,'maximum':5},'content':S,'media_keys':arr(S),'status':enum('PENDING','APPROVED','REJECTED','HIDDEN','DELETED'),'version':V})
@@ -174,6 +175,14 @@ op('catalog','/api/v1/admin/places/{place_id}/status','put','placeStatus',obj({'
 for name, model, key in [('geographic-units',GEO,'id'),('destinations',DEST,'destination_id'),('categories',TAXON,'id'),('tags',TAXON,'id'),('amenities',TAXON,'id'),('offerings',OFFER,'offering_id')]:
     crud('catalog','/api/v1/admin/'+name,model,key)
     op('catalog','/api/v1/'+name,'get','public_'+name.replace('-','_'),response=page(model),public=True)
+# Unknown persisted offering prices are null, never an invented zero. Keep
+# existing write schemas unchanged: supplied prices must remain numeric.
+for method, path in [('post','/api/v1/admin/offerings'),('patch','/api/v1/admin/offerings/{offering_id}')]:
+    specs['catalog']['paths'][path][method]['requestBody']['content']['application/json']['schema']['properties']['price'] = N
+# Preserve the existing additive P03 publication PATCH when regenerating drafts.
+offering_patch = specs['catalog']['paths']['/api/v1/admin/offerings/{offering_id}']['patch']
+offering_patch['requestBody']['content']['application/json']['schema']['properties']['status'] = enum('DRAFT','PUBLISHED','HIDDEN','ARCHIVED')
+offering_patch['description'] = 'Additive P03 revision: optional status controls publication. Existing PATCH fields and clients remain compatible; publication validates anchor visibility and event schedules.'
 op('catalog','/api/v1/places/{place_id}/offerings','get','placeOfferings',response=page(OFFER),public=True)
 crud('catalog','/api/v1/businesses',BUSINESS,'business_id')
 MEMBER=obj({'member_id':U,'user_id':U,'role':enum('OWNER','EDITOR'),'version':V})
@@ -204,7 +213,7 @@ op('community','/api/v1/contributions','post','createContribution',obj({'type':e
 op('community','/api/v1/me/contributions','get','myContributions',response=page(CONTRIBUTION))
 op('community','/api/v1/contributions/{contribution_id}','patch','editContribution',obj({'fields':FIELDS}),CONTRIBUTION,version=True)
 op('community','/api/v1/contributions/{contribution_id}/withdraw','post','withdrawContribution',response=CONTRIBUTION,version=True)
-for resource, model in [('reviews',REVIEW),('contributions',CONTRIBUTION),('reports',ACK)]:
+for resource, model in [('reviews',REVIEW),('contributions',CONTRIBUTION),('reports',REPORT_QUEUE)]:
     op('community','/api/v1/admin/'+resource,'get','moderationList_'+resource,response=page(model),scope='community:admin')
     op('community',f'/api/v1/admin/{resource}/{{id}}/moderate','post','moderate_'+resource,obj({'action':enum('APPROVE','REJECT','HIDE','RESTORE'),'reason':S}),ACK,202,scope='community:admin',version=True,idem=True)
 op('community','/internal/v1/ratings/batch','post','ratingsBatch',IDS,batch(RATING),scope='community:ratings:read')

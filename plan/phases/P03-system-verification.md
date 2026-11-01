@@ -1,6 +1,6 @@
 # P03 Tích hợp sáu service và kiểm nhận chất lượng
 
-Trạng thái: **PARTIAL** · 21/10/2026 · Evidence và giới hạn theo [progress](../../progress_be.md). Chưa đủ toàn bộ tiêu chí hoặc chữ ký owner/reviewer; không cấp SYSTEM_VERIFIED/mở P04.
+Trạng thái (30/10/2026): **PARTIAL**; P03-07 kiểm lại browser UI hiện tại LOCAL_VERIFIED với P02. Chưa chạy lại toàn bộ gate trên revision cuối, chưa CI/chữ ký; AI DEFERRED. Bằng chứng: [progress](../../progress_be.md). Không cấp SYSTEM_VERIFIED/mở P04.
 
 ## Công việc
 
