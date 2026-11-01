@@ -22,8 +22,22 @@ export function CollectionsPanel({ travel, busy = false }: CollectionsPanelProps
   const [editingItem, setEditingItem] = useState<Resource | null>(null);
   const [publicCollection, setPublicCollection] = useState<Resource | null>(null);
   const [publicItems, setPublicItems] = useState<Resource[]>([]);
+  const [placeNames, setPlaceNames] = useState<Record<string, string>>({});
   const [name, setName] = useState('');
   const [visibility, setVisibility] = useState<'PUBLIC' | 'PRIVATE'>('PRIVATE');
+
+  useEffect(() => {
+    let active = true;
+    const ids = [...new Set([...items, ...publicItems].map(item => String(item.place_id)))];
+    void Promise.allSettled(ids.map(async placeId => [placeId, String((await travel.place(placeId)).name)] as const))
+      .then(results => {
+        if (!active) return;
+        const names = Object.fromEntries(results.map((result, index) => result.status === 'fulfilled'
+          ? result.value : [ids[index], 'Địa điểm hiện không khả dụng']));
+        setPlaceNames(previous => ({ ...previous, ...names }));
+      });
+    return () => { active = false; };
+  }, [items, publicItems, travel]);
 
   async function loadCollections() {
     setLoading(true);
@@ -174,7 +188,7 @@ export function CollectionsPanel({ travel, busy = false }: CollectionsPanelProps
   return (
     <div className="collections-layout" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {error && <ErrorState message={error} onRetry={() => selected ? void loadCollectionItems(selected) : void loadCollections()} />}
-      <section className="travel-panel"><h2>Xem bộ sưu tập được chia sẻ</h2><form onSubmit={openPublic}><label>Mã bộ sưu tập<input name="collection_id" required /></label><Button type="submit" disabled={loading || busy}>Mở bộ sưu tập chia sẻ</Button></form>{publicCollection && <div><h3>{String(publicCollection.name)}</h3>{publicItems.map(item => <p key={id(item)}>{String(item.place_id)} · {String(item.note)}</p>)}</div>}</section>
+      <section className="travel-panel"><h2>Xem bộ sưu tập được chia sẻ</h2><form onSubmit={openPublic}><label>Mã bộ sưu tập<input name="collection_id" required /></label><Button type="submit" disabled={loading || busy}>Mở bộ sưu tập chia sẻ</Button></form>{publicCollection && <div><h3>{String(publicCollection.name)}</h3>{publicItems.map(item => <p key={id(item)}>{placeNames[String(item.place_id)] ?? 'Đang tải tên địa điểm…'} · {String(item.note)}</p>)}</div>}</section>
       {/* Create Collection Card */}
       <section className="travel-panel" aria-label="Tạo bộ sưu tập mới">
         <h2 style={{ fontSize: '1.35rem', fontWeight: 700, marginBottom: '14px' }}>
@@ -214,9 +228,9 @@ export function CollectionsPanel({ travel, busy = false }: CollectionsPanelProps
       {/* Selected Collection Detail View */}
       {selected ? (
         <section className="travel-panel" aria-label="Chi tiết bộ sưu tập" style={{ animation: 'fadeIn 200ms ease' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div className="collection-detail-header">
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="collection-title-row">
                 <h2 style={{ fontSize: '1.6rem', fontWeight: 800 }}>{String(selected.name)}</h2>
                 <Badge variant={selected.visibility === 'PUBLIC' ? 'success' : 'neutral'}>
                   {selected.visibility === 'PUBLIC' ? 'Công khai' : 'Riêng tư'}
@@ -247,16 +261,17 @@ export function CollectionsPanel({ travel, busy = false }: CollectionsPanelProps
           </form>
           {editingItem && <form key={id(editingItem)} onSubmit={editItem}><label>Sửa ghi chú địa điểm<input name="note" defaultValue={String(editingItem.note)} required /></label><Button type="submit" disabled={loading || busy}>Lưu ghi chú địa điểm</Button><button type="button" onClick={() => setEditingItem(null)}>Hủy sửa ghi chú</button></form>}
           {items.length > 0 ? (
-            <div className="travel-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+            <div className="travel-grid collection-items">
               {items.map((item, idx) => (
-                <div key={String(item.id ?? idx)} style={{ padding: '16px', background: 'var(--color-surface-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
-                  <h4>{String(item.place_name ?? item.place_id ?? 'Địa điểm lưu')}</h4>
+                <article className="collection-item" key={id(item)}>
+                  <h4>{placeNames[String(item.place_id)] ?? 'Đang tải tên địa điểm…'}</h4>
                   <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>{String(item.note ?? '')}</p>
-                  <button type="button" disabled={loading || busy} onClick={() => void openItem(item)}>Sửa ghi chú địa điểm</button>
-                  <button type="button" disabled={loading || busy} onClick={() => void changeItem(item, idx)}>Xóa khỏi bộ sưu tập</button>
-                  <button type="button" disabled={loading || busy || idx === 0} onClick={() => void changeItem(item, idx, -1)}>Lên</button>
-                  <button type="button" disabled={loading || busy || idx === items.length - 1} onClick={() => void changeItem(item, idx, 1)}>Xuống</button>
-                </div>
+                  <div className="collection-item-actions">
+                    <Button variant="secondary" size="sm" type="button" disabled={loading || busy} onClick={() => void openItem(item)}>Sửa ghi chú địa điểm</Button>
+                    <Button variant="subtle" size="sm" type="button" disabled={loading || busy} onClick={() => void changeItem(item, idx)}>Xóa khỏi bộ sưu tập</Button>
+                    <div className="collection-item-order"><Button variant="secondary" size="sm" type="button" disabled={loading || busy || idx === 0} onClick={() => void changeItem(item, idx, -1)}>Lên</Button><Button variant="secondary" size="sm" type="button" disabled={loading || busy || idx === items.length - 1} onClick={() => void changeItem(item, idx, 1)}>Xuống</Button></div>
+                  </div>
+                </article>
               ))}
             </div>
           ) : (
@@ -297,7 +312,7 @@ export function CollectionsPanel({ travel, busy = false }: CollectionsPanelProps
                 </p>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid var(--color-border-subtle)' }}>
+              <div className="card-actions">
                 <button
                   type="button"
                   className="btn-secondary"

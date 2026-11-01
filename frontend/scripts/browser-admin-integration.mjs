@@ -19,7 +19,7 @@ page.on('response', response => {
 });
 page.on('dialog', dialog => dialog.accept());
 async function login(alias) {
-  await page.goto(`${origin}/app#/T%C3%A0i%20kho%E1%BA%A3n`);
+  await page.goto(`${origin}/tai-khoan`);
   await page.getByLabel('Email', { exact: true }).fill(`fixture-${alias}@example.invalid`);
   await page.getByLabel('Mật khẩu', { exact: true }).fill(secrets.IDENTITY_FIXTURE_PASSWORD);
   await page.locator('form').getByRole('button', { name: 'Đăng nhập', exact: true }).click();
@@ -41,7 +41,7 @@ async function findRecord(section, name) {
 }
 try {
   await login('admin');
-  await page.goto(`${origin}/app#/${encodeURIComponent('Quản trị')}`);
+  await page.goto(`${origin}/quan-tri`);
   const users = page.getByRole('region', { name: 'Quản lý người dùng', exact: true });
   await users.waitFor(); await complete(users);
   const userRow = users.locator('article').filter({ has: page.getByRole('heading', { name: 'Synthetic u2', exact: true }) });
@@ -174,7 +174,7 @@ try {
     checks.push(`${kind}: soft-delete read-back`);
   }
   await page.getByRole('button', { name: 'Đăng xuất khỏi hệ thống' }).click(); await login('u1');
-  await page.goto(`${origin}/app#/${encodeURIComponent('Đóng góp')}`);
+  await page.goto(`${origin}/dong-gop`);
   const contribution = page.getByRole('region', { name: 'Đóng góp dữ liệu', exact: true });
   await contribution.waitFor(); await complete(contribution);
   const name = `Integration contribution ${suffix}`;
@@ -197,14 +197,14 @@ try {
   await contribution.getByLabel(/^Danh mục/).selectOption({ index: 1 });
   await contribution.getByRole('button', { name: 'Gửi đóng góp', exact: true }).click(); await complete(contribution);
   await page.getByRole('button', { name: 'Đăng xuất khỏi hệ thống' }).click(); await login('admin');
-  await page.goto(`${origin}/app#/${encodeURIComponent('Kiểm duyệt')}`);
+  await page.goto(`${origin}/kiem-duyet`);
   const moderation = page.locator('.moderation-console-layout'); await moderation.waitFor();
   await moderation.getByLabel(/^Nội dung kiểm duyệt/).selectOption('contributions');
   await moderation.locator('#moderation-reason').fill('Synthetic integration contribution is valid');
   const pending = moderation.locator('article').filter({ has: page.getByRole('heading', { name: appliedName, exact: true }) });
   await pending.getByRole('button', { name: 'Duyệt', exact: true }).click(); await complete(moderation);
   await page.getByRole('button', { name: 'Đăng xuất khỏi hệ thống' }).click(); await login('u1');
-  await page.goto(`${origin}/app#/${encodeURIComponent('Đóng góp')}`);
+  await page.goto(`${origin}/dong-gop`);
   const applied = contribution.locator('article').filter({ has: page.getByRole('heading', { name: appliedName, exact: true }) });
   for (let attempt = 0; attempt < 60 && !await applied.getByText('Trạng thái: APPLIED', { exact: true }).count(); attempt++) {
     assert.equal(await applied.getByText('Trạng thái: APPLY_FAILED', { exact: true }).count(), 0, 'Catalog rejected the contribution');

@@ -9,6 +9,7 @@ import './shared/styles/liquid-glass.css';
 import './shared/styles/app.css';
 import './shared/styles/editorial.css';
 import './shared/styles/cinematic.css';
+import './shared/styles/components.css';
 import App from './app/App';
 
 createRoot(document.getElementById('root')!).render(<App />);

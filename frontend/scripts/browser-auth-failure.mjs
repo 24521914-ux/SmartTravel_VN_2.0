@@ -11,7 +11,7 @@ const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 try {
   await page.route('**/api/identity/api/v1/me', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ code: 'DEPENDENCY_UNAVAILABLE', message: 'Profile outage fixture', traceId: 'fixture', fieldErrors: [] }) }));
-  await page.goto(`${origin}/app#/${encodeURIComponent('Tài khoản')}`);
+  await page.goto(`${origin}/tai-khoan`);
   await page.getByLabel('Email', { exact: true }).fill('fixture-u1@example.invalid');
   await page.getByLabel('Mật khẩu', { exact: true }).fill(secrets.IDENTITY_FIXTURE_PASSWORD);
   await page.locator('form').getByRole('button', { name: 'Đăng nhập', exact: true }).click();

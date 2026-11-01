@@ -91,7 +91,7 @@ async function responsiveCheck(role, section) {
 }
 let failure;
 try {
-  const address = (process.env.P02_FRONTEND_URL ?? 'http://127.0.0.1:5173') + '/app';
+  const address = (process.env.P02_FRONTEND_URL ?? 'http://127.0.0.1:5173') + '/kham-pha';
   for (let attempt = 0; attempt < 30; attempt++) {
     try { if ((await fetch(address)).status === 200) break; } catch { /* Dev server may still be starting. */ }
     await new Promise(resolve => setTimeout(resolve, 1000));

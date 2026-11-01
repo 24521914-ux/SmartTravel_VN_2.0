@@ -374,7 +374,11 @@ button:disabled {
   color: var(--color-text-primary);
 }
 
+input:not([type]),
 input[type="text"],
+input[type="url"],
+input[type="tel"],
+input[type="datetime-local"],
 input[type="email"],
 input[type="password"],
 input[type="date"],
@@ -385,8 +389,8 @@ textarea {
   width: 100%;
   padding: 10px 14px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-button);
-  background: #ffffff;
+  border-radius: 12px;
+  background: var(--color-surface-elevated);
   color: var(--color-text-primary);
   font-family: var(--font-body);
   font-size: 0.9375rem;

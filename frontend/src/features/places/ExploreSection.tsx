@@ -7,6 +7,8 @@ import { Icon, ErrorState, EmptyState } from '../../shared/ui';
 import type { TravelClient, Resource, Page } from '../../shared/api';
 import { useToast } from '../../app/providers/ToastProvider';
 import { useAuth } from '../../app/providers/AuthProvider';
+import { DestinationFilters } from './DestinationFilters';
+import { TravelCatalog } from './TravelCatalog';
 
 export interface ExploreSectionProps {
   travel: TravelClient;
@@ -20,6 +22,8 @@ const editorial = [
   { name: 'Hạ Long', image: 'ha-long', title: 'Để biển xanh dẫn lối', description: 'Ngắm những đảo đá nối nhau giữa mặt vịnh rộng mở.', alt: 'Những đảo đá vôi giữa vịnh Hạ Long' },
 ];
 const isFixture = (p: Resource) => /^(P0[0-9][\s_-]|[0-9a-f]{8}-[0-9a-f]{4}-)/i.test(String(p.name ?? ''));
+const isTestCategory = (row: Resource) => /^(Integration\b|P0\d[\s_-]|synthetic\b|test\b)/i.test(String(row.name ?? ''));
+const categoryIcon = (name: string) => /nhà hàng|ẩm thực|ăn/i.test(name) ? 'food' : /khách sạn|lưu trú/i.test(name) ? 'building' : /bảo tàng|văn hóa|di sản/i.test(name) ? 'layers' : /thiên nhiên|sinh thái/i.test(name) ? 'leaf' : 'compass';
 
 export function ExploreSection({ travel, onNavigateToTrip, onNavigate, busy = false }: ExploreSectionProps) {
   const { showToast } = useToast();
@@ -88,6 +92,11 @@ export function ExploreSection({ travel, onNavigateToTrip, onNavigate, busy = fa
     results.current?.scrollIntoView({ block: 'start' });
   }
   function chooseCategory(id: string) { setCategory(id); setExpanded(true); void loadPlaces(appliedQuery, id); }
+  function resetFilters() {
+    setQuery(''); setAppliedQuery(''); setCategory(''); setFilters({});
+    appliedFilters.current = {}; setExpanded(true);
+    void loadPlaces('', '');
+  }
   async function selectPlace(place: Resource) {
     try { setSelectedPlace(await travel.place(String(place.place_id ?? place.id))); }
     catch (error) { showToast((error as Error).message || 'Không thể tải chi tiết địa điểm.', 'error'); }
@@ -113,22 +122,23 @@ export function ExploreSection({ travel, onNavigateToTrip, onNavigate, busy = fa
         <div className="journey-hero-copy"><span className="journey-eyebrow">KHÁM PHÁ VIỆT NAM</span><h1 id="journey-title"><span>Chạm vào</span><br /><em>miền diệu kỳ.</em></h1><p>Từ miền non nước đến những phố xưa. Tìm một nơi khiến bạn muốn lên đường.</p><div className="journey-hero-actions"><a className="journey-button journey-button-light" href="#diem-den" onClick={e => { e.preventDefault(); results.current?.scrollIntoView({ block: 'start' }); }}>Khám phá điểm đến <Icon name="arrow" size={18} /></a><button type="button" className="journey-hero-link" onClick={() => onNavigateToTrip?.()}>Tạo lịch trình <Icon name="route" size={18} /></button></div></div>
         <a className="journey-photo-location" href="https://commons.wikimedia.org/wiki/File:Tam_Coc_Panorama_(8604887215).jpg" target="_blank" rel="noreferrer"><Icon name="pin" size={16} />Tam Cốc, Ninh Bình</a>
       </section>
-      <form className="journey-search" onSubmit={search} role="search" aria-label="Tìm điểm đến"><Icon name="search" size={25} /><label htmlFor="destination-search"><span>Chuyến đi tiếp theo của bạn?</span><input id="destination-search" type="search" placeholder="Thử tìm Hội An, Ninh Bình..." value={query} onChange={e => setQuery(e.target.value)} /></label><button type="submit" className="btn-primary" disabled={busy || loading}>Tìm điểm đến <Icon name="arrow" size={18} /></button></form>
-      <form className="travel-panel form-grid" aria-label="Bộ lọc điểm đến" onSubmit={search}>
-        <label>Vùng điểm đến<select value={filters.destinationId ?? ''} onChange={e => setFilters({ ...filters, destinationId: e.target.value })}><option value="">Tất cả</option>{destinationsList.map(row => <option key={String(row.destination_id ?? row.id)} value={String(row.destination_id ?? row.id)}>{String(row.name)}</option>)}</select></label>
-        <label>Tỉnh thành<select value={filters.geographicUnitId ?? ''} onChange={e => setFilters({ ...filters, geographicUnitId: e.target.value })}><option value="">Tất cả</option>{geographicUnits.map(row => <option key={String(row.geographic_unit_id ?? row.id)} value={String(row.geographic_unit_id ?? row.id)}>{String(row.name)}</option>)}</select></label>
-        <label>Giá tối thiểu<input type="number" min="0" value={filters.minPrice ?? ''} onChange={e => setFilters({ ...filters, minPrice: e.target.value })} /></label>
-        <label>Giá tối đa<input type="number" min={filters.minPrice || '0'} value={filters.maxPrice ?? ''} onChange={e => setFilters({ ...filters, maxPrice: e.target.value })} /></label>
-        <label>Đánh giá tối thiểu<input type="number" min="0" max="5" step="0.5" value={filters.minRating ?? ''} onChange={e => setFilters({ ...filters, minRating: e.target.value })} /></label>
-        <label>Vĩ độ<input type="number" min="-90" max="90" step="any" value={filters.lat ?? ''} required={Boolean(filters.lon || filters.radiusM)} onChange={e => setFilters({ ...filters, lat: e.target.value })} /></label>
-        <label>Kinh độ<input type="number" min="-180" max="180" step="any" value={filters.lon ?? ''} required={Boolean(filters.lat || filters.radiusM)} onChange={e => setFilters({ ...filters, lon: e.target.value })} /></label>
-        <label>Bán kính (m)<input type="number" min="1" value={filters.radiusM ?? ''} required={Boolean(filters.lat || filters.lon)} onChange={e => setFilters({ ...filters, radiusM: e.target.value })} /></label>
-        <button className="btn-secondary" type="submit" disabled={busy || loading}>Áp dụng bộ lọc</button>
-      </form>
-      <details className="travel-panel"><summary>Danh mục du lịch</summary><h3>Tiện ích</h3><p>{amenities.map(row => String(row.name)).join(' · ') || 'Chưa có tiện ích'}</p><h3>Thẻ địa điểm</h3><p>{tags.map(row => String(row.name)).join(' · ') || 'Chưa có thẻ địa điểm'}</p><h3>Dịch vụ và trải nghiệm</h3>{offerings.map(row => <p key={String(row.offering_id ?? row.id)}>{String(row.name)} · {row.price == null ? 'Chưa có giá' : `${Number(row.price).toLocaleString('vi-VN')} VND`}{row.place_id != null && <button type="button" onClick={() => void selectPlace({ place_id: row.place_id })}>Xem địa điểm cung cấp</button>}</p>)}</details>
+      <DestinationFilters
+        query={query} onQueryChange={setQuery} filters={filters} onFiltersChange={setFilters}
+        destinations={destinationsList} geographicUnits={geographicUnits}
+        appliedCount={Object.values(appliedFilters.current).filter(Boolean).length + Number(Boolean(appliedQuery)) + Number(Boolean(category))}
+        onSubmit={search} onReset={resetFilters} busy={busy || loading}
+      />
       <section className="journey-section" ref={results} id="diem-den" aria-labelledby="destinations-title" aria-busy={loading}>
         <div className="journey-section-heading"><div><h2 id="destinations-title">Một điểm đến, <em>vạn điều khám phá.</em></h2><p>{appliedQuery ? `Kết quả cho “${appliedQuery}”` : 'Tìm cảm hứng cho hành trình tiếp theo từ danh mục điểm đến.'}</p></div><button type="button" className="journey-text-button" onClick={() => onNavigate?.('Bản đồ')}>Khám phá bản đồ <Icon name="map" size={18} /></button></div>
-        {categories.length > 0 && <div className="journey-filters" aria-label="Lọc theo danh mục"><button type="button" aria-pressed={!category} onClick={() => chooseCategory('')}>Tất cả</button>{categories.filter(c => c.name && (c.category_id ?? c.id)).map(c => <button type="button" key={String(c.category_id ?? c.id)} aria-pressed={category === String(c.category_id ?? c.id)} onClick={() => chooseCategory(String(c.category_id ?? c.id))}>{String(c.name)}</button>)}</div>}
+        {categories.length > 0 && <>
+          <p className="explore-category-label">Bạn muốn khám phá điều gì?</p>
+          <div className="explore-categories" aria-label="Lọc theo danh mục">
+            <button type="button" aria-pressed={!category} onClick={() => chooseCategory('')}><Icon name="compass" size={19} />Tất cả</button>
+            {categories.filter(c => c.name && (c.category_id ?? c.id) && !isTestCategory(c)).map(c => <button type="button" key={String(c.category_id ?? c.id)} aria-pressed={category === String(c.category_id ?? c.id)} onClick={() => chooseCategory(String(c.category_id ?? c.id))}><Icon name={categoryIcon(String(c.name))} size={19} />{String(c.name)}</button>)}
+          </div>
+          {categories.some(isTestCategory) && <details className="explore-category-fixtures"><summary>Danh mục kiểm thử ({categories.filter(isTestCategory).length})</summary><div className="explore-categories">{categories.filter(c => c.name && (c.category_id ?? c.id) && isTestCategory(c)).map(c => <button type="button" key={String(c.category_id ?? c.id)} aria-pressed={category === String(c.category_id ?? c.id)} onClick={() => chooseCategory(String(c.category_id ?? c.id))}>{String(c.name)}</button>)}</div></details>}
+        </>}
+
         {error ? <ErrorState onRetry={() => void loadPlaces(appliedQuery, category)} /> : loading && !places.length ? <div className="journey-skeletons" aria-label="Đang tải điểm đến">{[0, 1, 2].map(n => <div key={n} className="journey-skeleton" />)}</div> : <>
           {visible.length > 0 && <div className="travel-grid journey-destinations">{visible.map(p => <PlaceCard key={String(p.place_id ?? p.id)} place={p} isFavorite={favoriteIds.has(String(p.place_id ?? p.id))} onSelect={place => void selectPlace(place)} onToggleFavorite={favorite} busy={busy || loading} favoriteDisabled={!favoritesLoaded} />)}</div>}
           {!visible.length && (
@@ -143,6 +153,7 @@ export function ExploreSection({ travel, onNavigateToTrip, onNavigate, busy = fa
         </>}
         {(!expanded && destinations.length > 6 || cursor) && <div className="journey-more"><button type="button" className="btn-secondary" disabled={loading} onClick={() => { setExpanded(true); if (expanded || destinations.length <= 6) void loadPlaces(appliedQuery, category, cursor ?? undefined); }}>{loading ? 'Đang tải...' : 'Xem thêm điểm đến'} <Icon name="arrow" size={18} /></button></div>}
       </section>
+      <TravelCatalog amenities={amenities} tags={tags} offerings={offerings} onSelectPlace={place => void selectPlace(place)} disabled={busy || loading} />
       <section className="journey-section journey-editorial" aria-labelledby="editorial-title">
         <div className="journey-section-heading">
           <div>

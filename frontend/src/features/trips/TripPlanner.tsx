@@ -635,7 +635,7 @@ export function TripPlanner({ travel, busy = false, suggestedPlace }: TripPlanne
                 </div>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid var(--color-border-subtle)' }}>
+              <div className="card-actions">
                 <button
                   type="button"
                   className="btn-secondary"

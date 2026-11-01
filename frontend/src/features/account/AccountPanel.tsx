@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Button, Badge } from '../../shared/ui';
+import { Button, Badge, Icon } from '../../shared/ui';
 import { TravelClient, type Resource, type Page } from '../../shared/api';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { useToast } from '../../app/providers/ToastProvider';
+import './account-auth.css';
 
 type GuestMode = 'login' | 'register' | 'verify-email' | 'forgot-password' | 'reset-password';
 
@@ -11,6 +12,7 @@ export function AccountPanel() {
   const { showToast } = useToast();
   const [travel] = useState(() => new TravelClient(apiClient));
   const [mode, setMode] = useState<GuestMode>('login');
+  const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'preferences'>('profile');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -50,30 +52,283 @@ export function AccountPanel() {
     void run(async () => { await action(data); form.reset(); });
   }
   const text = (data: FormData, key: string) => String(data.get(key) ?? '').trim();
-  const guestTitles: Record<GuestMode, string> = { login: 'Đăng nhập tài khoản', register: 'Đăng ký tài khoản', 'verify-email': 'Xác minh email', 'forgot-password': 'Quên mật khẩu', 'reset-password': 'Đặt lại mật khẩu' };
+  const guestTitles: Record<GuestMode, string> = {
+    login: 'Đăng nhập tài khoản',
+    register: 'Đăng ký tài khoản',
+    'verify-email': 'Xác minh email',
+    'forgot-password': 'Quên mật khẩu',
+    'reset-password': 'Đặt lại mật khẩu'
+  };
+  const guestDescriptions: Record<GuestMode, string> = {
+    login: 'Nhập thông tin bên dưới để tiếp tục hành trình và quản lý chuyến đi của bạn.',
+    register: 'Tạo tài khoản nhanh chóng để lên kế hoạch và lưu giữ kỷ niệm chuyến đi.',
+    'verify-email': 'Nhập mã xác nhận được gửi trong hòm thư điện tử của bạn.',
+    'forgot-password': 'Nhập email đã đăng ký để nhận mã khôi phục mật khẩu tài khoản.',
+    'reset-password': 'Nhập mã từ email và thiết lập mật khẩu mới cho tài khoản.'
+  };
 
-  return <div className="account-panel-container" style={{ display: 'grid', gap: 24 }}>
-    {error && <p role="alert">{error}</p>}
-    {!isAuthenticated ? <section className="travel-panel" style={{ maxWidth: 520, width: '100%', margin: '0 auto' }}>
-      <h2>{guestTitles[mode]}</h2>
-      <form className="clay-form" onSubmit={e => submit(e, async data => {
-        if (mode === 'login') { await login(text(data, 'email'), String(data.get('password'))); showToast('Đăng nhập thành công!', 'success'); return; }
-        const body = mode === 'register' ? { email: text(data, 'email'), password: String(data.get('password')), display_name: text(data, 'display_name') }
-          : mode === 'verify-email' ? { token: text(data, 'token') }
-          : mode === 'forgot-password' ? { email: text(data, 'email') }
-          : { token: text(data, 'token'), password: String(data.get('password')) };
-        await apiClient.request('identity', `/api/v1/auth/${mode}`, { method: 'POST', body, authenticated: false, idempotencyKey: crypto.randomUUID() });
-        showToast(mode === 'register' ? 'Đã đăng ký. Kiểm tra email để xác minh trước khi đăng nhập.' : mode === 'forgot-password' ? 'Nếu tài khoản tồn tại, hướng dẫn đặt lại mật khẩu sẽ được gửi qua email.' : 'Đã hoàn thành. Bạn có thể đăng nhập.', 'success');
-      })}>
-        {['login', 'register', 'forgot-password'].includes(mode) && <label htmlFor="login-email">Email<input id="login-email" name="email" type="email" autoComplete="email" required maxLength={254} /></label>}
-        {mode === 'register' && <label htmlFor="register-name">Tên hiển thị<input id="register-name" name="display_name" required maxLength={1024} /></label>}
-        {['verify-email', 'reset-password'].includes(mode) && <label htmlFor="auth-token">Mã xác nhận trong email<input id="auth-token" name="token" required maxLength={1024} /></label>}
-        {['login', 'register', 'reset-password'].includes(mode) && <label htmlFor="login-password">Mật khẩu<input id="login-password" name="password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required minLength={12} maxLength={128} /></label>}
-        <Button type="submit" disabled={busy || isLoading}>{guestTitles[mode].replace(' tài khoản', '')}</Button>
-      </form>
-      <nav aria-label="Xác thực tài khoản" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 16 }}>{(Object.keys(guestTitles) as GuestMode[]).filter(v => v !== mode).map(v => <button type="button" key={v} onClick={() => { setMode(v); setError(''); }}>{guestTitles[v]}</button>)}</nav>
-    </section> : <>
-      <section className="travel-panel"><h2>{String(profile?.display_name ?? user?.display_name ?? '')}</h2><p>Mã người dùng: {String(profile?.user_id ?? '')}</p>{(user?.roles ?? []).map(role => <Badge key={role}>{role}</Badge>)} <Button disabled={busy || isLoading} onClick={() => void run(async () => { await logout(); showToast('Đã đăng xuất.', 'info'); })}>Đăng xuất</Button></section>
+  return <div className="account-panel-container">
+    {!isAuthenticated ? (
+      <div className="account-auth-container">
+        <div className="auth-split-card">
+          {/* Left Column: Visual Hero Showcase (Image 2 aesthetic) */}
+          <section className="auth-hero-side" aria-label="Giới thiệu SmartTravel">
+            <img
+              src="/images/editorial/ha-long.webp"
+              alt="Cảnh sắc Việt Nam"
+              className="auth-hero-bg"
+              loading="eager"
+            />
+            <div className="auth-hero-overlay" />
+            <div className="auth-hero-gradient-top" />
+
+            <div className="auth-hero-content">
+              <span className="auth-hero-badge">
+                <Icon name="compass" size={13} /> Khám phá Việt Nam
+              </span>
+              <div className="auth-hero-title">
+                Bắt đầu hành trình cùng SmartTravel!
+              </div>
+              <p className="auth-hero-desc">
+                Khám phá hàng ngàn điểm đến độc đáo, tạo lịch trình cá nhân hóa thông minh và kết nối cùng cộng đồng du lịch xê dịch.
+              </p>
+            </div>
+
+            {/* Floating Social Proof Pill (Image 2 style) */}
+            <div className="auth-social-proof-pill">
+              <div className="auth-proof-avatar">
+                <Icon name="user" size={18} />
+              </div>
+              <div className="auth-proof-meta">
+                <span className="auth-proof-user">Minh Tuấn từ Hà Nội</span>
+                <span className="auth-proof-action">
+                  Vừa lên lịch trình Đà Nẵng 3N2Đ <span className="auth-proof-check">✓</span>
+                </span>
+              </div>
+            </div>
+          </section>
+
+          {/* Right Column: Interactive Modern Form */}
+          <section className="auth-form-side" aria-label={guestTitles[mode]}>
+            <div className="auth-form-inner">
+              {/* Header: Mode Switch Tabs & Brand Mark */}
+              <div className="auth-form-header">
+                <div className="auth-mode-pill-tabs">
+                  <button
+                    type="button"
+                    className={`auth-mode-pill-tab ${mode === 'login' ? 'active' : ''}`}
+                    onClick={() => { setMode('login'); setError(''); }}
+                  >
+                    Đăng nhập
+                  </button>
+                  <button
+                    type="button"
+                    className={`auth-mode-pill-tab ${mode === 'register' ? 'active' : ''}`}
+                    onClick={() => { setMode('register'); setError(''); }}
+                  >
+                    Đăng ký
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <h1 className="auth-account-badge">Tài khoản</h1>
+                  <div className="auth-brand-logo">
+                    <Icon name="compass" size={20} />
+                    <span className="auth-brand-name">SMARTTRAVEL</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Title & Subtext */}
+              <h2 className="auth-form-heading">{guestTitles[mode]}</h2>
+              <p className="auth-form-subtext">{guestDescriptions[mode]}</p>
+
+              {/* Error Alert */}
+              {error && (
+                <div role="alert" className="auth-alert-box">
+                  <Icon name="alert" size={18} />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              {/* Form */}
+              <form
+                className="clay-form auth-form-body"
+                onSubmit={e => submit(e, async data => {
+                  if (mode === 'login') {
+                    await login(text(data, 'email'), String(data.get('password')));
+                    showToast('Đăng nhập thành công!', 'success');
+                    return;
+                  }
+                  const body = mode === 'register'
+                    ? { email: text(data, 'email'), password: String(data.get('password')), display_name: text(data, 'display_name') }
+                    : mode === 'verify-email' ? { token: text(data, 'token') }
+                    : mode === 'forgot-password' ? { email: text(data, 'email') }
+                    : { token: text(data, 'token'), password: String(data.get('password')) };
+                  await apiClient.request('identity', `/api/v1/auth/${mode}`, { method: 'POST', body, authenticated: false, idempotencyKey: crypto.randomUUID() });
+                  showToast(
+                    mode === 'register'
+                      ? 'Đã đăng ký. Kiểm tra email để xác minh trước khi đăng nhập.'
+                      : mode === 'forgot-password'
+                      ? 'Nếu tài khoản tồn tại, hướng dẫn đặt lại mật khẩu sẽ được gửi qua email.'
+                      : 'Đã hoàn thành. Bạn có thể đăng nhập.',
+                    'success'
+                  );
+                })}
+              >
+                {mode === 'register' && (
+                  <div className="auth-field">
+                    <label htmlFor="register-name" className="auth-field-label">Tên hiển thị</label>
+                    <div className="auth-input-wrapper">
+                      <input
+                        id="register-name"
+                        name="display_name"
+                        required
+                        maxLength={1024}
+                        className="auth-text-input"
+                        placeholder="Nguyễn Văn A"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {['login', 'register', 'forgot-password'].includes(mode) && (
+                  <div className="auth-field">
+                    <label htmlFor="login-email" className="auth-field-label">Email</label>
+                    <div className="auth-input-wrapper">
+                      <input
+                        id="login-email"
+                        name="email"
+                        type="email"
+                        autoComplete="email"
+                        required
+                        maxLength={254}
+                        className="auth-text-input"
+                        placeholder="vidu@smarttravel.vn"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {['verify-email', 'reset-password'].includes(mode) && (
+                  <div className="auth-field">
+                    <label htmlFor="auth-token" className="auth-field-label">Mã xác nhận trong email</label>
+                    <div className="auth-input-wrapper">
+                      <input
+                        id="auth-token"
+                        name="token"
+                        required
+                        maxLength={1024}
+                        className="auth-text-input"
+                        placeholder="Nhập mã xác nhận..."
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {['login', 'register', 'reset-password'].includes(mode) && (
+                  <div className="auth-field">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label htmlFor="login-password" className="auth-field-label">Mật khẩu</label>
+                      {mode === 'login' && (
+                        <button
+                          type="button"
+                          className="auth-forgot-link"
+                          onClick={() => { setMode('forgot-password'); setError(''); }}
+                        >
+                          Quên mật khẩu?
+                        </button>
+                      )}
+                    </div>
+                    <div className="auth-input-wrapper">
+                      <input
+                        id="login-password"
+                        name="password"
+                        type={showPassword ? 'text' : 'password'}
+                        autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                        required
+                        minLength={12}
+                        maxLength={128}
+                        className="auth-text-input"
+                        placeholder="Ít nhất 12 ký tự"
+                      />
+                      <button
+                        type="button"
+                        className="auth-pw-toggle"
+                        onClick={() => setShowPassword(prev => !prev)}
+                        aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                        tabIndex={-1}
+                      >
+                        <Icon name={showPassword ? 'eye' : 'lock'} size={16} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <Button type="submit" className="auth-submit-btn" disabled={busy || isLoading}>
+                  {guestTitles[mode].replace(' tài khoản', '')}
+                </Button>
+              </form>
+
+              {/* Social Login Options (Image 2 style) */}
+              {['login', 'register'].includes(mode) && (
+                <>
+                  <div className="auth-social-label">
+                    Hoặc tiếp tục với tài khoản khác
+                  </div>
+                  <div className="auth-social-row">
+                    <button
+                      type="button"
+                      className="auth-social-btn google"
+                      onClick={() => showToast('Đăng nhập Google sẽ sớm khả dụng trong bản cập nhật.', 'info')}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.17 0 9.99 0 12s.45 3.83 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
+                      <span>Google</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="auth-social-btn facebook"
+                      onClick={() => showToast('Đăng nhập Facebook sẽ sớm khả dụng trong bản cập nhật.', 'info')}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="#1877F2" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                      <span>Facebook</span>
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Accessible Navigation for all alternate guest modes */}
+              <nav aria-label="Xác thực tài khoản" className="auth-alt-nav">
+                {(Object.keys(guestTitles) as GuestMode[]).filter(v => v !== mode).map(v => (
+                  <button
+                    type="button"
+                    key={v}
+                    onClick={() => { setMode(v); setError(''); }}
+                  >
+                    {guestTitles[v]}
+                  </button>
+                ))}
+              </nav>
+            </div>
+
+            {/* Footer Links (Image 2 style) */}
+            <div className="auth-form-footer">
+              <div className="auth-footer-links">
+                <button type="button" onClick={() => showToast('Chính sách bảo mật: Toàn bộ thông tin được bảo vệ theo chuẩn GDPR.', 'info')}>
+                  Chính sách bảo mật
+                </button>
+                <button type="button" onClick={() => showToast('Điều khoản dịch vụ: Sử dụng SmartTravel VN cho mục đích cá nhân.', 'info')}>
+                  Điều khoản dịch vụ
+                </button>
+              </div>
+              <span>© 2026 SmartTravel VN. All rights reserved.</span>
+            </div>
+          </section>
+        </div>
+      </div>
+    ) : <>
+      {error && <p role="alert">{error}</p>}
+      <section className="travel-panel account-summary"><div className="account-summary-copy"><span className="section-eyebrow">Tài khoản của bạn</span><h2>{String(profile?.display_name ?? user?.display_name ?? '')}</h2><div className="account-role-list">{(user?.roles ?? []).map(role => <Badge key={role}>{role === 'USER' ? 'Du khách' : role === 'ADMIN' ? 'Quản trị viên' : role === 'BUSINESS' ? 'Doanh nghiệp' : role}</Badge>)}</div><details className="account-identifier"><summary>Mã tài khoản</summary><code>{String(profile?.user_id ?? '')}</code></details></div><Button variant="secondary" disabled={busy || isLoading} onClick={() => void run(async () => { await logout(); showToast('Đã đăng xuất.', 'info'); })}>Đăng xuất</Button></section>
       <div className="sub-tab-bar" role="tablist">{([['profile', 'Hồ sơ cá nhân'], ['security', 'Bảo mật tài khoản'], ['preferences', 'Sở thích & Quyền riêng tư']] as const).map(([id, title]) => <button key={id} type="button" role="tab" aria-selected={activeTab === id} className={`sub-tab ${activeTab === id ? 'active' : ''}`} onClick={() => setActiveTab(id)}>{title}</button>)}</div>
       {activeTab === 'profile' && <section className="travel-panel"><h3>Thông tin cơ bản</h3><form className="clay-form" key={String(profile?.version)} onSubmit={e => submit(e, async data => {
         const current = await travel.read<Resource>('identity', '/me');

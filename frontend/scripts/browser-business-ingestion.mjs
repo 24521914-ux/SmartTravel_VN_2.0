@@ -11,7 +11,7 @@ const output = fileURLToPath(new URL('../../backend/infra/.local/p03/frontend-bu
 page.on('pageerror', error => pageErrors.push(error.message)); page.on('dialog', dialog => dialog.accept());
 page.on('response', response => { const path = new URL(response.url()).pathname; if (path.startsWith('/api/')) requests.push({ path: path.replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi, '{id}'), method: response.request().method(), status: response.status() }); });
 async function login(alias) {
-  await page.goto(`${origin}/app#/${encodeURIComponent('Tài khoản')}`);
+  await page.goto(`${origin}/tai-khoan`);
   await page.getByLabel('Email', { exact: true }).fill(`fixture-${alias}@example.invalid`);
   await page.getByLabel('Mật khẩu', { exact: true }).fill(secrets.IDENTITY_FIXTURE_PASSWORD);
   await page.locator('form').getByRole('button', { name: 'Đăng nhập', exact: true }).click();
@@ -26,7 +26,7 @@ async function responseFor(path, method, action, expected) {
 }
 try {
   const suffix = Date.now(); await login('business');
-  await page.goto(`${origin}/app#/${encodeURIComponent('Doanh nghiệp')}`);
+  await page.goto(`${origin}/doanh-nghiep`);
   const portal = page.locator('.business-portal-layout'); await portal.waitFor();
   const name = `Integration business ${suffix}`;
   await portal.getByLabel('Tên doanh nghiệp', { exact: true }).fill(name);
@@ -47,7 +47,7 @@ try {
   const verification = await responseFor(`/businesses/${id}/verification`, 'POST', () => portal.getByRole('button', { name: 'Gửi xác minh KYC' }).click());
   assert.equal(verification.status, 'PENDING'); checks.push('business verification pending');
   await page.getByRole('button', { name: 'Đăng xuất khỏi hệ thống' }).click(); await login('admin');
-  await page.goto(`${origin}/app#/${encodeURIComponent('Kiểm duyệt')}`);
+  await page.goto(`${origin}/kiem-duyet`);
   await page.locator('.kyc-review-accordion summary').click();
   await page.locator('#verify-id').fill(String(verification.verification_id ?? verification.request_id ?? verification.id));
   await page.locator('#verify-version').fill('1'); await page.locator('#verify-reason').fill('Integration verification review');
@@ -59,7 +59,7 @@ try {
     return travel.mutate('catalog', `/admin/places/${created.place_id}/status`, { status: 'PUBLISHED' }, 'PUT', created.version);
   }, suffix);
   await page.getByRole('button', { name: 'Đăng xuất khỏi hệ thống' }).click(); await login('business');
-  await page.goto(`${origin}/app#/${encodeURIComponent('Doanh nghiệp')}`);
+  await page.goto(`${origin}/doanh-nghiep`);
   await portal.locator('article').filter({ has: page.getByRole('heading', { name: `${name} edited`, exact: true }) }).getByRole('button', { name: 'Quản lý doanh nghiệp' }).click();
   await portal.getByRole('tab', { name: 'Yêu cầu địa điểm', exact: true }).click();
   await portal.locator('#claim-place-id').fill(claimPlace.place_id);
@@ -67,7 +67,7 @@ try {
   const claim = await responseFor(`/businesses/${id}/claims`, 'POST', () => portal.getByRole('button', { name: 'Gửi yêu cầu claim', exact: true }).click());
   assert.equal(claim.status, 'PENDING'); checks.push('verified business claim submitted pending');
   async function review(kind, requestId) {
-    await page.goto(`${origin}/app#/${encodeURIComponent('Kiểm duyệt')}`);
+    await page.goto(`${origin}/kiem-duyet`);
     await page.locator('.kyc-review-accordion summary').click();
     await page.locator('#verify-kind').selectOption(kind); await page.locator('#verify-id').fill(requestId);
     await page.locator('#verify-version').fill('1'); await page.locator('#verify-reason').fill('Synthetic integration evidence reviewed');
@@ -76,7 +76,7 @@ try {
   await page.getByRole('button', { name: 'Đăng xuất khỏi hệ thống' }).click(); await login('admin');
   await review('claims', claim.claim_id); checks.push('admin claim approval');
   await page.getByRole('button', { name: 'Đăng xuất khỏi hệ thống' }).click(); await login('business');
-  await page.goto(`${origin}/app#/${encodeURIComponent('Doanh nghiệp')}`);
+  await page.goto(`${origin}/doanh-nghiep`);
   const changeForm = portal.locator('details').filter({ hasText: 'Đề nghị sửa địa điểm đã được claim' });
   await changeForm.locator('summary').click(); await changeForm.locator('input[name=claim_id]').fill(claim.claim_id);
   await changeForm.locator('input[name=version]').fill(String(claimPlace.version));
@@ -90,7 +90,7 @@ try {
   const persisted = await page.evaluate(async placeId => (await import('/src/api/session.ts')).travelClient.place(placeId), claimPlace.place_id);
   assert.equal(persisted.price, 12345); assert.equal(persisted.name, claimPlace.name); assert.ok(persisted.version > claimPlace.version);
   checks.push('admin change approval persisted actual Catalog fields');
-  await page.goto(`${origin}/app#/${encodeURIComponent('Quản trị')}`);
+  await page.goto(`${origin}/quan-tri`);
   const ingestion = page.locator('.admin-ingestion-console'); await ingestion.waitFor();
   await ingestion.locator('summary').filter({ hasText: 'Tạo nguồn dữ liệu' }).click();
   await ingestion.getByLabel('Tên nguồn', { exact: true }).fill(`Integration source ${suffix}`);

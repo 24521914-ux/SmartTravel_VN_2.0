@@ -80,7 +80,7 @@ async function openPlace(id, name) {
 }
 
 try {
-  await page.goto(`${base}/app`); await idle(); await login('u1');
+  await page.goto(`${base}/kham-pha`); await idle(); await login('u1');
   const name = `P03 full browser ${Date.now()}`;
   await navigate('Chuyến đi');
   await page.getByLabel('Tên chuyến đi', { exact: true }).fill(name);

@@ -24,7 +24,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     <button
       ref={ref}
       disabled={disabled || loading}
-      className={`${variantClass} ${className}`}
+      className={`${variantClass} btn-size-${size} ${className}`}
       {...props}
     >
       {loading ? (

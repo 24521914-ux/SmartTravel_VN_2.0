@@ -65,7 +65,7 @@ async function openAccount(role) {
   page.on('response', response => {
     if (new URL(response.url()).hostname === 'www.openstreetmap.org' && new URL(response.url()).pathname.endsWith('/embed.html')) report.provider_observations.push({ host: 'www.openstreetmap.org', http_status: response.status() });
   });
-  await page.goto(`${base}/app`); await idle();
+  await page.goto(`${base}/kham-pha`); await idle();
   await page.getByLabel('Email', { exact: true }).first().fill(`fixture-${role}@example.invalid`);
   const password = page.getByLabel('Mật khẩu', { exact: true });
   await password.fill(secrets.IDENTITY_FIXTURE_PASSWORD);
@@ -83,7 +83,7 @@ try {
   });
   await check('user keyboard login', () => openAccount('u1'));
   await check('keyboard skip-link focus', async () => {
-    await page.goto(`${base}/app`); await idle();
+    await page.goto(`${base}/kham-pha`); await idle();
     await page.keyboard.press('Tab');
     assert.equal(await page.evaluate(() => document.activeElement?.textContent), 'Đến nội dung chính');
     await page.keyboard.press('Enter');

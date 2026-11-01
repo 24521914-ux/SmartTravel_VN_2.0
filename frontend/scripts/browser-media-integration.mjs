@@ -16,12 +16,12 @@ async function call(path, method, status, action) {
   return response.status() === 204 ? null : response.json();
 }
 try {
-  await page.goto(`${origin}/app#/${encodeURIComponent('Tài khoản')}`);
+  await page.goto(`${origin}/tai-khoan`);
   await page.getByLabel('Email', { exact: true }).fill('fixture-admin@example.invalid');
   await page.getByLabel('Mật khẩu', { exact: true }).fill(secrets.IDENTITY_FIXTURE_PASSWORD);
   await page.locator('form').getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await page.getByRole('button', { name: 'Đăng xuất khỏi hệ thống' }).waitFor();
-  await page.goto(`${origin}/app#/${encodeURIComponent('Quản trị')}`);
+  await page.goto(`${origin}/quan-tri`);
   const media = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Ảnh địa điểm', exact: true }) });
   await media.getByLabel('Ảnh cần tải lên').setInputFiles({ name: 'fake.png', mimeType: 'image/png', buffer: Buffer.from('not an image') });
   await call('/admin/media', 'POST', 400, () => media.getByRole('button', { name: 'Tải ảnh lên', exact: true }).click()); checks.push('invalid image rejected');
@@ -39,12 +39,12 @@ try {
   await call(`/admin/media/${id}/review`, 'POST', 202, () => media.getByRole('button', { name: 'Lưu quyết định ảnh', exact: true }).click());
   await media.getByText(/REJECTED/).waitFor(); checks.push('admin rejects quarantined media');
   await page.getByRole('button', { name: 'Đăng xuất khỏi hệ thống' }).click();
-  await page.goto(`${origin}/app#/${encodeURIComponent('Tài khoản')}`);
+  await page.goto(`${origin}/tai-khoan`);
   await page.getByLabel('Email', { exact: true }).fill('fixture-u1@example.invalid');
   await page.getByLabel('Mật khẩu', { exact: true }).fill(secrets.IDENTITY_FIXTURE_PASSWORD);
   await page.locator('form').getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await page.getByRole('button', { name: 'Đăng xuất khỏi hệ thống' }).waitFor();
-  await page.goto(`${origin}/app#/${encodeURIComponent('Khám phá')}`);
+  await page.goto(`${origin}/kham-pha`);
   await page.locator('#diem-den article').first().waitFor({ state: 'attached' });
   const fixtures = page.locator('.journey-data-note');
   if (await fixtures.count()) await fixtures.locator('summary').click();

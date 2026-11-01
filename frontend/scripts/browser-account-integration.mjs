@@ -41,7 +41,7 @@ async function login(pass) {
   await page.waitForTimeout(200);
 }
 try {
-  await page.goto(`${origin}/app#/${encodeURIComponent('Tài khoản')}`);
+  await page.goto(`${origin}/tai-khoan`);
   await page.getByRole('button', { name: 'Đăng ký tài khoản', exact: true }).click();
   await page.getByLabel('Email', { exact: true }).fill(email); await page.getByLabel('Tên hiển thị', { exact: true }).fill('Browser registration');
   await page.getByLabel('Mật khẩu', { exact: true }).fill(password); await submit('Đăng ký', '/auth/register'); checks.push('register SMTP');

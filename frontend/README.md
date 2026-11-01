@@ -16,6 +16,44 @@ npm run dev
 Mở `http://127.0.0.1:5173`, nút kiểm tra gọi Catalog fixture qua Vite dev proxy. Không cần service nghiệp vụ thật. Build: `npm run build`.
 
 Proxy chỉ dành cho dev; deploy thật cần Gateway route/same-origin configuration và auth flow trong P01/P02. Không có token production ở scaffold. Build TypeScript không đồng nghĩa đã kiểm browser/E2E hoặc chức năng frontend nghiệp vụ.
+
+## Đường dẫn màn hình
+
+Điều hướng dùng History API với slug không dấu. Tên menu tiếng Việt không đổi.
+`/` và `/app` chuyển về `/kham-pha`; bookmark cũ dạng `/app#/Khám%20phá`
+được chuyển sang path mới bằng `replaceState`, không tạo thêm bước Back.
+
+| Màn hình | Path |
+|---|---|
+| Khám phá | `/kham-pha` |
+| Bản đồ | `/ban-do` |
+| Bộ sưu tập | `/bo-suu-tap` |
+| Chuyến đi | `/chuyen-di` |
+| Thông báo | `/thong-bao` |
+| Tài khoản | `/tai-khoan` |
+| Doanh nghiệp | `/doanh-nghiep` |
+| Kiểm duyệt | `/kiem-duyet` |
+| Quản trị | `/quan-tri` |
+| Đóng góp | `/dong-gop` |
+
+Vite dev/preview hỗ trợ SPA fallback khi mở trực tiếp hoặc tải lại các path.
+Khi triển khai `dist/`, hosting phải trả `index.html` cho các đường dẫn giao diện;
+giữ route `/api/` đến Gateway và phục vụ asset tĩnh trước fallback. Ví dụ Nginx:
+
+```nginx
+location /api/ {
+    proxy_pass http://gateway:8080;
+}
+location /assets/ {
+    try_files $uri =404;
+}
+location / {
+    try_files $uri $uri/ /index.html;
+}
+```
+
+Path không có trong bảng hiển thị trang không tìm thấy ở phía client.
+Kiểm tra điều hướng: `npm run test:browser:routing` (cần dev server và Gateway).
 # API/auth client P01
 
 `src/api/` cung cấp client cho sáu service qua prefix `/api/<service>`, body/response giữ
@@ -37,9 +75,9 @@ Client nền tảng này chưa phải màn nghiệp vụ hoặc bằng chứng k
 
 ## Ứng dụng tích hợp P02
 
-Mở `http://127.0.0.1:5173/app` sau khi khởi động stack P02 và `npm run dev`.
+Mở `http://127.0.0.1:5173/kham-pha` sau khi khởi động stack P02 và `npm run dev`.
 Vite chuyển `/api` tới Gateway thật `http://127.0.0.1:58080`; thay bằng biến
-`P02_GATEWAY_TARGET` khi Gateway dùng địa chỉ khác. Landing `/` được giữ nguyên.
+`P02_GATEWAY_TARGET` khi Gateway dùng địa chỉ khác. Landing dùng `/kham-pha`; `/` chuyển về landing.
 `P00_STUB_TARGET` chỉ dành cho chạy fixture P00 chủ động; không đặt trong P02.
 
 Màn ứng dụng có đăng nhập/đăng ký/xác minh email, tìm kiếm và chi tiết địa điểm,
