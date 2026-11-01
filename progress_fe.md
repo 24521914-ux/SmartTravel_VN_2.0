@@ -1,6 +1,6 @@
 # Tiến độ Frontend (FE) — SmartTravel VN
 
-Cập nhật: **02/11/2026 01:07** (GMT+7)
+Cập nhật: **02/11/2026 01:23** (GMT+7)
 
 Progress gồm **hai file**: file này (`progress_fe.md`) cho frontend web; [`progress_be.md`](progress_be.md) cho backend và **trạng thái kết nối BE ↔ FE từng API** (mục 9 của file đó). Quy ước trạng thái, tiêu chuẩn PASS và cách cập nhật dùng chung: `progress_be.md` mục 2.
 
@@ -131,6 +131,8 @@ Mã bộ sưu tập, job, hồ sơ xác minh, claim, yêu cầu sửa và ảnh 
 Chạy lại seed: `python backend/infra/seed_demo.py` (cần Python có PyYAML/Pillow và stack P02 đang chạy). Chỉ đối chiếu dữ liệu: `python backend/infra/seed_demo.py --verify-only`. Không xóa manifest rồi chạy lại sau khi đã đổi tên dữ liệu; không tự đặt lại mật khẩu, role, tên hoặc nội dung người test đã chỉnh.
 
 - Kiểm lại bàn giao PR [#23](https://github.com/24521914-ux/SmartTravel_VN/pull/23) — **LOCAL_VERIFIED** · Codex, `feature/travel-demo-routing-filters`, source `7b04167`; checkout dirty chỉ còn `.ai-memory/` untracked. Node 24.21.0/Chromium 156: routing 45/0/0/0; editorial 32/0/0/0; filters lượt đầu 20 PASS/2 FAIL (Gateway chưa chạy và header che nút quay lại), sau phục hồi stack và sửa CSS `7b04167` chạy lại 1 lần 22/0/0/0; demo browser 11 PASS/0 page error qua Gateway/DB thật. Contract FE 15/0/0/0; seed Python 3.14 8/0/0/0; checksum 3/0/0/0, validator 183 HTTP + 23 event/command PASS. Java 21 Maven catalog/community/trip unit/security PASS: 113 run/0 failed/0 errors/74 skipped (DB/broker không chạy local trong lượt này). Build TypeScript/Vite sau sửa PASS. Fixture API chỉ dùng cho nhánh UI được ghi trong suite. CI đang chạy; chưa nâng CI/gate hoặc ACCEPTED.
+
+- Kiểm CI bàn giao — **PARTIAL** · PR #23, source `fc370e8`: P02 run `41334918573` FAIL tại `test:gateway` (chờ item NEEDS_REVIEW); các luồng domain/resilience/import-ack trước đó PASS, 10 check còn lại PASS trên `9a37369`. F-31: xác nhận smoke thiếu fixture candidate riêng, chưa xác nhận đây là nguyên nhân CI vì artifact không lưu trạng thái job/item. Đã bổ sung candidate PUBLISHED qua API thật và chẩn đoán trạng thái; không đổi assertion/contract. `node --check` PASS; local 3 lượt phát triển FAIL (thiếu taxonomy ID đã sửa; CONNECTOR_FAILURE trên stack cũ; Gateway 502 sau thay container), chưa tính local suite PASS. CI revision mới đang chờ.
 
 ## 7. P03 — Kiểm thử và thiết kế lại giao diện
 
