@@ -130,7 +130,7 @@ Mã bộ sưu tập, job, hồ sơ xác minh, claim, yêu cầu sửa và ảnh 
 
 Chạy lại seed: `python backend/infra/seed_demo.py` (cần Python có PyYAML/Pillow và stack P02 đang chạy). Chỉ đối chiếu dữ liệu: `python backend/infra/seed_demo.py --verify-only`. Không xóa manifest rồi chạy lại sau khi đã đổi tên dữ liệu; không tự đặt lại mật khẩu, role, tên hoặc nội dung người test đã chỉnh.
 
-- Chu?n b? b?n giao PR ? **IN_PROGRESS** ? Ng??i l?m: Codex ? Nh?nh: `feature/travel-demo-routing-filters` ? Baseline `5015912`, checkout dirty; t?i kho?n push `Truong102006`. ?ang ki?m th? revision b?n giao; gi? nguy?n tr?ng th?i gate v? c?c b?ng ch?ng l?ch s?.
+- Ki?m l?i b?n giao PR [#23](https://github.com/24521914-ux/SmartTravel_VN/pull/23) ? **LOCAL_VERIFIED** ? Codex, `feature/travel-demo-routing-filters`, source `7b04167`; checkout ch? c?n `.ai-memory/` untracked (dirty). Node 24.21.0/Chromium 156: routing 45/0/0/0; editorial 32/0/0/0; filters l??t ??u 20 PASS/2 FAIL (Gateway ch?a ch?y v? n?t quay l?i b? header che), sau ph?c h?i stack v? s?a CSS `7b04167` ch?y l?i ??ng 1 l?n 22/0/0/0; demo browser 11 PASS/0 page error qua Gateway/DB th?t. Contract FE 15/0/0/0; seed unittest Python 3.14 8/0/0/0; contract checksum 3/0/0/0, validator 183 HTTP + 23 event/command PASS. Java 21 Maven catalog/community/trip unit/security PASS: t?ng 113 run/0 failed/0 errors/74 skipped (DB/broker ch?a ch?y local trong l??t n?y). Kh?ng t?nh skip l? PASS; fixture API ch? d?ng cho nh?nh UI ???c ghi trong suite. CI revision `7b04167` ?ang ch?y; ch?a n?ng CI/gate ho?c ACCEPTED.
 
 ## 7. P03 — Kiểm thử và thiết kế lại giao diện
 
