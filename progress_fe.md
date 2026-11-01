@@ -1,6 +1,6 @@
 # Tiến độ Frontend (FE) — SmartTravel VN
 
-Cập nhật: **30/10/2026 22:05** (GMT+7)
+Cập nhật: **01/11/2026 17:48** (GMT+7)
 
 Progress gồm **hai file**: file này (`progress_fe.md`) cho frontend web; [`progress_be.md`](progress_be.md) cho backend và **trạng thái kết nối BE ↔ FE từng API** (mục 9 của file đó). Quy ước trạng thái, tiêu chuẩn PASS và cách cập nhật dùng chung: `progress_be.md` mục 2.
 
@@ -47,7 +47,7 @@ Phạm vi FE hiện tại: **chỉ web** (React). Ứng dụng di động chưa 
 |---|---|
 | Stack | React 19.2, TypeScript 5.9, Vite 7.3; font Be Vietnam Pro (`@fontsource`) + Playfair Display; icon `@phosphor-icons/react`; Playwright cho test trình duyệt |
 | Chạy dev | `http://127.0.0.1:5173`; Vite proxy `/api` → Gateway (`P02_GATEWAY_TARGET`, mặc định `http://127.0.0.1:58080`) |
-| `src/main.tsx` → `src/app/App.tsx` | Entry. App tải các màn bằng `React.lazy`, điều hướng theo hash route |
+| `src/main.tsx` → `src/app/App.tsx` | Entry. App tải các màn bằng `React.lazy`; `src/app/routes.ts` ánh xạ 10 màn sang path không dấu, hỗ trợ bookmark hash cũ |
 | `src/app/providers/` | `AuthProvider` (login, refresh, logout, tải `/me`), `ToastProvider` (thông báo) |
 | `src/app/layouts/LayoutShell.tsx` | Header trong suốt → kính nổi khi cuộn > 60 px, menu theo vai trò (Thông báo khi đăng nhập; Doanh nghiệp cho BUSINESS; Kiểm duyệt, Quản trị cho ADMIN), footer |
 | `src/features/*` | `places` (Khám phá, chi tiết, bản đồ, card, section landing), `collections`, `trips` (TripPlanner), `notifications`, `account`, `businesses`, `moderation`, `ingestion` |
@@ -98,6 +98,40 @@ Bằng chứng theo màn: các suite A–I và revision tại [progress_be.md m�
 - [ ] FE-P02-03: Nối đủ API không AI — **PARTIAL** · Toàn bộ đã nối và được quan sát, còn hai nhánh media chưa kiểm được với scanner thật (F-14); số lượng/bằng chứng chỉ tại BE mục9. Không có màn còn thiếu trong scope API hiện tại.
 - [x] FE-P02-04: Bỏ fallback ghi giả, sửa body/path theo contract — **LOCAL_VERIFIED** (dirty) · A/B/C/E/G PASS qua Gateway thật, F/H và negative assertions giữ dữ liệu/form khi lỗi, không toast thành công giả; đóng F-22/F-23, source `4e020e1`, scripts `edb10cb`.
 
+### 6.1. Dữ liệu mẫu để test thủ công
+
+- Trang Chuyến đi khi chưa đăng nhập — **LOCAL_VERIFIED** (dirty), Codex/`feature/local-demo-data`, HEAD `5015912`: hiện “Vui lòng đăng nhập để xem chuyến đi”, nút đăng nhập chuyển sang Tài khoản; đợi xác định phiên trước khi mở planner, không gọi API Trip cho khách. Đăng nhập vẫn tải lịch trình, API 503 khi đã đăng nhập vẫn hiện lỗi dữ liệu. `npm --prefix frontend run build` PASS; `node frontend/scripts/browser-demo-data.mjs` 11 kiểm tra PASS / 0 page error (khách 0 request Trip); Node 24/Chromium, Gateway/DB thật, ca 503 dùng response mô phỏng. Không thay đổi tổng API kết nối.
+Sau phản hồi ảnh chụp ngày 01/11/2026: 48 địa điểm kiểm thử tên máy đã được chuyển `HIDDEN` trong Catalog, 28 địa điểm mẫu có tên rõ ràng vẫn công khai; nhóm thẻ “Danh mục dữ liệu kiểm thử” không còn dữ liệu để hiển thị. Dọn lại sau khi chạy test tự động bằng `python backend/infra/seed_demo.py --hide-legacy-tests`; bằng chứng API/DB tại BE mục 6.1.
+
+Bộ dữ liệu local ngày 01/11/2026 đã được lưu trong PostgreSQL/MongoDB P02. Người làm: Codex, nhánh `feature/local-demo-data`. Màn hình đã kiểm bằng `node frontend/scripts/browser-demo-data.mjs`: **LOCAL_VERIFIED** (dirty), 8 kiểm tra / 0 page error, HEAD `5015912`, Node 24/Chromium/Docker thật. Bằng chứng database và giới hạn tại [progress_be.md mục 6.1](progress_be.md#61-dữ-liệu-mẫu-kiểm-thử-thủ-công--01112026); số lượng kết nối API vẫn theo BE mục 9.
+
+Mở `http://127.0.0.1:5173/tai-khoan`. Mật khẩu chung cho **các tài khoản mẫu bên dưới** nằm trong trường `password` của file ignored [demo-accounts.json](backend/infra/.local/p02/demo-accounts.json). Đây là các danh tính giả lập, không phải thông tin cá nhân thật.
+
+| Tài khoản mẫu | Email đăng nhập | Dùng để test |
+|---|---|---|
+| Nguyễn Ngọc Lan | `lan.nguyen@demo.smarttravel.invalid` | Yêu thích, 2 bộ sưu tập, 3 chuyến đi đã có lịch trình, đóng góp, đánh giá, 24 thông báo đọc/chưa đọc |
+| Trần Quang Minh | `minh.tran@demo.smarttravel.invalid` | Người dùng thứ hai: bộ sưu tập công khai, đánh giá, kiểm tra quyền riêng tư |
+| Lê Mai Hương | `mai.huong@demo.smarttravel.invalid` | Chủ 2 doanh nghiệp: Miền Trung Xanh đã xác minh; Trải nghiệm Di sản Hội An chờ xác minh |
+| Phạm Hải An | `an.pham@demo.smarttravel.invalid` | Thành viên `EDITOR` của 2 doanh nghiệp, đối chiếu quyền với chủ doanh nghiệp |
+| Quản trị SmartTravel | `quan.tri@demo.smarttravel.invalid` | Kiểm duyệt đánh giá/đóng góp/báo cáo, hồ sơ doanh nghiệp, danh mục, người dùng, nguồn nhập |
+
+| Màn hình | Dữ liệu mẫu nên mở | Thao tác gợi ý |
+|---|---|---|
+| `/kham-pha`, `/ban-do` | Hồ Hoàn Kiếm, Mỹ Khê, Hội An, Đại Nội Huế, Đà Lạt, Vịnh Hạ Long | Tìm/lọc theo tên, danh mục, tỉnh/vùng, giá, tọa độ, đánh giá; xem chi tiết và dịch vụ; lưu/bỏ lưu |
+| `/bo-suu-tap` | “Những miền biển em muốn đến” công khai; “Cuối tuần khám phá di sản” riêng tư | Sửa ghi chú/thứ tự, thêm/xóa địa điểm; dùng tài khoản Minh mở mã bộ sưu tập công khai |
+| `/chuyen-di` | “Đà Nẵng – Hội An: biển xanh và phố cổ”; “Hà Nội: một cuối tuần khám phá di sản”; “Đà Lạt: nghỉ ngơi giữa ngàn thông” | Chuyến đi 05–07/12/2026, mỗi chuyến 3 ngày; sửa/lên xuống, khóa/mở khóa, thêm ngày, sửa chặng/ước tính tuyến |
+| `/thong-bao` | Thông báo “Cẩm nang mẫu · …” của Lan | Đánh dấu đã đọc; tải lại; xem thêm qua trang thứ hai |
+| `/dong-gop` | Làng rau Trà Quế, Rừng dừa Bảy Mẫu Cẩm Thanh, đề xuất sửa giờ Mỹ Khê | Sửa/rút hồ sơ chờ; admin duyệt rồi người gửi kiểm tra trạng thái |
+| `/kiem-duyet` | 6 đánh giá chờ, 1 báo cáo, 3 đóng góp; hồ sơ doanh nghiệp/claim/yêu cầu sửa | Đối chiếu dữ liệu trước/sau duyệt bằng tài khoản người gửi |
+| `/doanh-nghiep` | Du lịch Miền Trung Xanh; Trải nghiệm Di sản Hội An | So sánh quyền chủ/editor; hồ sơ đã duyệt và chờ; claim Hội An chờ xét, yêu cầu sửa giá Mỹ Khê chờ duyệt |
+| `/quan-tri` | “Cẩm nang du lịch miền Trung · Nguồn mẫu nội bộ” | Mở job, bản ghi/lỗi/ứng viên; thử quyết định ghép, retry/cancel theo trạng thái hợp lệ |
+
+Mã bộ sưu tập, job, hồ sơ xác minh, claim, yêu cầu sửa và ảnh nằm trong [demo-records.json](backend/infra/.local/p02/demo-records.json); tìm theo các khóa `collection:`, `job:`, `verification:`, `claims:`, `change-request:`, `media:`. Một số form hiện yêu cầu nhập ID/phiên bản thủ công (F-16). Giá/giờ mở cửa, đánh giá và doanh nghiệp chỉ phục vụ test; ảnh chưa duyệt do scanner (F-14), hồ sơ PDF là tham chiếu mẫu. Đổi mật khẩu/xóa dữ liệu nên thử cuối cùng bằng tài khoản người dùng, sau đó không kỳ vọng seed tự khôi phục tài khoản đã sửa/xóa. Email xác minh/reset xem tại `http://127.0.0.1:59025`.
+
+Chạy lại seed: `python backend/infra/seed_demo.py` (cần Python có PyYAML/Pillow và stack P02 đang chạy). Chỉ đối chiếu dữ liệu: `python backend/infra/seed_demo.py --verify-only`. Không xóa manifest rồi chạy lại sau khi đã đổi tên dữ liệu; không tự đặt lại mật khẩu, role, tên hoặc nội dung người test đã chỉnh.
+
+- Chu?n b? b?n giao PR ? **IN_PROGRESS** ? Ng??i l?m: Codex ? Nh?nh: `feature/travel-demo-routing-filters` ? Baseline `5015912`, checkout dirty; t?i kho?n push `Truong102006`. ?ang ki?m th? revision b?n giao; gi? nguy?n tr?ng th?i gate v? c?c b?ng ch?ng l?ch s?.
+
 ## 7. P03 — Kiểm thử và thiết kế lại giao diện
 
 **Bằng chứng giao diện mới** (theo ghi chép nhánh FE, checkout dirty `cfd121d` → `544dd08`, Windows, Node 24.21.0, Chromium Playwright):
@@ -115,6 +149,11 @@ Bằng chứng theo màn: các suite A–I và revision tại [progress_be.md m�
 - [ ] FE-P03-04: Kiểm thử accessibility đầy đủ (WCAG, screen reader) — **NOT_STARTED** · Hiện có Lighthouse Accessibility 100, focus/Escape, reduced motion.
 - [ ] FE-P03-05: Test UI phần AI (`test:browser:ai`) — **DEFERRED** (người dùng, 20/10/2026).
 - [ ] FE-P03-06: Dọn code cũ và script — **PARTIAL** · `browser-nonai.mjs` đã cập nhật, suite nghiệp vụ mới PASS; code gốc không dùng và clay-ui-check cũ chưa dọn (F-24).
+- [x] FE-P03-07: Chuyển 10 màn sang path không dấu — **LOCAL_VERIFIED** (dirty) · Người làm: Codex · Nhánh: `refactor/frontend-path-routing` · Bằng chứng: `npm --prefix frontend run test:browser:routing` 45/0/0/0 (run/failed/errors/skipped), đủ 10 path trực tiếp/F5, bookmark cũ, query/anchor, Back/Forward, không lặp lịch sử, trang không tìm thấy và hash lỗi; `test:contracts` 15/0/0/0, `test:ui:editorial` 32/0/0/0; `npm --prefix frontend run build` PASS (TypeScript + Vite). Baseline SHA `5015912`, checkout dirty, Node 24.21.0, Chromium 156.0.8078.4; routing dùng Vite + Gateway P02 thật, guest, chỉ đọc, không stub; editorial có mock API. Next: CI trên revision PR và review N1/N2; chưa đóng gate P03.
+
+- [x] FE-P03-08: Đồng bộ font các tiêu đề phối hai kiểu chữ — **LOCAL_VERIFIED** (dirty) · Theo yêu cầu người dùng 31/10/2026: 6 tiêu đề hero/điểm đến/editorial/showcase/cộng đồng/finale dùng Playfair Display italic 400 cho cả câu, giữ màu nhấn. Bằng chứng: Playwright `node --input-type=module`, đọc `getComputedStyle` trên `.journey-hero h1`, `.journey-section h2:has(em)`, `.cinematic-finale h2`: 24/0/0/0 kiểm tra ở 375/768/1440/1920 px, font tải thành công, 0 tràn ngang; kiểm ảnh mobile/desktop; `npm --prefix frontend run build` PASS. Baseline SHA `5015912`, checkout dirty trên `refactor/frontend-path-routing`, Node 24.21.0, Chromium, Vite + Gateway P02 thật, không stub. Next: review N1/N2 và CI revision PR; không nâng gate.
+
+- [x] FE-P03-09: Thiết kế lại bộ lọc và danh mục du lịch theo tham khảo Travel.com.vn — **LOCAL_VERIFIED** (dirty) · Người làm: Codex · Nhánh: `refactor/frontend-path-routing` · `DestinationFilters.tsx`: form từ khóa/vùng/tỉnh, nâng cao giá/đánh giá/tọa độ, đặt lại và tự mở/focus ô lỗi khi thu gọn. `TravelCatalog.tsx`: 3 nhóm, chip tiện ích/thẻ và card dịch vụ; bản ghi kiểm thử giữ nguyên trong phần thu gọn. Bằng chứng: `npm --prefix frontend run test:browser:filters` 22/0/0/0 (run/failed/errors/skipped): Gateway thật áp dụng `minPrice=0&minRating=0` và đặt lại HTTP 200; responsive 375/768/1440/1920 px không tràn; fixture API kiểm đủ tham số, phân trang, validation, giá 0/null, chi tiết dịch vụ và lỗi/trống. `test:contracts` 15/0/0/0; `test:ui:editorial` 32/0/0/0; `npm --prefix frontend run build` PASS (4626 modules). Baseline SHA `5015912`, checkout dirty; Node 24.21.0, Chromium 156.0.8078.4, Vite + Gateway P02 thật cho kiểm live, mock có kiểm soát cho các nhánh chức năng. Giữ nguyên contract/API và số kết nối BE ↔ FE. Next: CI revision PR và review N1/N2; không nâng gate.
 
 ## 8. P04 — Triển khai
 
@@ -154,6 +193,8 @@ Chạy từ thư mục gốc repo; Node 24.
 | UI giả lập API | `npm --prefix frontend run test:ui` · `test:ui:editorial` · `node frontend/scripts/cinematic-ui-check.mjs` | Cần dev server; không chứng minh kết nối backend |
 | Gateway thật | `npm --prefix frontend run test:gateway` | Cần stack P02 (`python backend/infra/p02.py up`) |
 | Trình duyệt với Gateway | `npm --prefix frontend run test:browser` | Cần stack P02 + dev server; đã cập nhật UI hiện tại |
+| Path và lịch sử điều hướng | `npm --prefix frontend run test:browser:routing` | 10 path, tải lại trang, bookmark hash cũ, Back/Forward và trang không tìm thấy; chỉ đọc, không đăng nhập |
+| Bộ lọc và danh mục | `npm --prefix frontend run test:browser:filters` | Responsive với Gateway thật; fixture API cho tham số lọc, validation, đặt lại, phân trang, danh mục và giá dịch vụ |
 | Nghiệp vụ thật bổ sung | `npm --prefix frontend run test:browser:account` · `test:browser:business` · `test:browser:admin` · `test:browser:media` · `test:browser:trip` · `test:browser:auth-failure` | Cần P02 + dev server; A–H BE mục9 |
 | Tổng hợp API đã quan sát | `npm --prefix frontend run integration:coverage` | Chỉ đọc report suite PASS, không thay thế chạy test |
 | Bật AI khi làm phần AI | `VITE_AI_ENABLED=true` (FE) và `AI_ENABLED=true` (Gateway) | Phải bật cả hai |
@@ -164,6 +205,7 @@ Chạy từ thư mục gốc repo; Node 24.
 
 | Thời điểm | Thay đổi | PR / commit |
 |---|---|---|
+| 30/10/2026 22:48 | Rà soát tiến độ FE, đối chiếu report tích hợp với bảng API tại BE mục 9; số liệu khớp, giữ hai nhánh scanner chưa xác nhận. Chỉ kiểm tra tài liệu/report cũ, không chạy lại browser/build hoặc nâng trạng thái | Baseline `5015912`; nhánh `fix/frontend-backend-integration`, checkout có `.ai-memory/` untracked |
 | 30/10/2026 22:03 | Hoàn thành tích hợp local với P02, khôi phục nghiệp vụ, bỏ ghi giả, kiểm Gateway/browser; hai nhánh scanner chưa xác nhận, chưa CI/gate | `66e6586`, `4e020e1`, `edb10cb` |
 | 23/10/2026 01:05 | Merge frontend v4 vào cấu trúc progress BE/FE; ghi lại màn hình UI mới, hạ FE-P02-01/02 và P03-07 xuống `PARTIAL`, thêm F-20…F-24 | Merge `eed140a` |
 | 23/10/2026 00:10 | Header kính nổi, typography editorial, bố cục ảnh bất đối xứng (v4) | `544dd08`, `949a941` (nhánh `feature/frontend-floria-v4-refinement`) |

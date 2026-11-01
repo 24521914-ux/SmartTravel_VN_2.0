@@ -1,6 +1,6 @@
 # Tiến độ Backend (BE) — SmartTravel VN
 
-Cập nhật: **30/10/2026 22:05** (GMT+7)
+Cập nhật: **01/11/2026 17:48** (GMT+7)
 
 Progress gồm **hai file**: file này (`progress_be.md`) cho backend, Gateway, hạ tầng và **trạng thái kết nối BE ↔ FE**; [`progress_fe.md`](progress_fe.md) cho frontend web. Mỗi file sắp theo phase P00 → P04. Yêu cầu chi tiết của từng phase vẫn nằm trong `plan/phases/`; file này chỉ ghi **đã làm tới đâu, kiểm bằng gì, làm gì tiếp**.
 
@@ -281,6 +281,18 @@ Yêu cầu: `plan/phases/P02-service-integration.md` · Trạng thái phase: **`
 - [ ] **Gate P02** (6/6 `CONNECTED`) — **PARTIAL** · Thiếu: P02-01, P02-08, P02-14; CI revision mới và chữ ký. F-14 còn hai nhánh media cần scanner.
 
 ---
+
+### 6.1. Dữ liệu mẫu kiểm thử thủ công — 01/11/2026
+
+- Trạng thái đăng nhập trang Chuyến đi — **LOCAL_VERIFIED** (dirty), Codex/`feature/local-demo-data`, HEAD `5015912`: FE không gọi API Trip khi khách chưa đăng nhập, hiển thị lời mời đăng nhập; dữ liệu riêng tư vẫn yêu cầu xác thực tại Gateway. `node frontend/scripts/browser-demo-data.mjs`: 11 kiểm tra PASS / 0 page error; ca khách 0 request Trip, tài khoản Lan đọc lịch trình từ DB thật, ca lỗi 503 được mô phỏng để kiểm tra FE vẫn báo lỗi tải dữ liệu. `npm --prefix frontend run build` PASS, Node 24/Chromium; không đổi contract, backend hoặc tổng kết nối mục 9.
+- Dọn dữ liệu công khai theo phản hồi ảnh chụp — **LOCAL_VERIFIED** (dirty), Codex/`feature/local-demo-data`, HEAD `5015912`: `python backend/infra/seed_demo.py --hide-legacy-tests` chuyển 48 địa điểm tên máy `P02`/`P03` sang `HIDDEN` qua API Catalog; đối chiếu đúng 48 ID/trạng thái trong PostgreSQL, giữ nguyên bản ghi và tham chiếu, 28 địa điểm mẫu vẫn công khai. Lần chạy lại thay đổi 0 bản ghi. `test_seed_demo.py`: 8 run / 0 failed / 0 errors / 0 skipped; `node frontend/scripts/browser-demo-data.mjs`: 9 kiểm tra PASS / 0 page error, xác nhận API public không còn tên máy và giao diện không còn `.journey-data-note`. Python 3.14, Node 24/Chromium, Gateway/PostgreSQL thật. Lệnh này dùng sau các suite tự động có tạo địa điểm công khai; không đổi tên giả thành địa điểm thật.
+- Bộ seed bổ trợ P02 — **LOCAL_VERIFIED** (dirty) · Người làm: Codex, nhánh `feature/local-demo-data`, HEAD `5015912`. `python backend/infra/seed_demo.py --verify-only` đọc API qua Gateway thật và đối chiếu ID trong PostgreSQL/MongoDB: 5 tài khoản, 28 địa điểm chính, 3 bộ sưu tập/11 item, 7 yêu thích, 3 chuyến đi/9 ngày/14 địa điểm/3 chặng điểm đến/6 chặng di chuyển, 28 đánh giá/1 báo cáo/3 đóng góp, 2 doanh nghiệp/2 thành viên editor/2 hồ sơ xác minh/2 claim/1 yêu cầu sửa, 33 thông báo, 1 ảnh chờ quét, 1 nguồn/1 job. Đây là dữ liệu mẫu, không phải nghiệm thu các task/gate P02.
+- `python -m unittest discover -s backend/infra -p test_seed_demo.py -v`: 7 run / 0 failed / 0 errors / 0 skipped; `node frontend/scripts/browser-demo-data.mjs`: 8 kiểm tra giao diện / 0 page error. Lượt cuối `python backend/infra/seed_demo.py` PASS toàn bộ đọc lại/đối chiếu DB, `new records this run: 0`; các lượt xây dựng script trước đó gặp lỗi API/ID đã sửa, không tính là PASS. Môi trường: Python 3.14, Node 24, Chromium headless, stack P02 Docker thật; HEAD `5015912`, checkout dirty. Không build lại Java và không nâng CI/gate.
+- `python backend/infra/seed_demo.py` tạo dữ liệu có tên tiếng Việt, đọc lại theo tên/ID và dùng UUID ổn định cho dữ liệu không có API tạo. 7 tên `Integration categories <timestamp>` đã được đổi thành danh mục du lịch, giữ nguyên ID/liên kết; không xóa dữ liệu cũ. Thông báo mẫu và thành viên editor được chèn trực tiếp trong DB của service tương ứng, không được tính là bằng chứng consumer/event hay API thêm thành viên hoạt động.
+- Nguồn `Cẩm nang du lịch miền Trung · Nguồn mẫu nội bộ` dùng nhánh opt-in `run=demo-vietnam` của provider local: 4 bản ghi, quan sát 2 `APPLIED`, 1 `NEEDS_REVIEW` (Mỹ Khê), 1 `FAILED` (`NORMALIZATION_INVALID`, tọa độ cố ý sai); có ứng viên ghép và lỗi để kiểm thử. Feed tích hợp cũ không đổi. Job giữ `RUNNING` khi còn bản ghi cần xử lý; không giả trạng thái hoàn tất.
+- Credential chỉ lưu trong file ignored `backend/infra/.local/p02/demo-accounts.json`; ID trong `demo-records.json` cùng thư mục. Giữ hai file này khi chạy lại để bảo toàn nhận diện sau khi người test đổi tên/xóa dữ liệu. Ảnh dùng asset Hội An có sẵn, ở trạng thái chờ scanner (F-14); evidence PDF của hồ sơ doanh nghiệp chỉ là tham chiếu giả lập, chưa có file để xem/tải. AI tiếp tục hoãn. Hướng dẫn tài khoản/kịch bản: [progress_fe.md mục 6.1](progress_fe.md#61-dữ-liệu-mẫu-để-test-thủ-công).
+
+- Chu?n b? b?n giao PR ? **IN_PROGRESS** ? Ng??i l?m: Codex ? Nh?nh: `feature/travel-demo-routing-filters` ? Baseline `5015912`, checkout dirty; t?i kho?n push `Truong102006`. ?ang ki?m th? revision b?n giao; gi? nguy?n tr?ng th?i gate v? c?c b?ng ch?ng l?ch s?.
 
 ## 7. P03 — Kiểm thử hệ thống
 
@@ -627,6 +639,7 @@ Mới nhất ở trên. Mỗi dòng: ngày giờ · thay đổi · PR/commit.
 
 | Thời điểm | Thay đổi | PR / commit |
 |---|---|---|
+| 30/10/2026 22:48 | Rà soát: 7/7 report được công cụ tổng hợp chấp nhận, 160/175 API được quan sát, 158 có 2xx; bảng API khớp tổng. Đồng bộ dòng Trạng thái hai README plan và P04 (lệch tài liệu thuộc F-19). Chỉ đọc lại bằng chứng cũ, không chạy lại suite nghiệp vụ/CI, không nâng trạng thái hoặc đóng gate | Baseline `5015912`; nhánh `fix/frontend-backend-integration`, checkout có `.ai-memory/` untracked |
 | 30/10/2026 22:03 | Kiểm lại FE↔BE trên P02: 158✅/2🟡; sửa provider UUID/PATCH/pagination, Trip destination path, media cap, report queue, refresh/login; đóng F-18/F-22/F-23. Chỉ local, chưa CI/merge/gate | `66e6586`, `4e020e1`, `edb10cb`, `40590cf` |
 | 29/10/2026 15:07 | Hoàn thành master plan Unified Modular Recommendation (chỉ tài liệu), 13 file/60 task; kiểm lại 11 nhóm tĩnh sau khi đồng bộ dataset/model/policy JSON examples; thêm F-25/F-26 từ đối chiếu source/contract; đồng bộ dòng Trạng thái P07/P08, giữ AI DEFERRED và trạng thái kết nối hiện hữu | Nhánh `docs/intelligence-modular-recommendation-plan`, commit `0df6399` |
 | 23/10/2026 01:05 | Merge frontend v4 (`feature/frontend-floria-v4-refinement`) vào cấu trúc progress BE/FE; xóa `progress/` cũ còn trong nhánh FE; đối chiếu lại kết nối BE ↔ FE trên UI mới: 0 ✅, 27 🟡, 9 ❌; hạ P02-09, P03-07 xuống `PARTIAL`; thêm F-20…F-24. Sửa giờ hai dòng 22/10 bên dưới (trước ghi nhầm giờ UTC) | Merge `eed140a`, nhánh `docs/progress-frontend-v4-merge` |
