@@ -1,6 +1,6 @@
 # Tiến độ Backend (BE) — SmartTravel VN
 
-Cập nhật: **02/11/2026 01:23** (GMT+7)
+Cập nhật: **02/11/2026 01:34** (GMT+7)
 
 Progress gồm **hai file**: file này (`progress_be.md`) cho backend, Gateway, hạ tầng và **trạng thái kết nối BE ↔ FE**; [`progress_fe.md`](progress_fe.md) cho frontend web. Mỗi file sắp theo phase P00 → P04. Yêu cầu chi tiết của từng phase vẫn nằm trong `plan/phases/`; file này chỉ ghi **đã làm tới đâu, kiểm bằng gì, làm gì tiếp**.
 
@@ -294,7 +294,7 @@ Yêu cầu: `plan/phases/P02-service-integration.md` · Trạng thái phase: **`
 
 - Kiểm lại bàn giao PR [#23](https://github.com/24521914-ux/SmartTravel_VN/pull/23) — **LOCAL_VERIFIED** · Codex, `feature/travel-demo-routing-filters`, source `7b04167`; checkout dirty chỉ còn `.ai-memory/` untracked. Node 24.21.0/Chromium 156: routing 45/0/0/0; editorial 32/0/0/0; filters lượt đầu 20 PASS/2 FAIL (Gateway chưa chạy và header che nút quay lại), sau phục hồi stack và sửa CSS `7b04167` chạy lại 1 lần 22/0/0/0; demo browser 11 PASS/0 page error qua Gateway/DB thật. Contract FE 15/0/0/0; seed Python 3.14 8/0/0/0; checksum 3/0/0/0, validator 183 HTTP + 23 event/command PASS. Java 21 Maven catalog/community/trip unit/security PASS: 113 run/0 failed/0 errors/74 skipped (DB/broker không chạy local trong lượt này). Build TypeScript/Vite sau sửa PASS. Fixture API chỉ dùng cho nhánh UI được ghi trong suite. CI đang chạy; chưa nâng CI/gate hoặc ACCEPTED.
 
-- Kiểm CI bàn giao — **PARTIAL** · PR #23, source `fc370e8`: P02 run `41334918573` FAIL tại `test:gateway` (chờ item NEEDS_REVIEW); các luồng domain/resilience/import-ack trước đó PASS, 10 check còn lại PASS trên `9a37369`. F-31: xác nhận smoke thiếu fixture candidate riêng, chưa xác nhận đây là nguyên nhân CI vì artifact không lưu trạng thái job/item. Đã bổ sung candidate PUBLISHED qua API thật và chẩn đoán trạng thái; không đổi assertion/contract. `node --check` PASS; local 3 lượt phát triển FAIL (thiếu taxonomy ID đã sửa; CONNECTOR_FAILURE trên stack cũ; Gateway 502 sau thay container), chưa tính local suite PASS. CI revision mới đang chờ.
+- Kiểm CI bàn giao — **CI_VERIFIED** trong phạm vi 11 check của PR #23, revision `2f2e702e3b57eaec29879ebd35682265573f0e33`: P00 `41336264353`, P01 `41336264348`, P02 `41336264376`, P03 tooling `41336264372` đều SUCCESS (11/11). CI Linux/Java 21/Node 24, DB/broker/container thật theo workflow; không suy rộng sang các gate hoặc toàn bộ task. P02 run trước `41334918573` FAIL tại smoke chờ NEEDS_REVIEW; `fc370e8` bổ sung candidate PUBLISHED độc lập và chẩn đoán, giữ assertion; local sau refresh stack/Gateway PASS (1 lượt), DB xác nhận NEEDS_REVIEW → CANCELLED. Gateway unit/security local Java 21 22/0/0/0. Đã merge PR #23 bằng `Truong102006`, merge `4223631bc955ca47475fe2bb630a7a48576a3681`; giữ nguyên trạng thái gate/chữ ký.
 
 ## 7. P03 — Kiểm thử hệ thống
 
@@ -607,9 +607,8 @@ Bảng dưới đối chiếu 171 operation public/admin trong OpenAPI (không t
 | F-25 | Trung bình | P00/P01 | OpenAPI `POST /api/v1/interactions/batch` khai báo `security: []` nhưng `SecurityConfiguration` Intelligence yêu cầu `intelligence:write`; chưa thống nhất contract/provider security. Khảo sát tĩnh tại `89eb8cb`, chưa thay code/quyền | N2 + N1 review contract | OPEN |
 | F-26 | Trung bình | P01/P03 (AI) | `BasicRepository.candidates` lấy 1.000 PUBLISHED theo UUID trước bộ lọc, có thể bỏ sót ứng viên hợp lệ; `persist` lấy `data_as_of` max trên candidate pool, chưa phản ánh freshness bảo thủ của kết quả thực dùng. Khảo sát tĩnh `BasicRepository.java:86,115` tại `89eb8cb`; cần regression >1.000 place và mixed freshness trong RC-G1-08/11, chưa có runtime evidence | N2 + N1 review | OPEN |
 
-| F-31 | Trung bình | P03 | CI P02 `41334918573` FAIL smoke chờ NEEDS_REVIEW; thiếu fixture độc lập đã sửa `fc370e8`, nguyên nhân CI chưa xác nhận; cần CI revision mới và trạng thái job/item khi lỗi | Codex | PARTIAL |
 
-Đã đóng: F-30 (Trung bình, P03, Codex: header cố định che nút quay lại chi tiết; `7b04167`, filters lần đầu FAIL, sau sửa 22/0/0/0), F-18 (khôi phục màn và nối đủ API không AI, còn hai nhánh media tách F-14; `4e020e1`/`edb10cb`, A–G), F-22 (sửa body/path/form thật; `4e020e1`, A/B/C/E/G), F-23 (bỏ bản ghi giả, chỉ cập nhật sau API thành công; `4e020e1`, F/H và negative assertions các suite).
+Đã đóng: F-31 (Trung bình, P03, Codex: smoke phụ thuộc candidate của suite trước; fixture độc lập `fc370e8`, CI cũ `41334918573` FAIL, CI mới `41336264376` PASS trên `2f2e702`; PR #23), F-30 (Trung bình, P03, Codex: header cố định che nút quay lại chi tiết; `7b04167`, filters lần đầu FAIL, sau sửa 22/0/0/0), F-18 (khôi phục màn và nối đủ API không AI, còn hai nhánh media tách F-14; `4e020e1`/`edb10cb`, A–G), F-22 (sửa body/path/form thật; `4e020e1`, A/B/C/E/G), F-23 (bỏ bản ghi giả, chỉ cập nhật sau API thành công; `4e020e1`, F/H và negative assertions các suite).
 
 Đã đóng trong lượt tích hợp này: F-27 (Cao, P02, N1: UUID PATCH500 và các field PATCH Catalog không persist; `66e6586`, J 38/0/0/0 và C readback), F-28 (Cao, P02, N2: Trip gọi URL Catalog destination detail không tồn tại; `66e6586`, L 43/0/0/0 và E tạo/sửa/xóa chặng thật), F-29 (Trung bình, P02, N1/N2: cap100 trước cursor và report queue thiếu nội dung/ID; `66e6586`, J/K pagination101, C/E report moderation). Không dùng stub destination detail cũ làm bằng chứng kết nối thật.
 
@@ -643,6 +642,7 @@ Mới nhất ở trên. Mỗi dòng: ngày giờ · thay đổi · PR/commit.
 
 | Thời điểm | Thay đổi | PR / commit |
 |---|---|---|
+| 02/11/2026 01:33 | Merge tích hợp BE–FE, seed mẫu, path/bộ lọc/giao diện; 11 check CI PASS trên revision PR `2f2e702`; sửa F-30/F-31, không đóng gate | [PR #23](https://github.com/24521914-ux/SmartTravel_VN/pull/23), merge `4223631bc955ca47475fe2bb630a7a48576a3681` |
 | 30/10/2026 22:48 | Rà soát: 7/7 report được công cụ tổng hợp chấp nhận, 160/175 API được quan sát, 158 có 2xx; bảng API khớp tổng. Đồng bộ dòng Trạng thái hai README plan và P04 (lệch tài liệu thuộc F-19). Chỉ đọc lại bằng chứng cũ, không chạy lại suite nghiệp vụ/CI, không nâng trạng thái hoặc đóng gate | Baseline `5015912`; nhánh `fix/frontend-backend-integration`, checkout có `.ai-memory/` untracked |
 | 30/10/2026 22:03 | Kiểm lại FE↔BE trên P02: 158✅/2🟡; sửa provider UUID/PATCH/pagination, Trip destination path, media cap, report queue, refresh/login; đóng F-18/F-22/F-23. Chỉ local, chưa CI/merge/gate | `66e6586`, `4e020e1`, `edb10cb`, `40590cf` |
 | 29/10/2026 15:07 | Hoàn thành master plan Unified Modular Recommendation (chỉ tài liệu), 13 file/60 task; kiểm lại 11 nhóm tĩnh sau khi đồng bộ dataset/model/policy JSON examples; thêm F-25/F-26 từ đối chiếu source/contract; đồng bộ dòng Trạng thái P07/P08, giữ AI DEFERRED và trạng thái kết nối hiện hữu | Nhánh `docs/intelligence-modular-recommendation-plan`, commit `0df6399` |
