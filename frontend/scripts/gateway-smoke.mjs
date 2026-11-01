@@ -67,15 +67,31 @@ try {
   checks.push('business deletion persists suspension while preserving audit record');
   await identity.logout();
   await identity.login('fixture-admin@example.invalid', password);
-  const source = await travel.mutate('ingestion', '/admin/data-sources', { name: `P03 cancellation ${Date.now()}`, uri: `http://source-sandbox:8080/records?run=cancel-${Date.now()}`, secret_reference: 'none', license_version: 'synthetic-v1', allow_storage: true, allow_training: false });
+  const cancellationRun = `cancel-${Date.now()}`;
+  // Matching requires a published candidate. Earlier resilience probes may hide
+  // their places, so establish this test's own candidate instead of relying on them.
+  const geographicUnits = await travel.read('catalog', '/geographic-units');
+  assert.ok(geographicUnits.items.length, 'Cancellation fixture requires a geographic unit');
+  const candidate = await travel.mutate('catalog', '/admin/places', {
+    name: `P02 source ${cancellationRun}`,
+    geographic_unit_id: geographicUnits.items[0].geographic_unit_id ?? geographicUnits.items[0].id,
+    latitude: 16.047079, longitude: 108.20623,
+    category_ids: ['20000000-0000-0000-0000-000000000001'],
+  });
+  await travel.mutate('catalog', `/admin/places/${candidate.place_id}/status`, { status: 'PUBLISHED' }, 'PUT', candidate.version);
+  assert.equal((await travel.place(candidate.place_id)).status, 'PUBLISHED');
+  const source = await travel.mutate('ingestion', '/admin/data-sources', { name: `P03 cancellation ${Date.now()}`, uri: `http://source-sandbox:8080/records?run=${cancellationRun}`, secret_reference: 'none', license_version: 'synthetic-v1', allow_storage: true, allow_training: false });
   const job = await travel.mutate('ingestion', `/admin/data-sources/${source.source_id}/import-jobs`, { mode: 'FULL' });
   let waiting = false;
+  let observedStatuses = [];
   for (let attempt = 0; attempt < 60; attempt++) {
     const items = await travel.read('ingestion', `/admin/import-jobs/${job.job_id}/items`);
+    observedStatuses = items.items.map(item => ({ status: item.status, error_code: item.error_code }));
     if (items.items.some(item => item.status === 'NEEDS_REVIEW')) { waiting = true; break; }
     await new Promise(resolve => setTimeout(resolve, 500));
   }
-  assert.ok(waiting, 'Synthetic matching job must await operator decision');
+  const settledJob = await travel.read('ingestion', `/admin/import-jobs/${job.job_id}`);
+  assert.ok(waiting, `Synthetic matching job must await operator decision; job=${settledJob.status}; items=${JSON.stringify(observedStatuses)}`);
   for (const view of ['errors', 'candidates']) assert.ok(Array.isArray((await travel.read('ingestion', `/admin/import-jobs/${job.job_id}/${view}`)).items));
   const currentJob = await travel.read('ingestion', `/admin/import-jobs/${job.job_id}`);
   const retried = await travel.mutate('ingestion', `/admin/import-jobs/${job.job_id}/retry`, undefined, 'POST', currentJob.version);
