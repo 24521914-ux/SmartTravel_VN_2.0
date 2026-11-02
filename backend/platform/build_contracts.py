@@ -40,15 +40,27 @@ TAXON = obj({'id': U, 'name': S, 'active': B, 'version': V})
 GEO = obj({'id': U, 'name': S, 'parent_id': {'type':['string','null'],'format':'uuid'}, 'level': enum('COUNTRY','PROVINCE','DISTRICT','WARD'), 'aliases': arr(S), 'version': V})
 DEST = obj({'destination_id': U, 'name': S, 'status': enum('ACTIVE','INACTIVE'), 'geographic_unit_ids': arr(U), 'version': V})
 HOURS = obj({'weekday': {'type':'integer','minimum':0,'maximum':6}, 'open': {'type':'string','pattern':'^([01][0-9]|2[0-3]):[0-5][0-9]$'}, 'close': {'type':'string','pattern':'^([01][0-9]|2[0-3]):[0-5][0-9]$'}, 'overnight': B})
-PLACE = obj({'place_id': U, 'name': S, 'status': enum('DRAFT','PUBLISHED','HIDDEN','ARCHIVED'), 'version': V,
+PLACE = obj({'place_id': U, 'name': S, 'name_en': {'type':['string','null'],'maxLength':240}, 'address': S,
+    'description': {'type':['string','null']}, 'status': enum('DRAFT','PUBLISHED','HIDDEN','ARCHIVED'), 'version': V,
     **POINT['properties'], 'category_ids': arr(U), 'tag_ids': arr(U), 'amenity_ids': arr(U), 'geographic_unit_id': U,
-    'destination_ids': arr(U), 'price': {'type':['number','null'],'minimum':0}, 'currency': enum('VND'),
+    'destination_ids': arr(U), 'price': {'type':['number','null'],'minimum':0},
+    'price_min': {'type':['number','null'],'minimum':0}, 'price_max': {'type':['number','null'],'minimum':0},
+    'rating_avg': {'type':['number','null'],'minimum':0,'maximum':5},
+    'review_count': {'type':['integer','null'],'minimum':0}, 'currency': enum('VND'),
     'opening_hours': arr(HOURS, 28), 'media_keys': arr(S), 'source_version': V})
 PUBLIC_PLACE = obj({**PLACE['properties'], 'status': enum('PUBLISHED')})
+# HTTP read metadata must not silently change the frozen v1 event payload or
+# permit clients to write server-owned rating/publication fields.
+PLACE_EVENT = obj({k:v for k,v in PLACE['properties'].items() if k not in {
+    'name_en','address','description','price_min','price_max','rating_avg','review_count'}})
+PLACE_WRITE = patch(obj({k:PLACE['properties'][k] for k in (
+    'name','address','description','latitude','longitude','category_ids',
+    'tag_ids','amenity_ids','geographic_unit_id','destination_ids','price','currency',
+    'opening_hours','media_keys')}))
 OFFER = obj({'offering_id':U,'place_id':U,'type':enum('SERVICE','TOUR','EVENT','ACTIVITY','EXPERIENCE'),'name':S,'price':{'type':['number','null'],'minimum':0},'currency':enum('VND'),'version':V})
 BUSINESS = obj({'business_id':U,'name':S,'status':enum('PENDING','VERIFIED','SUSPENDED'),'version':V})
 CLAIM = obj({'claim_id':U,'business_id':U,'place_id':U,'owner_user_id':U,'status':enum('PENDING','APPROVED','REJECTED','REVOKED'),'version':V})
-REVIEW = obj({'review_id':U,'user_id':U,'place_id':U,'rating':{'type':'integer','minimum':1,'maximum':5},'content':S,'media_keys':arr(S),'status':enum('PENDING','APPROVED','REJECTED','HIDDEN','DELETED'),'version':V})
+REVIEW = obj({'review_id':U,'user_id':U,'place_id':U,'rating':{'type':'integer','minimum':1,'maximum':5},'content':S,'author_name':{'type':'string','maxLength':120},'media_keys':arr(S),'status':enum('PENDING','APPROVED','REJECTED','HIDDEN','DELETED'),'version':V}, ['review_id','user_id','place_id','rating','content','media_keys','status','version'])
 RATING = obj({'place_id':U,'count':{'type':'integer','minimum':0},'sum':{'type':'integer','minimum':0},'version':V,'as_of':T})
 COLLECTION = obj({'collection_id':U,'owner_id':U,'name':S,'visibility':enum('PUBLIC','PRIVATE'),'version':V})
 COLLECTION_ITEM = obj({'item_id':U,'place_id':U,'note':S,'rank':N,'version':V})
@@ -130,13 +142,13 @@ def op(service, path, method, name, request=None, response=None, code=200, publi
     if name=='public_categories': case['response']['items'][0]['id']=sample(U,'category_id')
     examples[service][name] = case
 
-def crud(service,path,model,id_field,create=None,public_read=False):
+def crud(service,path,model,id_field,create=None,public_read=False,update=None):
     tag = service + '_' + re.sub(r'[^a-zA-Z0-9]+','_',path).strip('_')
     op(service,path,'get',tag+'_list',response=page(model),public=public_read)
     op(service,path,'post',tag+'_create',request=create or patch(model,[id_field,'owner_id','user_id','status','state']),response=model,code=201,idem=True,version='{' in path)
     detail = path + '/{' + id_field + '}'
     op(service,detail,'get',tag+'_get',response=model,public=public_read)
-    op(service,detail,'patch',tag+'_update',request=patch(model,[id_field,'owner_id','user_id','status','state']),response=model,version=True,idem=True)
+    op(service,detail,'patch',tag+'_update',request=update or patch(model,[id_field,'owner_id','user_id','status','state']),response=model,version=True,idem=True)
     op(service,detail,'delete',tag+'_delete',code=204,version=True,idem=True)
 
 # Identity: no client role/owner override on public registration/profile.
@@ -168,7 +180,7 @@ op('identity','/internal/v1/users/status/batch','post','userStatusBatch',IDS,bat
 op('identity','/internal/v1/users/preferences/batch','post','preferencesBatch',IDS,batch(obj({'user_id':U,**PREF['properties']})),scope='identity:preferences:read')
 op('identity','/internal/v1/deletion-requests/{request_id}','get','deletionStatus',response=ACK,scope='identity:deletion:read')
 # Catalog public reads and protected administration.
-crud('catalog','/api/v1/admin/places',PLACE,'place_id')
+crud('catalog','/api/v1/admin/places',PLACE,'place_id',create=PLACE_WRITE,update=PLACE_WRITE)
 op('catalog','/api/v1/places','get','searchPlaces',response=page(PUBLIC_PLACE),public=True,queries={'q':S,'categoryId':U,'geographicUnitId':U,'destinationId':U,'minPrice':N,'maxPrice':N,'minRating':{'type':'number','minimum':0,'maximum':5},'lat':POINT['properties']['latitude'],'lon':POINT['properties']['longitude'],'radiusM':{'type':'number','minimum':1},'type':S})
 op('catalog','/api/v1/places/{place_id}','get','getPlace',response=PUBLIC_PLACE,public=True)
 op('catalog','/api/v1/admin/places/{place_id}/status','put','placeStatus',obj({'status':enum('DRAFT','PUBLISHED','HIDDEN','ARCHIVED')}),PLACE,scope='catalog:admin',version=True)
@@ -274,7 +286,7 @@ event('identity.user.status-changed.v1','identity',[s for s in SERVICES if s!='i
 event('identity.preferences.changed.v1','identity',['intelligence'],obj({'user_id':U,**PREF['properties']}),'preferences')
 event('identity.user.deletion-requested.v1','identity',[s for s in SERVICES if s!='identity'],obj({'deletion_request_id':U,'user_id':U,'policy_version':V}),'deletion')
 event('domain.user-data-deleted.v1',[s for s in SERVICES if s!='identity'],['identity'],obj({'deletion_request_id':U,'service':enum(*[s for s in SERVICES if s!='identity']),'status':enum('COMPLETED','FAILED'),'artifact_handling':S}),'deletion')
-event('catalog.place.upserted.v1','catalog',['community','trip','intelligence'],PLACE,'place')
+event('catalog.place.upserted.v1','catalog',['community','trip','intelligence'],PLACE_EVENT,'place')
 event('catalog.place.visibility-changed.v1','catalog',['community','trip','intelligence'],obj({'place_id':U,'status':enum('PUBLISHED','HIDDEN','ARCHIVED'),'version':V}),'place')
 event('catalog.destination.changed.v1','catalog',['trip','intelligence'],DEST,'destination')
 event('catalog.category.changed.v1','catalog',['identity','intelligence'],obj({'category_id':U,'name':S,'active':B,'version':V}),'category')

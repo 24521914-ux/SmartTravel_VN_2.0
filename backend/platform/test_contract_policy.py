@@ -10,6 +10,23 @@ def api(service,path,method):
 def body(op): return op['requestBody']['content']['application/json']['schema']
 
 class ContractPolicyTests(unittest.TestCase):
+    def test_place_http_metadata_does_not_expand_frozen_event_v1(self):
+        read=api('catalog','/api/v1/places/{place_id}','get')['responses']['200']['content']['application/json']['schema']
+        event=json.loads((ROOT/'events/catalog.place.upserted.v1.schema.json').read_text(encoding='utf-8'))['properties']['payload']
+        metadata={'name_en','address','description','price_min','price_max','rating_avg','review_count'}
+        self.assertTrue(metadata <= set(read['properties']))
+        self.assertFalse(metadata & set(event['properties']))
+        self.assertEqual(set(event['required']),set(event['properties']))
+
+    def test_place_writes_allow_address_but_not_server_owned_metadata(self):
+        rules=json.loads((ROOT.parent/'services/catalog-service/src/main/resources/request-contracts.json').read_text(encoding='utf-8'))
+        for method,path in [('post','/api/v1/admin/places'),('patch','/api/v1/admin/places/{place_id}')]:
+            schema=body(api('catalog',path,method))
+            with self.subTest(method=method):
+                self.assertIn('address',schema['properties'])
+                self.assertFalse({'rating_avg','review_count','status','version','source_version'} & set(schema['properties']))
+                matches=[rule['schema'] for rule in rules if rule['method']==method.upper() and rule['path'].startswith('/api/v1/admin/places') and rule['path'].count('/')==path.count('/')]
+                self.assertEqual(matches,[schema])
     def test_privileged_routes_protected_and_scoped(self):
         for path in (ROOT/'openapi').glob('*.yaml'):
             spec=json.loads(path.read_text(encoding='utf-8'))

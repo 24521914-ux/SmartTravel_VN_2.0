@@ -4,7 +4,7 @@ import org.bson.Document;
 public final class Representations {
     private Representations(){}
     private static Map<String,Object> fields(Document row,String id,String... names){var out=new LinkedHashMap<String,Object>();out.put(id,row.getString("_id"));for(String name:names)out.put(name,row.get(name));return out;}
-    public static Map<String,Object> review(Document row){var out=fields(row,"review_id","user_id","place_id","rating","content","status","version");out.put("media_keys",row.getOrDefault("media_keys",List.of()));return out;}
+    public static Map<String,Object> review(Document row){var out=fields(row,"review_id","user_id","place_id","rating","content","status","version");if(row.get("author_name") instanceof String name&&!name.isBlank())out.put("author_name",name);out.put("media_keys",row.getOrDefault("media_keys",List.of()));return out;}
     public static Map<String,Object> collection(Document row){return fields(row,"collection_id","owner_id","name","visibility","version");}
     public static Map<String,Object> item(Document row){var out=fields(row,"item_id","place_id","note","rank");out.put("version",row.getOrDefault("version",1L));return out;}
     public static Map<String,Object> contribution(Document row){var out=fields(row,"contribution_id","user_id","target_id","expected_version","status","version");out.put("type","ADD_PLACE".equals(row.getString("type"))?"ADD":"EDIT");out.put("fields",row.get("payload"));out.put("expected_version",row.getOrDefault("expected_version",0L));return out;}
