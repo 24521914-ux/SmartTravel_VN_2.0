@@ -48,6 +48,19 @@ class CatalogDatabaseTests {
     @AfterAll static void close(){if(context!=null)context.close();if(policyStub!=null)policyStub.stop(0);}
     Map<String,Object> input(String name){return new HashMap<>(Map.of("name_vi",name,"address","fixture address","geographic_unit_id",GEO.toString(),"lat",10.77,"lon",106.69));}
     UUID create(String name){return (UUID)places.create(input(name),USER).get("place_id");}
+    @Test void placeAddressSearchNormalizesAccentsAndTracksAddressUpdates(){
+        var body=input("Address search landmark");body.put("address","123 Đường Trần Phú, Đà Nẵng");
+        UUID id=(UUID)places.create(body,USER).get("place_id");
+        places.update(id,1,Map.of("status","PUBLISHED"),USER);
+        assertThat(places.search(Map.of("q","123 duong tran phu"))).extracting(row->row.get("place_id")).contains(id);
+        assertThat(places.search(Map.of("q","Đà Nẵng"))).extracting(row->row.get("place_id")).contains(id);
+        places.update(id,2,Map.of("address","456 Nguyễn Huệ, Huế"),USER);
+        assertThat(places.search(Map.of("q","123 duong tran phu"))).extracting(row->row.get("place_id")).doesNotContain(id);
+        assertThat(places.search(Map.of("q","456 nguyen hue"))).extracting(row->row.get("place_id")).contains(id);
+        places.update(id,3,Map.of("name","Renamed landmark"),USER);
+        assertThat(places.search(Map.of("q","456 Nguyễn Huệ"))).extracting(row->row.get("place_id")).contains(id);
+        assertThat(places.search(Map.of("q","renamed landmark"))).extracting(row->row.get("place_id")).contains(id);
+    }
     @Test void frontendPlacePatchBindsGeographicUuidAndPersistsReadAfterWrite(){
         UUID id=create("Frontend place patch fixture"),updatedGeo=UUID.randomUUID();
         db.update("INSERT INTO catalog.geographic_units(geographic_unit_id,unit_type,code,name_vi,version,valid_from,status) VALUES(?,'PROVINCE',?,'Other fixture',1,'2020-01-01','ACTIVE')",updatedGeo,updatedGeo.toString());
