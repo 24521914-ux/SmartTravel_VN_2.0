@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  ArrowLeft,
   Bell,
   Buildings,
   CalendarBlank,
@@ -21,6 +22,7 @@ import {
   Stack,
   Star,
   Sun,
+  Moon,
   Trash,
   User,
   WarningCircle,
@@ -34,6 +36,7 @@ import {
   Tag,
   CurrencyCircleDollar,
   ForkKnife,
+  ChatCircle,
   type Icon as PhosphorIcon
 } from '@phosphor-icons/react';
 
@@ -42,8 +45,10 @@ const icons: Record<string, PhosphorIcon> = {
   pin: MapPin,
   map: MapTrifold,
   arrow: ArrowRight,
+  arrowLeft: ArrowLeft,
   heart: Heart,
   sun: Sun,
+  moon: Moon,
   calendar: CalendarBlank,
   clock: Clock,
   star: Star,
@@ -73,6 +78,7 @@ const icons: Record<string, PhosphorIcon> = {
   tag: Tag,
   price: CurrencyCircleDollar,
   food: ForkKnife,
+  chat: ChatCircle,
 };
 
 export interface IconProps {

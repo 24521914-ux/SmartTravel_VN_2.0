@@ -108,3 +108,31 @@ và `P02_FRONTEND_URL`. Không in token/password. Browser smoke tạo tài nguy�
 ## P03 non-AI acceptance — 20 October 2026
 
 AI is disabled unless `VITE_AI_ENABLED=true`; Gateway also requires its independent `AI_ENABLED=true` flag. Recommendation, model admin and AI consent opt-in are hidden while deferred. Existing consent revocation remains available. `npm run test:browser` runs the non-AI real-Gateway browser suite; the older AI suite is retained as `test:browser:ai` for later work. Browser output is now `backend/infra/.local/p03/frontend-browser/`. Current acceptance: 8 groups, 36 responsive cases, zero AI HTTP requests/page errors. See [P03 non-AI handoff](../docs/P03_NON_AI_ACCEPTANCE.md); older browser checkpoints below/above remain historical.
+
+## Bản đồ và địa chỉ
+
+Trang `/ban-do` dùng Leaflet, hiển thị ghim từ tọa độ Catalog đã lưu. Nút `Tìm`
+tìm tên/địa chỉ trong Catalog; `Tra địa chỉ trên bản đồ` tìm trực tiếp qua Photon
+và chỉ xem trước kết quả, không tạo hoặc sửa địa điểm.
+
+Ở `/quan-tri` → quản lý danh mục → địa điểm → sửa: tra tên kèm tỉnh/thành,
+chọn kết quả, kiểm tra địa chỉ và ghim, bấm bản đồ để chỉnh lối vào rồi lưu.
+`Tra từ tọa độ hiện tại` gợi ý địa chỉ gần ghim; cần kiểm tra trước khi chọn.
+Các địa chỉ cũ bằng tên địa điểm vẫn cần quản trị viên bổ sung, không tự ghi đè.
+
+Photon demo không cần key, chỉ gọi khi bấm tìm; có cache trong phiên và hàng đợi
+giãn cách yêu cầu. Máy chủ demo không có cam kết sẵn sàng; dùng endpoint riêng
+khi có nhiều người dùng. Cấu hình công khai ở `.env.example`: `VITE_PHOTON_URL`,
+`VITE_MAP_TILE_URL`, `VITE_MAP_ATTRIBUTION`. Không đặt secret trong biến `VITE_*`.
+Localhost dùng nền Stadia Maps không cần key; domain triển khai mặc định dùng OSM.
+Nếu dùng Stadia trên domain triển khai, cần đăng ký domain hoặc key giới hạn domain.
+Khi đổi nguồn nền phải cấu hình attribution đúng nhà cung cấp.
+
+Tài liệu dịch vụ: [Photon](https://github.com/komoot/photon),
+[Stadia authentication](https://docs.stadiamaps.com/authentication/),
+[OSM tile policy](https://operations.osmfoundation.org/policies/tiles/).
+Migration Catalog `V9__place_address_search.sql` cập nhật chỉ mục tên + địa chỉ,
+hỗ trợ tìm không dấu và đồng bộ khi sửa tên/địa chỉ. Chạy kiểm tra bản đồ bằng
+`npm run test:browser:map` khi P02 và Vite sẵn sàng.
+Trạng thái và bằng chứng nằm tại [progress_fe.md](../progress_fe.md) và
+[progress_be.md](../progress_be.md).

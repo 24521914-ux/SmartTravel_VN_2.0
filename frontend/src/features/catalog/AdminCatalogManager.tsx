@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { Page, Resource, TravelClient } from '../../shared/api';
 import { ErrorState } from '../../shared/ui';
+import { PlaceLocationEditor } from './PlaceLocationEditor';
 
 type Field = { key: string; label: string; kind?: 'number' | 'boolean' | 'list' | 'reference'; options?: string[]; source?: string; multiple?: boolean; min?: number; max?: number };
 const definitions: Record<string, { label: string; id: string; fields: Field[] }> = {
   places: { label: 'Địa điểm', id: 'place_id', fields: [
-    { key: 'name', label: 'Tên địa điểm' }, { key: 'latitude', label: 'Vĩ độ', kind: 'number', min: -90, max: 90 },
+    { key: 'name', label: 'Tên địa điểm' }, { key: 'address', label: 'Địa chỉ đầy đủ' }, { key: 'latitude', label: 'Vĩ độ', kind: 'number', min: -90, max: 90 },
     { key: 'longitude', label: 'Kinh độ', kind: 'number', min: -180, max: 180 },
     { key: 'category_ids', label: 'Danh mục', kind: 'reference', source: 'categories', multiple: true },
     { key: 'tag_ids', label: 'Nhãn', kind: 'reference', source: 'tags', multiple: true },
@@ -95,6 +96,9 @@ export function AdminCatalogManager({ travel }: { travel: TravelClient }) {
     {error && <ErrorState message={error} />}{message && <p role="status">{message}</p>}{busy && <p role="status">Đang xử lý danh mục...</p>}
     {editing && <form onSubmit={e => void save(e)} style={{ display: 'grid', gap: 12 }}>
       <h3>{selected ? 'Sửa' : 'Thêm'} {definition.label.toLowerCase()}</h3>
+      {kind === 'places' && <PlaceLocationEditor key={selected ? rowId(selected, definition.id) : 'new-place'} name={String(values.name ?? '')} address={String(values.address ?? '')} latitude={values.latitude} longitude={values.longitude}
+        area={String(references['geographic-units']?.find(row => rowId(row, 'id') === values.geographic_unit_id)?.name ?? '')}
+        onChange={location => setValues(previous => ({ ...previous, ...location }))} />}
       {definition.fields.map(field => <label key={field.key}>{field.label}
         {field.kind === 'boolean' ? <input type="checkbox" checked={Boolean(values[field.key])} onChange={e => setValues(v => ({ ...v, [field.key]: e.target.checked }))} />
         : field.options ? <select required value={String(values[field.key] ?? '')} onChange={e => setValues(v => ({ ...v, [field.key]: e.target.value }))}><option value="">Chọn {field.label.toLowerCase()}</option>{field.options.map(o => <option key={o}>{o}</option>)}</select>

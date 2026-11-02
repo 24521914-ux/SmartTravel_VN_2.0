@@ -164,8 +164,10 @@ try {
   await responsiveCheck('user', 'Bản đồ');
   await page.getByRole('button', { name: 'Xem vị trí', exact: true }).first().click(); await idle();
   assert.match(await page.getByRole('link', { name: /Mở OpenStreetMap/ }).getAttribute('href'), /^https:\/\/www.openstreetmap.org\//);
-  await page.locator('iframe').waitFor();
-  mark('map', 'Location coordinates, OSM link and opt-in map iframe');
+  await page.getByRole('region', { name: 'Bản đồ địa điểm tương tác', exact: true }).waitFor();
+  await page.locator('.leaflet-marker-icon').first().waitFor();
+  assert.equal(await page.locator('iframe').count(), 0);
+  mark('map', 'Location coordinates, OSM link and interactive Leaflet markers');
   await logout(); await login('business');
   await responsiveCheck('business', 'Khám phá');
   await responsiveCheck('business', 'Tài khoản');
