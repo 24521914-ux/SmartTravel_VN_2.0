@@ -1,6 +1,6 @@
 # Tiến độ Frontend (FE) — SmartTravel VN
 
-Cập nhật: **02/11/2026 01:34** (GMT+7)
+Cập nhật: **02/11/2026, 22:57** (GMT+7)
 
 Progress gồm **hai file**: file này (`progress_fe.md`) cho frontend web; [`progress_be.md`](progress_be.md) cho backend và **trạng thái kết nối BE ↔ FE từng API** (mục 9 của file đó). Quy ước trạng thái, tiêu chuẩn PASS và cách cập nhật dùng chung: `progress_be.md` mục 2.
 
@@ -156,6 +156,8 @@ Chạy lại seed: `python backend/infra/seed_demo.py` (cần Python có PyYAML/
 - [x] FE-P03-08: Đồng bộ font các tiêu đề phối hai kiểu chữ — **LOCAL_VERIFIED** (dirty) · Theo yêu cầu người dùng 31/10/2026: 6 tiêu đề hero/điểm đến/editorial/showcase/cộng đồng/finale dùng Playfair Display italic 400 cho cả câu, giữ màu nhấn. Bằng chứng: Playwright `node --input-type=module`, đọc `getComputedStyle` trên `.journey-hero h1`, `.journey-section h2:has(em)`, `.cinematic-finale h2`: 24/0/0/0 kiểm tra ở 375/768/1440/1920 px, font tải thành công, 0 tràn ngang; kiểm ảnh mobile/desktop; `npm --prefix frontend run build` PASS. Baseline SHA `5015912`, checkout dirty trên `refactor/frontend-path-routing`, Node 24.21.0, Chromium, Vite + Gateway P02 thật, không stub. Next: review N1/N2 và CI revision PR; không nâng gate.
 
 - [x] FE-P03-09: Thiết kế lại bộ lọc và danh mục du lịch theo tham khảo Travel.com.vn — **LOCAL_VERIFIED** (dirty) · Người làm: Codex · Nhánh: `refactor/frontend-path-routing` · `DestinationFilters.tsx`: form từ khóa/vùng/tỉnh, nâng cao giá/đánh giá/tọa độ, đặt lại và tự mở/focus ô lỗi khi thu gọn. `TravelCatalog.tsx`: 3 nhóm, chip tiện ích/thẻ và card dịch vụ; bản ghi kiểm thử giữ nguyên trong phần thu gọn. Bằng chứng: `npm --prefix frontend run test:browser:filters` 22/0/0/0 (run/failed/errors/skipped): Gateway thật áp dụng `minPrice=0&minRating=0` và đặt lại HTTP 200; responsive 375/768/1440/1920 px không tràn; fixture API kiểm đủ tham số, phân trang, validation, giá 0/null, chi tiết dịch vụ và lỗi/trống. `test:contracts` 15/0/0/0; `test:ui:editorial` 32/0/0/0; `npm --prefix frontend run build` PASS (4626 modules). Baseline SHA `5015912`, checkout dirty; Node 24.21.0, Chromium 156.0.8078.4, Vite + Gateway P02 thật cho kiểm live, mock có kiểm soát cho các nhánh chức năng. Giữ nguyên contract/API và số kết nối BE ↔ FE. Next: CI revision PR và review N1/N2; không nâng gate.
+
+- [ ] FE-P03-10: Làm mới bộ lọc/địa điểm; bổ sung song ngữ, sáng/tối, giá, đánh giá mẫu và ảnh có ghi nguồn — **IN_PROGRESS** · Người làm: Codex · Nhánh: feature/explore-ui-demo-content · Next: hoàn thiện giao diện và kiểm tra thủ công trước khi cập nhật bằng chứng.
 
 ## 8. P04 — Triển khai
 
