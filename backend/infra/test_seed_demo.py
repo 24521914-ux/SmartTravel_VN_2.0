@@ -7,10 +7,75 @@ from http.server import ThreadingHTTPServer
 from urllib.request import urlopen
 
 from providers.source_sandbox import Source
-from seed_demo import Demo, rid, legacy_test_place
+from seed_demo import (ACCOUNT_FIXTURES, PLACE_DESCRIPTIONS, REVIEW_FIXTURES, VERIFICATION_BASELINE_KEY,
+                       TOURISM_AREAS, tourism_scope_update,
+                       Demo, manifest_entries, rid, is_seed_review, legacy_test_place, normalize_mongo_json,
+                       validate_account_identity)
 
 
 class DemoIdentityTest(unittest.TestCase):
+    def test_tourism_scopes_cover_every_public_fixture_once(self):
+        names = [name for _, _, _, places in TOURISM_AREAS for name in places]
+        self.assertEqual(set(names), set(PLACE_DESCRIPTIONS))
+        self.assertEqual(len(names), len(set(names)))
+        self.assertEqual(len({province for province, *_ in TOURISM_AREAS}), 6)
+        self.assertGreater(sum(province == 'Đà Nẵng' for province, *_ in TOURISM_AREAS), 1)
+
+    def test_tourism_scope_migration_is_idempotent_and_preserves_manual_moves(self):
+        self.assertEqual(tourism_scope_update({'geographic_unit_id': 'province'}, 'province', 'area'),
+                         {'geographic_unit_id': 'area'})
+        self.assertEqual(tourism_scope_update({'geographic_unit_id': 'area'}, 'province', 'area'), {})
+        with self.assertRaisesRegex(RuntimeError, 'changed manually'):
+            tourism_scope_update({'geographic_unit_id': 'user-chosen-scope'}, 'province', 'area')
+
+    def test_fixture_content_covers_manual_search_and_rating_cases(self):
+        self.assertEqual(len(PLACE_DESCRIPTIONS), 29)
+        self.assertEqual(len(set(PLACE_DESCRIPTIONS.values())), 29)
+        self.assertEqual(len(REVIEW_FIXTURES), 28)
+        self.assertEqual({rating for rating, _ in REVIEW_FIXTURES}, {1, 2, 3, 4, 5})
+        self.assertEqual(len({content for _, content in REVIEW_FIXTURES}), 28)
+        self.assertTrue(all(len(content) > 60 and 'P03 test' not in content for _, content in REVIEW_FIXTURES))
+
+    def test_account_fixtures_have_independent_empty_and_destructive_users(self):
+        accounts = {account['alias']: account for account in ACCOUNT_FIXTURES}
+        self.assertTrue({'new-user', 'password-change', 'delete-account'} <= set(accounts))
+        self.assertEqual(len({account['email'] for account in ACCOUNT_FIXTURES}), len(ACCOUNT_FIXTURES))
+        self.assertTrue(all(account['email'].endswith('@demo.smarttravel.invalid') for account in ACCOUNT_FIXTURES))
+        for alias in ('new-user', 'password-change', 'delete-account'):
+            self.assertEqual(accounts[alias]['roles'], ['USER'])
+
+    def test_deleted_tracked_account_is_not_recreated(self):
+        with self.assertRaisesRegex(RuntimeError, 'refusing to recreate'):
+            validate_account_identity('lan', {'user_id': 'old-id'}, [])
+
+    def test_changed_account_identity_is_not_silently_reused(self):
+        with self.assertRaisesRegex(RuntimeError, 'identity changed'):
+            validate_account_identity('lan', {'user_id': 'old-id'}, [{'user_id': 'new-id'}])
+
+    def test_untracked_review_adoption_requires_an_exact_seed_signature(self):
+        current = {'rating': 3, 'content': 'Nội dung đã biên tập riêng.', 'status': 'PENDING'}
+        self.assertTrue(is_seed_review(current, 3, 'Nội dung đã biên tập riêng.'))
+        self.assertFalse(is_seed_review({**current, 'content': 'Đánh giá do người dùng tự viết.'},
+                                        3, 'Nội dung đã biên tập riêng.'))
+        self.assertFalse(is_seed_review({**current, 'status': 'APPLYING'}, 3, 'Nội dung đã biên tập riêng.'))
+
+    def test_historical_review_signature_is_recognized_for_safe_migration(self):
+        legacy = {'rating': 4, 'content': 'Bản seed cũ.', 'status': 'APPROVED'}
+        self.assertTrue(is_seed_review(legacy, 5, 'Nội dung mới.', 4, 'Bản seed cũ.'))
+        self.assertFalse(is_seed_review(legacy, 5, 'Nội dung mới.', 4, 'Một nội dung khác.'))
+
+    def test_mongosh_bson_long_encoding_is_normalized_for_if_match(self):
+        self.assertEqual(normalize_mongo_json({'version': {'high': 0, 'low': 7, 'unsigned': False}}),
+                         {'version': 7})
+        self.assertEqual(normalize_mongo_json({'version': {'high': -1, 'low': -1, 'unsigned': False}}),
+                         {'version': -1})
+
+    def test_verification_baseline_marker_is_not_counted_as_a_business_request(self):
+        state = {VERIFICATION_BASELINE_KEY: {'verified_at': 'opaque'},
+                 'verification:business-a': {'request_id': 'request-a'}}
+        self.assertEqual(manifest_entries(state, 'verification:'),
+                         [('verification:business-a', {'request_id': 'request-a'})])
+
     def test_legacy_detection_keeps_named_destinations(self):
         for name in ['P03 isolated review 1793371440334', 'P03 stalled consumer aa44b067', 'P02 source 62839f0f', 'Integration places 1793335']:
             self.assertTrue(legacy_test_place({'name': name}), name)
