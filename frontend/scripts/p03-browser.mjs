@@ -4,10 +4,11 @@ import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
+import { loadP02Secrets } from './p02-secrets.mjs';
 
 // Uses real HTTP and isolated synthetic accounts. Never save browser storage or tokens.
 const root = fileURLToPath(new URL('..', import.meta.url));
-const secrets = JSON.parse(readFileSync(process.env.P02_SECRETS_FILE ?? resolve(root, '../backend/infra/.local/p02/secrets.json'), 'utf8'));
+const secrets = loadP02Secrets();
 const base = process.env.P02_FRONTEND_URL ?? 'http://127.0.0.1:5173';
 const output = resolve(root, '../backend/infra/.local/p03/frontend-browser');
 const sourceFiles = ['frontend/src/OperationalPanels.tsx', 'frontend/src/TravelApp.tsx', 'frontend/src/travel.css', 'frontend/scripts/p03-browser.mjs', 'backend/contracts/checksums.json'];

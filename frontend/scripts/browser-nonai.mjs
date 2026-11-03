@@ -4,12 +4,13 @@ import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
+import { loadP02Secrets } from './p02-secrets.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const repo = resolve(root, '..');
 const output = resolve(repo, 'backend/infra/.local/p03/frontend-browser');
 mkdirSync(output, { recursive: true });
-const secrets = JSON.parse(readFileSync(process.env.P02_SECRETS_FILE ?? resolve(repo, 'backend/infra/.local/p02/secrets.json'), 'utf8'));
+const secrets = loadP02Secrets();
 const snapshot = () => {
   const result = spawnSync('python', ['-c', "import sys,json;sys.path.insert(0,'backend/infra');from p03_candidate import candidate_manifest;print(json.dumps(candidate_manifest()))"], { cwd: repo, encoding: 'utf8' });
   assert.equal(result.status, 0, 'Candidate manifest unavailable');

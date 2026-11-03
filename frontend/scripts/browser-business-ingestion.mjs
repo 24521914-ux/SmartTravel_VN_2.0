@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
+import { loadP02Secrets } from './p02-secrets.mjs';
 
-const secrets = JSON.parse(readFileSync(process.env.P02_SECRETS_FILE ?? fileURLToPath(new URL('../../backend/infra/.local/p02/secrets.json', import.meta.url)), 'utf8'));
+const secrets = loadP02Secrets();
 const origin = process.env.P02_FRONTEND_URL ?? 'http://127.0.0.1:5173';
 const browser = await chromium.launch(); const page = await browser.newPage(); page.setDefaultTimeout(20000);
 const requests = [], checks = [], pageErrors = [];

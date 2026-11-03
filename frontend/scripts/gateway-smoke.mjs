@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import ts from 'typescript';
+import { loadP02Secrets } from './p02-secrets.mjs';
 
 // Runs the browser's actual clients against the real Gateway; no fetch replacement.
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -25,8 +26,7 @@ try {
   const { IdentityClient } = await import(pathToFileURL(resolve(directory, 'identity.js')));
   const { TravelClient } = await import(pathToFileURL(resolve(directory, 'travel.js')));
   const { memoryTokenStore } = await import(pathToFileURL(resolve(directory, 'auth.js')));
-  const secretPath = process.env.P02_SECRETS_FILE ?? resolve(root, '../backend/infra/.local/p02/secrets.json');
-  const password = process.env.P02_USER_PASSWORD ?? JSON.parse(readFileSync(secretPath, 'utf8')).IDENTITY_FIXTURE_PASSWORD;
+  const password = process.env.P02_USER_PASSWORD ?? loadP02Secrets().IDENTITY_FIXTURE_PASSWORD;
   assert.ok(password, 'Missing fixture user password');
   const store = memoryTokenStore();
   const baseUrl = `${process.env.P02_GATEWAY_TARGET ?? 'http://127.0.0.1:58080'}/api`;

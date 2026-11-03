@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { loadP02Secrets } from './p02-secrets.mjs';
 
 const frontend = fileURLToPath(new URL('..', import.meta.url));
 const repo = resolve(frontend, '..');
@@ -12,7 +13,7 @@ const output = resolve(repo, 'backend/infra/.local/p03/frontend-trip-collection'
 mkdirSync(output, { recursive: true });
 const reportFile = resolve(output, 'report.json');
 const previousAttempts = existsSync(reportFile) ? JSON.parse(readFileSync(reportFile, 'utf8')).attempts ?? [] : [];
-const password = JSON.parse(readFileSync(process.env.P02_SECRETS_FILE ?? resolve(repo, 'backend/infra/.local/p02/secrets.json'), 'utf8')).IDENTITY_FIXTURE_PASSWORD;
+const password = loadP02Secrets().IDENTITY_FIXTURE_PASSWORD;
 const base = process.env.P02_FRONTEND_URL ?? 'http://127.0.0.1:5173';
 const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });

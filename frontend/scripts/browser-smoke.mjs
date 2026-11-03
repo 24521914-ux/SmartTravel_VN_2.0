@@ -3,9 +3,10 @@ import { chromium } from '@playwright/test';
 import { readFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
+import { loadP02Secrets } from './p02-secrets.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const secrets = JSON.parse(readFileSync(process.env.P02_SECRETS_FILE ?? resolve(root, '../backend/infra/.local/p02/secrets.json'), 'utf8'));
+const secrets = loadP02Secrets();
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 const browserErrors = [];
