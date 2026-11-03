@@ -1,6 +1,6 @@
 # Tiến độ Backend (BE) — SmartTravel VN
 
-Cập nhật: **04/11/2026 01:40** (GMT+7)
+Cập nhật: **04/11/2026 05:47** (GMT+7)
 
 Progress gồm **hai file**: file này (`progress_be.md`) cho backend, Gateway, hạ tầng và **trạng thái kết nối BE ↔ FE**; [`progress_fe.md`](progress_fe.md) cho frontend web. Mỗi file sắp theo phase P00 → P04. Yêu cầu chi tiết của từng phase vẫn nằm trong `plan/phases/`; file này chỉ ghi **đã làm tới đâu, kiểm bằng gì, làm gì tiếp**.
 
@@ -617,7 +617,7 @@ Bảng dưới đối chiếu 171 operation public/admin trong OpenAPI (không t
 | F-24 | Thấp | P03 | Đã cập nhật browser-nonai và thêm suite nghiệp vụ cho UI hiện tại; code FE cũ không còn dùng và clay-ui-check cũ chưa dọn. Không ảnh hưởng entry hiện tại `src/app/App.tsx` | N2 | PARTIAL |
 | F-25 | Trung bình | P00/P01 | OpenAPI `POST /api/v1/interactions/batch` khai báo `security: []` nhưng `SecurityConfiguration` Intelligence yêu cầu `intelligence:write`; chưa thống nhất contract/provider security. Khảo sát tĩnh tại `89eb8cb`, chưa thay code/quyền | N2 + N1 review contract | OPEN |
 | F-26 | Trung bình | P01/P03 (AI) | `BasicRepository.candidates` lấy 1.000 PUBLISHED theo UUID trước bộ lọc, có thể bỏ sót ứng viên hợp lệ; `persist` lấy `data_as_of` max trên candidate pool, chưa phản ánh freshness bảo thủ của kết quả thực dùng. Khảo sát tĩnh `BasicRepository.java:86,115` tại `89eb8cb`; cần regression >1.000 place và mixed freshness trong RC-G1-08/11, chưa có runtime evidence | N2 + N1 review | OPEN |
-| F-32 | Cao | P02/P04 | Token service-to-service do `p02.py` (`workload()`) tự ký bằng khóa riêng của Identity, TTL 24 giờ, nhúng tĩnh vào env/property (`intelligence.catalog-token`…); hết hạn phải chạy `p02.py renew`, script triển khai giữ khóa ký JWT. Khảo sát tĩnh `c7ea5ba` | N1 (Identity) + N2 | PARTIAL: đã sửa trên nhánh `feature/identity-workload-tokens` (P04-CS-03), chờ review và merge |
+| F-32 | Cao | P02/P04 | Token service-to-service do `p02.py` (`workload()`) tự ký bằng khóa riêng của Identity, TTL 24 giờ, nhúng tĩnh vào env/property (`intelligence.catalog-token`…); hết hạn phải chạy `p02.py renew`, script triển khai giữ khóa ký JWT. Khảo sát tĩnh `c7ea5ba` | N1 (Identity) + N2 | PARTIAL: đã sửa ở P04-CS-03, đã lên `main` (không qua PR), chờ N1/N2 review và CI |
 | F-33 | Trung bình | P02/P03 | Mỗi request có token người dùng gọi Identity đồng bộ 2 lần (Gateway `PrincipalExchangeFilter` + `LiveSessionValidator` ở 5 service), không cache, fail-closed: Identity chậm/sập làm mọi chức năng cần đăng nhập ở cả 6 service lỗi. Khảo sát tĩnh `c7ea5ba` | N1 + N2 | OPEN |
 | F-34 | Trung bình | P04 | Không có compose triển khai hoàn chỉnh: `backend/platform/cloud/compose.yaml` thiếu Gateway và RabbitMQ; stack P02 chỉ dựng được qua compose sinh động bởi `p02.py`, port bind loopback. Xử lý theo mục 8.1 | N1 | OPEN |
 | F-35 | Thấp | P00 | Skeleton monolith thừa từ commit đầu: `backend/pom.xml` (artifact `demo`, JPA/Redis/Spring AI) và `backend/src/com/example/demo`, không thuộc service nào | N1 | OPEN |
@@ -659,6 +659,7 @@ Mới nhất ở trên. Mỗi dòng: ngày giờ · thay đổi · PR/commit.
 
 | Thời điểm | Thay đổi | PR / commit |
 |---|---|---|
+| 04/11/2026 05:47 | Push thẳng P04-CS-01…03 lên `main` (fast-forward, không qua PR) theo yêu cầu người dùng; **chưa có CI và chưa có N1/N2 review** (lệch AGENTS.md mục 7). Trạng thái task giữ LOCAL_VERIFIED, F-32 vẫn PARTIAL chờ review | `ba0d301`…`6d31d22` trên `main` |
 | 04/11/2026 01:40 | P04-CS-03 LOCAL_VERIFIED trên nhánh (chưa merge): token service-to-service qua client-credentials của Identity, smoke P02 PASS 13/13; F-32 PARTIAL; thêm F-36, F-37 | `0aa99d0`, `c8a7b5f` (nhánh `feature/identity-workload-tokens`) |
 | 02/11/2026 01:33 | Merge tích hợp BE–FE, seed mẫu, path/bộ lọc/giao diện; 11 check CI PASS trên revision PR `2f2e702`; sửa F-30/F-31, không đóng gate | [PR #23](https://github.com/24521914-ux/SmartTravel_VN/pull/23), merge `4223631bc955ca47475fe2bb630a7a48576a3681` |
 | 30/10/2026 22:48 | Rà soát: 7/7 report được công cụ tổng hợp chấp nhận, 160/175 API được quan sát, 158 có 2xx; bảng API khớp tổng. Đồng bộ dòng Trạng thái hai README plan và P04 (lệch tài liệu thuộc F-19). Chỉ đọc lại bằng chứng cũ, không chạy lại suite nghiệp vụ/CI, không nâng trạng thái hoặc đóng gate | Baseline `5015912`; nhánh `fix/frontend-backend-integration`, checkout có `.ai-memory/` untracked |
