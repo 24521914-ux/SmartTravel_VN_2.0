@@ -1,6 +1,8 @@
 const community = db.getSiblingDB('community_db');
 assert.eq = (actual, expected, message) => assert(EJSON.stringify(actual) === EJSON.stringify(expected), message);
-assert(community.auth('community_migrator', process.env.COMMUNITY_MIGRATION_PASSWORD), 'migration authentication failed');
+// Atlas: the migration URI already authenticates the community_migrator Database User.
+if (process.env.COMMUNITY_MIGRATION_URI_AUTH !== 'true')
+  assert(community.auth('community_migrator', process.env.COMMUNITY_MIGRATION_PASSWORD), 'migration authentication failed');
 const crypto = require('crypto');
 const fs = require('fs');
 const file = '/migrations/V1__community_baseline.js';

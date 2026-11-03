@@ -1,5 +1,3 @@
 **
-!test_issuer.py
 !cloud/
-!cloud/dev_issuer.py
 !cloud/check_databases.py

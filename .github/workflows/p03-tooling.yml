@@ -9,6 +9,8 @@ on:
       - 'backend/infra/p02.py'
       - 'backend/infra/test_p02_compose.py'
       - 'docker-compose*.yml'
+      - 'backend/platform/cloud/**'
+      - 'backend/infra/mongo/**'
       - '.env.example'
       - 'backend/contracts/**'
       - 'frontend/**'
@@ -40,6 +42,7 @@ jobs:
           python -m unittest discover -s backend/platform/init -p "test_*.py"
           python -m unittest discover -s backend/infra -p test_p02_compose.py
           docker compose --env-file .env.example config --quiet
+          python -m unittest discover -s backend/platform/cloud -p "test_*.py"
           python backend/platform/validate_contracts.py
       - name: Validate frontend
         run: |
