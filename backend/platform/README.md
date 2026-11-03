@@ -127,6 +127,17 @@ docker build --build-context backend=backend --target source -t smarttravel-api-
 
 `backend/.dockerignore` chỉ cho phép `mvnw`, `.mvn/`, `contracts/`, `services/` (bỏ `target/`, `.local/`, `.env*`). Target `source` bỏ qua test (`-Dmaven.test.skip=true`); bằng chứng test vẫn lấy từ `mvnw verify`/CI.
 
+Container init cho stack compose nằm ở `backend/platform/init` (image `platform-tools`: `docker build -t smarttravel-platform-tools:local backend/platform/init`). Mỗi job chạy một lần, idempotent, credential chỉ lấy từ environment:
+
+| Job | Lệnh | Làm gì |
+|---|---|---|
+| `key-init` | `python identity_keys.py` (user `0:0`, volume khóa tại `/keys`) | Tạo khóa ký RS256 của Identity nếu chưa có; không bao giờ thay khóa đã có |
+| `rabbit-init` | `python broker_topology.py` (mount `backend/contracts` tại `/contracts:ro`) | Vhost, user runtime least-privilege, exchange, binding theo `registry.json` |
+| `mongo-init` | image `mongo:8.0`, `mongosh` chạy `infra/mongo/bootstrap.js` rồi `migrate.js` | Replica set, user migrator/runtime, migration Community |
+| `sandbox-init` | image PostGIS, `psql -f sandbox_geography.sql` | Ranh giới giả lập cho source sandbox; chỉ local/dev |
+
+`p02.py` dùng chung `broker_topology.plan()`, `identity_keys.generate()` và `sandbox_geography.sql`, nên topology và khóa giống hệt giữa runner Python và compose.
+
 Dockerfiles UID/GID10001, không root. Mỗi gói có image độc lập, DBpassword chỉ truyền environment, không bake vào image. Rebuild sau source changes.
 
 Evidence thực tế ngày08/10/2026: 18 service Java tests +4 platform tests PASS; 6 standalone apps own DB/JWKS PASS; DB/PostGIS/pgvector/MongoDB/sáu Redis PASS; 183 HTTP/23 messages validate; 7 policy +3 HTTP suite +2 event suite PASS; frontend build/proxy và npm audit0 PASS; 6 service images +platform image build PASS. Chi tiết/giới hạn tại [manifest](P00_HANDOFF.md). CI workflow mới có source, chưa có remote run.

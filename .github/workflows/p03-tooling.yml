@@ -33,6 +33,7 @@ jobs:
         run: |
           python backend/infra/p03_nonai_tests.py
           python -m unittest discover -s backend/platform -p test_contract_checksums.py
+          python -m unittest discover -s backend/platform/init -p "test_*.py"
           python backend/platform/validate_contracts.py
       - name: Validate frontend
         run: |

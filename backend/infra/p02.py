@@ -22,6 +22,11 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 INFRA = Path(__file__).resolve().parent
+# Shared with the compose init containers (backend/platform/init).
+sys.path.insert(0, str(ROOT / 'backend/platform/init'))
+import broker_topology  # noqa: E402
+import identity_keys  # noqa: E402
+
 LOCAL = INFRA / '.local/p02'
 SERVICES = ['identity', 'catalog', 'community', 'trip', 'ingestion', 'intelligence']
 PORTS = dict(identity=58101, catalog=58102, community=58103, trip=58104,
@@ -54,15 +59,7 @@ def prepare():
         secret_file.write_text(json.dumps(values, indent=2), encoding='utf-8')
     key_file = LOCAL / 'keys.json'
     if not key_file.exists():
-        from cryptography.hazmat.primitives.asymmetric import rsa
-        private = rsa.generate_private_key(public_exponent=65537, key_size=2048).private_numbers()
-        public = private.public_numbers
-        def encoded(number):
-            return base64.urlsafe_b64encode(number.to_bytes((number.bit_length()+7)//8, 'big')).rstrip(b'=').decode()
-        key = dict(kty='RSA', kid='p02-identity-1', use='sig', alg='RS256',
-                   **{k: encoded(v) for k, v in dict(n=public.n, e=public.e, d=private.d,
-                       p=private.p, q=private.q, dp=private.dmp1, dq=private.dmq1, qi=private.iqmp).items()})
-        exclusive(key_file, json.dumps({'keys': [key]}))
+        exclusive(key_file, json.dumps(identity_keys.generate('p02-identity-1')))
     return values
 
 
@@ -214,46 +211,9 @@ def broker_request(path, body=None, method='GET'):
 
 
 def topology():
-    broker_request('vhosts/smarttravel', {}, 'PUT')
     registry = json.loads((ROOT / 'backend/contracts/registry.json').read_text(encoding='utf-8'))
-    for service in SERVICES:
-        broker_request('users/'+service+'_runtime', {'password': prepare()[service.upper()+'_BROKER_PASSWORD'], 'tags': ''}, 'PUT')
-        broker_request('permissions/smarttravel/'+service+'_runtime',
-                       {'configure': '^'+service+r'\..*', 'write': '^'+service+r'\.(events|inbox|dlq|deadletters)$',
-                        'read': '^'+service+r'\..*'}, 'PUT')
-        published = [kind for kind, rule in registry['messages'].items()
-                     if service in ([rule['producer']] if isinstance(rule['producer'], str) else rule['producer'])]
-        broker_request('topic-permissions/smarttravel/'+service+'_runtime',
-                       {'exchange': service+'.events', 'write': '^('+'|'.join(k.replace('.', r'\.').replace('-', r'\-') for k in published)+')$',
-                        'read': '.*'}, 'PUT')
-        broker_request('topic-permissions/smarttravel/'+service+'_runtime',
-                       {'exchange': service+'.inbound', 'write': '^$', 'read': '.*'}, 'PUT')
-        for suffix in ['events', 'inbound']:
-            broker_request('exchanges/smarttravel/'+service+'.'+suffix,
-                           {'type': 'topic', 'durable': True, 'auto_delete': False, 'internal': False, 'arguments': {}}, 'PUT')
-    for kind, rule in registry['messages'].items():
-        for producer in ([rule['producer']] if isinstance(rule['producer'], str) else rule['producer']):
-            for consumer in rule['consumers']:
-                if producer == consumer:
-                    continue
-                broker_request(f'bindings/smarttravel/e/{producer}.events/e/{consumer}.inbound',
-                               {'routing_key': kind, 'arguments': {}}, 'POST')
-    broker_request('users/catalog_operator',
-                   {'password': prepare()['CATALOG_BROKER_OPERATOR_PASSWORD'], 'tags': ''}, 'PUT')
-    broker_request('permissions/smarttravel/catalog_operator',
-                   {'configure': '^$', 'write': '^catalog\\.inbound$', 'read': '^catalog\\.dlq$'}, 'PUT')
-    accepted = [kind for kind, rule in registry['messages'].items() if 'catalog' in rule['consumers']]
-    broker_request('topic-permissions/smarttravel/catalog_operator',
-                   {'exchange': 'catalog.inbound', 'write': '^('+'|'.join(k.replace('.', r'\.').replace('-', r'\-') for k in accepted)+')$',
-                    'read': '^$'}, 'PUT')
-    # Registered self-owned events still have a real durable audit sink rather than a test capture.
-    broker_request('queues/smarttravel/platform.audit', {'durable': True, 'auto_delete': False, 'arguments': {}}, 'PUT')
-    broker_request('policies/smarttravel/platform-audit-retention',
-                   {'pattern': '^platform\\.audit$', 'definition': {'max-length': 10000, 'message-ttl': 2592000000},
-                    'priority': 1, 'apply-to': 'queues'}, 'PUT')
-    for service in SERVICES:
-        broker_request(f'bindings/smarttravel/e/{service}.events/q/platform.audit',
-                       {'routing_key': '#', 'arguments': {}}, 'POST')
+    for method, path, body in broker_topology.plan(registry, prepare()):
+        broker_request(path, body, method)
 
 
 def request(base, path, method='GET', body=None, token=None, headers=None):
@@ -353,8 +313,8 @@ def manifest():
 
 def seed_sandbox_geography():
     """Explicit synthetic local geometry for the licensed source sandbox, not real VN boundaries."""
-    compose('exec','-T','catalog-db','psql','-U','catalog_admin','-d','catalog_db','-v','ON_ERROR_STOP=1','-c',
-        "UPDATE catalog.geographic_units SET boundary=ST_Multi(ST_MakeEnvelope(107.8,15.7,108.5,16.4,4326)) WHERE code='DNG' AND boundary IS NULL")
+    sql = (ROOT / 'backend/platform/init/sandbox_geography.sql').read_text(encoding='utf-8')
+    compose('exec','-T','catalog-db','psql','-U','catalog_admin','-d','catalog_db','-v','ON_ERROR_STOP=1','-c', sql)
 
 
 def replay_catalog_dlq():
