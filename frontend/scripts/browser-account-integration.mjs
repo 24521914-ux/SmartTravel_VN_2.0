@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
 import { chromium } from '@playwright/test';
 import { randomBytes } from 'node:crypto';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const origin = process.env.P02_FRONTEND_URL ?? 'http://127.0.0.1:5173';
+if (existsSync(fileURLToPath(new URL('../../backend/infra/.local/p02/mail.json', import.meta.url)))) {
+  throw new Error('Synthetic account tests require the Mailpit environment, not Gmail SMTP.');
+}
 const output = fileURLToPath(new URL('../../backend/infra/.local/p03/frontend-account-browser/', import.meta.url));
 mkdirSync(output, { recursive: true });
 const browser = await chromium.launch(); const page = await browser.newPage(); page.setDefaultTimeout(20000);
@@ -33,7 +36,7 @@ async function tokenFromMail(subject) {
   throw new Error('SMTP sandbox message missing');
 }
 async function login(pass) {
-  await page.getByRole('navigation', { name: 'Xác thực tài khoản' }).getByRole('button', { name: 'Đăng nhập tài khoản', exact: true }).click();
+  await page.locator('.auth-mode-pill-tabs').getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await page.getByLabel('Email', { exact: true }).fill(email); await page.getByLabel('Mật khẩu', { exact: true }).fill(pass);
   await submit('Đăng nhập', '/auth/login'); await page.getByRole('button', { name: 'Đăng xuất khỏi hệ thống' }).waitFor();
   await page.getByRole('tab', { name: 'Hồ sơ cá nhân', exact: true }).click();
@@ -44,9 +47,11 @@ try {
   await page.goto(`${origin}/tai-khoan`);
   await page.getByRole('button', { name: 'Đăng ký tài khoản', exact: true }).click();
   await page.getByLabel('Email', { exact: true }).fill(email); await page.getByLabel('Tên hiển thị', { exact: true }).fill('Browser registration');
-  await page.getByLabel('Mật khẩu', { exact: true }).fill(password); await submit('Đăng ký', '/auth/register'); checks.push('register SMTP');
+  await page.getByLabel('Mật khẩu', { exact: true }).fill(password);
+  await page.getByLabel('Xác nhận mật khẩu', { exact: true }).fill(password);
+  await submit('Đăng ký', '/auth/register'); checks.push('register SMTP');
   const token = await tokenFromMail();
-  await page.getByRole('button', { name: 'Xác minh email', exact: true }).click();
+  await page.getByRole('heading', { name: 'Xác minh email', exact: true }).waitFor();
   await page.getByLabel('Mã xác nhận trong email').fill(token); await submit('Xác minh email', '/auth/verify-email'); checks.push('verify email');
   await login(password);
   await page.getByLabel('Tên hiển thị', { exact: true }).fill('Browser updated profile'); await submit('Lưu hồ sơ', '/me');
@@ -63,7 +68,7 @@ try {
   await page.getByRole('button', { name: 'Quên mật khẩu', exact: true }).click(); await page.getByLabel('Email', { exact: true }).fill(email);
   await submit('Quên mật khẩu', '/auth/forgot-password');
   const reset = await tokenFromMail('reset|password|mật khẩu');
-  await page.getByRole('button', { name: 'Đặt lại mật khẩu', exact: true }).click();
+  await page.getByRole('heading', { name: 'Đặt lại mật khẩu', exact: true }).waitFor();
   await page.getByLabel('Mã xác nhận trong email').fill(reset); await page.getByLabel('Mật khẩu', { exact: true }).fill(password);
   await submit('Đặt lại mật khẩu', '/auth/reset-password'); await login(password); checks.push('forgot/reset/login');
   await page.getByRole('tab', { name: 'Sở thích & Quyền riêng tư', exact: true }).click();

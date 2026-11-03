@@ -15,6 +15,7 @@
     "test:browser:map": "node scripts/browser-map.mjs",
     "test:browser:account": "node scripts/browser-account-integration.mjs",
     "test:browser:auth-failure": "node scripts/browser-auth-failure.mjs",
+    "test:browser:auth-recovery": "node scripts/browser-auth-recovery.mjs",
     "test:browser:admin": "node scripts/browser-admin-integration.mjs",
     "test:browser:business": "node scripts/browser-business-ingestion.mjs",
     "test:browser:media": "node scripts/browser-media-integration.mjs",

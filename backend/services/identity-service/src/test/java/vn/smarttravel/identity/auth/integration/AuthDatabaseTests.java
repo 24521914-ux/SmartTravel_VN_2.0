@@ -174,9 +174,10 @@ class AuthDatabaseTests {
         var value=new com.nimbusds.jwt.SignedJWT(new com.nimbusds.jose.JWSHeader.Builder(com.nimbusds.jose.JWSAlgorithm.RS256).keyID(key.getKeyID()).build(),claims);
         value.sign(new com.nimbusds.jose.crypto.RSASSASigner(key)); return value.serialize();
     }
-    @Test void all25FrozenOperationsHaveRealHttpProviderResponses() throws Exception {
+    @Test void all26CandidateOperationsHaveRealHttpProviderResponses() throws Exception {
         var covered=new java.util.HashSet<String>(); String email=email();
         provider(covered,"/api/v1/auth/register",HttpMethod.POST,"/api/v1/auth/register",Map.of("email",email,"password",PASSWORD,"display_name","Provider test"),null,202,"Idempotency-Key",UUID.randomUUID().toString());
+        provider(covered,"/api/v1/auth/resend-verification",HttpMethod.POST,"/api/v1/auth/resend-verification",Map.of("email",email),null,202);
         mail.deliver();
         provider(covered,"/api/v1/auth/verify-email",HttpMethod.POST,"/api/v1/auth/verify-email",Map.of("token",delivered.get(email).split("\n")[1]),null,202);
         var pair=provider(covered,"/api/v1/auth/login",HttpMethod.POST,"/api/v1/auth/login",Map.of("email",email,"password",PASSWORD),null,200).getBody();
@@ -212,7 +213,7 @@ class AuthDatabaseTests {
         provider(covered,"/internal/v1/users/preferences/batch",HttpMethod.POST,"/internal/v1/users/preferences/batch",Map.of("ids",java.util.List.of(user)),workload,200);
         var deletion=provider(covered,"/api/v1/me/deletion-requests",HttpMethod.POST,"/api/v1/me/deletion-requests",Map.of("policy_version",1),token,202,"Idempotency-Key","delete").getBody();
         provider(covered,"/internal/v1/deletion-requests/{request_id}",HttpMethod.GET,"/internal/v1/deletion-requests/"+deletion.get("request_id"),null,workload,200);
-        assertThat(covered).hasSize(25);
+        assertThat(covered).hasSize(26);
         var expected=new java.util.HashSet<String>(); var paths=json.readTree(findContract("openapi/identity.yaml").toFile()).path("paths");
         paths.fields().forEachRemaining(entry -> entry.getValue().fields().forEachRemaining(method -> expected.add(method.getKey().toUpperCase()+" "+entry.getKey())));
         assertThat(covered).containsExactlyInAnyOrderElementsOf(expected);
@@ -584,6 +585,46 @@ class AuthDatabaseTests {
         assertThat(preferences.get(principal).get("version")).isEqualTo(2L);
         assertThat(preferences.get(principal).get("consent_version")).isEqualTo(2L);
     }
+    @Test void pendingLoginExplainsVerificationOnlyAfterPasswordMatches() {
+        var account=pending(email());
+        var correct=api(HttpMethod.POST,"/api/v1/auth/login",Map.of("email",account.email(),"password",PASSWORD),null);
+        assertThat(correct.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(correct.getBody().get("code")).isEqualTo("EMAIL_NOT_VERIFIED");
+        assertThat(api(HttpMethod.POST,"/api/v1/auth/login",Map.of("email",account.email(),"password",PASSWORD+"wrong"),null).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(api(HttpMethod.POST,"/api/v1/auth/login",Map.of("email",email(),"password",PASSWORD),null).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.auth_sessions WHERE user_id=?",Integer.class,account.user())).isZero();
+    }
+
+    @Test void resendRecoversExpiredVerificationAndKeepsCooldownAndAccountPrivacy() {
+        var account=pending(email()); mail.deliver();
+        String old=delivered.get(account.email()).split("\n")[1];
+        var body=Map.of("email",account.email().toUpperCase());
+        assertThat(api(HttpMethod.POST,"/api/v1/auth/resend-verification",body,null).getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.account_tokens WHERE user_id=?",Integer.class,account.user())).isEqualTo(1);
+        db.update("UPDATE identity.account_tokens SET created_at=now()-interval '2 days',expires_at=now()-interval '1 day' WHERE user_id=?",account.user());
+        assertThat(api(HttpMethod.POST,"/api/v1/auth/resend-verification",body,null).getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        mail.deliver();
+        String replacement=delivered.get(account.email()).split("\n")[1];
+        assertThat(replacement).isNotEqualTo(old);
+        assertThatThrownBy(() -> auth.consumeAccountToken(old,"VERIFY_EMAIL",null)).isInstanceOf(IdentityException.class);
+        auth.consumeAccountToken(replacement,"VERIFY_EMAIL",null);
+        assertThat(auth.login(account.email(),PASSWORD)).containsKey("access_token");
+        int count=db.queryForObject("SELECT count(*) FROM identity.account_tokens WHERE user_id=?",Integer.class,account.user());
+        var active=api(HttpMethod.POST,"/api/v1/auth/resend-verification",body,null);
+        var unknown=api(HttpMethod.POST,"/api/v1/auth/resend-verification",Map.of("email",email()),null);
+        assertThat(active.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        assertThat(unknown.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        assertThat(active.getBody().keySet()).containsExactlyInAnyOrderElementsOf(unknown.getBody().keySet());
+        assertThat(db.queryForObject("SELECT count(*) FROM identity.account_tokens WHERE user_id=?",Integer.class,account.user())).isEqualTo(count);
+        assertThat(api(HttpMethod.POST,"/api/v1/auth/resend-verification",Map.of("email","invalid"),null).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test void resendVerificationIsRateLimitedForUnknownAccountsToo() {
+        var body=Map.of("email",email());
+        for(int i=0;i<10;i++) assertThat(api(HttpMethod.POST,"/api/v1/auth/resend-verification",body,null).getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        assertThat(api(HttpMethod.POST,"/api/v1/auth/resend-verification",body,null).getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+    }
+
     @Test void canonicalDuplicateRegistrationHasAtomicDefaultsAndIdempotency() {
         String email=email(), key=UUID.randomUUID().toString();
         var first = auth.register(email.toUpperCase(), PASSWORD, "Test", key);
@@ -626,6 +667,7 @@ class AuthDatabaseTests {
         String email=email();
         assertThat(api(HttpMethod.POST,"/api/v1/auth/register",Map.of("email",email,"password",PASSWORD,"display_name","Test","roles",java.util.List.of("ADMIN")),null,"Idempotency-Key","x").getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(api(HttpMethod.POST,"/api/v1/auth/register",Map.of("email",email,"password",PASSWORD,"display_name","Test"),null).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(api(HttpMethod.POST,"/api/v1/auth/register",Map.of("email",email,"password",PASSWORD,"display_name","x".repeat(121)),null,"Idempotency-Key",UUID.randomUUID().toString()).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(api(HttpMethod.POST,"/api/v1/auth/login",Map.of("email",email,"password",PASSWORD),null).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
     @Test void refreshRotatesAndReuseCommitsWholeFamilyRevocation() {

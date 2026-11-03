@@ -154,12 +154,14 @@ def crud(service,path,model,id_field,create=None,public_read=False,update=None):
 # Identity: no client role/owner override on public registration/profile.
 EMAIL={'type':'string','format':'email','maxLength':254}
 PASSWORD={'type':'string','minLength':12,'maxLength':128}
-op('identity','/api/v1/auth/register','post','register',obj({'email':EMAIL,'password':PASSWORD,'display_name':S}),ACK,202,public=True,idem=True)
+op('identity','/api/v1/auth/register','post','register',obj({'email':EMAIL,'password':PASSWORD,'display_name':{'type':'string','minLength':1,'maxLength':120}}),ACK,202,public=True,idem=True)
 op('identity','/api/v1/auth/login','post','login',obj({'email':EMAIL,'password':PASSWORD}),TOKEN,public=True)
 for route in ['refresh','logout']:
     op('identity','/api/v1/auth/'+route,'post',route,obj({'refresh_token':S}),TOKEN if route=='refresh' else None,200 if route=='refresh' else 204,public=True)
-for route, request in [('verify-email',obj({'token':S})),('forgot-password',obj({'email':EMAIL})),('reset-password',obj({'token':S,'password':PASSWORD}))]:
+for route, request in [('verify-email',obj({'token':S})),('resend-verification',obj({'email':EMAIL})),('forgot-password',obj({'email':EMAIL})),('reset-password',obj({'token':S,'password':PASSWORD}))]:
     op('identity','/api/v1/auth/'+route,'post',route.replace('-','_'),request,ACK,202,public=True)
+specs['identity']['paths']['/api/v1/auth/resend-verification']['post']['description']='Accepts an email without revealing account existence. Only PENDING accounts receive a replacement verification token (24 hours); requests within 60 seconds are accepted without another mail job. Existing tokens are superseded. Account/IP rate limits also apply.'
+specs['identity']['paths']['/api/v1/auth/login']['post']['description']='A correct password for a PENDING account returns 403 EMAIL_NOT_VERIFIED. Incorrect credentials and unavailable accounts return 401.'
 op('identity','/api/v1/me','get','profile',response=USER)
 op('identity','/api/v1/me','patch','updateProfile',obj({'display_name':S}),USER,version=True)
 op('identity','/api/v1/me/password','put','changePassword',obj({'current_password':PASSWORD,'new_password':PASSWORD}),code=204)

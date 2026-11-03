@@ -1,7 +1,7 @@
 """Isolated six-service integration environment. No P01 volumes or test issuer.
 
 Commands: prepare, build, up, status, smoke, down. Secrets and evidence are ignored.
-External email uses Mailpit; routing uses the application's explicit fallback.
+Email defaults to Mailpit; configure_mail.py enables Gmail SMTP explicitly.
 """
 import argparse
 import base64
@@ -19,6 +19,7 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 import yaml
+from configure_mail import load_mail_settings
 
 ROOT = Path(__file__).resolve().parents[2]
 INFRA = Path(__file__).resolve().parent
@@ -63,6 +64,7 @@ def prepare():
                    **{k: encoded(v) for k, v in dict(n=public.n, e=public.e, d=private.d,
                        p=private.p, q=private.q, dp=private.dmp1, dq=private.dmq1, qi=private.iqmp).items()})
         exclusive(key_file, json.dumps({'keys': [key]}))
+    values.update(load_mail_settings())
     return values
 
 
@@ -128,6 +130,11 @@ def configuration(values):
                        IDENTITY_MAIL_KEY=values['IDENTITY_MAIL_KEY'], MAIL_HOST='identity-mail', MAIL_PORT='1025',
                        IDENTITY_NOTIFICATION_EMAIL_ENABLED='true', IDENTITY_FIXTURES_ENABLED='true',
                        IDENTITY_FIXTURE_PASSWORD=values['IDENTITY_FIXTURE_PASSWORD'])
+            # Optional verified Gmail configuration; absent settings keep the local SMTP sink.
+            env.update({key: values[key] for key in (
+                'MAIL_HOST', 'MAIL_PORT', 'MAIL_USERNAME', 'MAIL_PASSWORD', 'MAIL_AUTH',
+                'MAIL_TLS_REQUIRED', 'MAIL_TIMEOUT_MS', 'IDENTITY_MAIL_FROM',
+                'IDENTITY_NOTIFICATION_EMAIL_ENABLED') if key in values})
             cfg['volumes']['identity-signing-keys'] = {'name': 'smarttravel-p02_identity-signing-keys'}
             volumes.append('identity-signing-keys:/run/identity:ro')
         if service == 'catalog':
@@ -371,13 +378,17 @@ def replay_catalog_dlq():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['prepare', 'build', 'dependencies', 'up', 'renew', 'status', 'monitor', 'manifest', 'smoke', 'replay-catalog-dlq', 'down'])
+    parser.add_argument('action', choices=['prepare', 'apply-mail', 'build', 'dependencies', 'up', 'renew', 'status', 'monitor', 'manifest', 'smoke', 'replay-catalog-dlq', 'down'])
     args = parser.parse_args()
     values = prepare()
     configuration(values)
     if args.action == 'prepare':
         compose('config', '--quiet')
-        print('P02 configuration valid; isolated secrets/volumes; email sandbox Mailpit.')
+        print('P02 configuration valid; isolated secrets/volumes; email provider: ' +
+              ('Gmail SMTP' if values.get('MAIL_HOST') == 'smtp.gmail.com' else 'local Mailpit') + '.')
+    elif args.action == 'apply-mail':
+        compose('up', '-d', '--no-deps', 'identity')
+        print('Identity restarted with the configured email provider; other services and data retained.')
     elif args.action == 'build':
         for service in SERVICES:
             arguments = [sys.executable, str(ROOT / 'backend/platform/build_service_image.py'), service,

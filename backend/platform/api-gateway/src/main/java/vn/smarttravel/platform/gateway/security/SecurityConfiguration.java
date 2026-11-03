@@ -42,7 +42,7 @@ public class SecurityConfiguration {
                         .pathMatchers("/api/*/internal/**", "/api/*/actuator/**").denyAll()
                         .pathMatchers(HttpMethod.POST,"/api/identity/api/v1/auth/register","/api/identity/api/v1/auth/login",
                                 "/api/identity/api/v1/auth/refresh","/api/identity/api/v1/auth/logout",
-                                "/api/identity/api/v1/auth/verify-email","/api/identity/api/v1/auth/forgot-password",
+                                "/api/identity/api/v1/auth/verify-email","/api/identity/api/v1/auth/resend-verification","/api/identity/api/v1/auth/forgot-password",
                                 "/api/identity/api/v1/auth/reset-password",
                                 "/api/intelligence/api/v1/recommendations","/api/intelligence/api/v1/interactions/batch").permitAll()
                         .pathMatchers(HttpMethod.GET,"/api/identity/api/v1/preference-options",

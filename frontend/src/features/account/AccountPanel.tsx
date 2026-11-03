@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Button, Badge, Icon } from '../../shared/ui';
-import { TravelClient, type Resource, type Page } from '../../shared/api';
+import { ApiError, TravelClient, type Resource, type Page } from '../../shared/api';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { useToast } from '../../app/providers/ToastProvider';
 import { useAppPreferences } from '../../app/providers/AppPreferences';
 import './account-auth.css';
 
-type GuestMode = 'login' | 'register' | 'verify-email' | 'forgot-password' | 'reset-password';
+type GuestMode = 'login' | 'register' | 'verify-email' | 'resend-verification' | 'forgot-password' | 'reset-password';
 
 export function AccountPanel() {
   const { user, isAuthenticated, login, logout, isLoading, reloadUser, apiClient } = useAuth();
@@ -18,6 +18,10 @@ export function AccountPanel() {
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'preferences'>('profile');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [email, setEmail] = useState('');
+  const [notice, setNotice] = useState('');
+  const localMailbox = import.meta.env.DEV && ['localhost', '127.0.0.1'].includes(window.location.hostname)
+    ? (import.meta.env.VITE_LOCAL_MAILBOX_URL ?? 'http://localhost:59025') : '';
   const [profile, setProfile] = useState<Resource | null>(null);
   const [preferences, setPreferences] = useState<Resource | null>(null);
   const [categories, setCategories] = useState<Resource[]>([]);
@@ -30,7 +34,18 @@ export function AccountPanel() {
   async function run(action: () => Promise<void>) {
     setBusy(true); setError('');
     try { await action(); }
-    catch (error) { setError(error instanceof Error ? error.message : 'Không thực hiện được yêu cầu.'); }
+    catch (error) {
+      if (error instanceof ApiError && error.body.code === 'EMAIL_NOT_VERIFIED') {
+        setMode('verify-email');
+        setNotice(text('Email chưa được xác minh. Nhập mã trong email hoặc yêu cầu gửi lại mã bên dưới.', 'Verify your email using the code, or request a new code below.'));
+      } else if (error instanceof ApiError && error.status === 401 && !isAuthenticated) {
+        setError(mode === 'login'
+          ? text('Email hoặc mật khẩu không đúng, hoặc tài khoản không thể đăng nhập.', 'Incorrect email or password, or the account cannot sign in.')
+          : text('Mã không hợp lệ, đã dùng hoặc hết hạn. Hãy yêu cầu mã mới.', 'The code is invalid, used or expired. Request a new code.'));
+      } else if (error instanceof ApiError && error.status === 429) {
+        setError(text('Bạn đã yêu cầu quá nhiều lần. Vui lòng chờ rồi thử lại.', 'Too many requests. Please wait before trying again.'));
+      } else setError(error instanceof Error ? error.message : text('Không thực hiện được yêu cầu.', 'Unable to complete the request.'));
+    }
     finally { setBusy(false); }
   }
   async function allPages(service: 'catalog' | 'identity', path: string) {
@@ -51,6 +66,7 @@ export function AccountPanel() {
 
   function submit(e: FormEvent<HTMLFormElement>, action: (data: FormData) => Promise<void>) {
     e.preventDefault(); const form = e.currentTarget; const data = new FormData(form);
+    if (busy || isLoading) return;
     void run(async () => { await action(data); form.reset(); });
   }
   const fieldValue = (data: FormData, key: string) => String(data.get(key) ?? '').trim();
@@ -58,6 +74,7 @@ export function AccountPanel() {
     login: text('Đăng nhập tài khoản', 'Sign in to your account'),
     register: text('Đăng ký tài khoản', 'Create an account'),
     'verify-email': text('Xác minh email', 'Verify your email'),
+    'resend-verification': text('Gửi lại mã xác minh', 'Resend verification code'),
     'forgot-password': text('Quên mật khẩu', 'Forgot password'),
     'reset-password': text('Đặt lại mật khẩu', 'Reset password')
   };
@@ -65,6 +82,7 @@ export function AccountPanel() {
     login: text('Nhập thông tin bên dưới để tiếp tục hành trình và quản lý chuyến đi của bạn.', 'Enter your details to continue your journey and manage your trips.'),
     register: text('Tạo tài khoản nhanh chóng để lên kế hoạch và lưu giữ kỷ niệm chuyến đi.', 'Create an account to plan trips and keep your travel memories.'),
     'verify-email': text('Nhập mã xác nhận được gửi trong hòm thư điện tử của bạn.', 'Enter the verification code sent to your inbox.'),
+    'resend-verification': text('Nhập email đã đăng ký. Nếu tài khoản đang chờ xác minh, hệ thống sẽ gửi mã mới; mỗi lần gửi cách nhau ít nhất 60 giây.', 'Enter your registered email. Pending accounts can receive a new code, with at least 60 seconds between requests.'),
     'forgot-password': text('Nhập email đã đăng ký để nhận mã khôi phục mật khẩu tài khoản.', 'Enter your account email to receive a password reset code.'),
     'reset-password': text('Nhập mã từ email và thiết lập mật khẩu mới cho tài khoản.', 'Enter the email code and choose a new password.')
   };
@@ -118,15 +136,17 @@ export function AccountPanel() {
                 <div className="auth-mode-pill-tabs">
                   <button
                     type="button"
+                    disabled={busy || isLoading}
                     className={`auth-mode-pill-tab ${mode === 'login' ? 'active' : ''}`}
-                    onClick={() => { setMode('login'); setError(''); }}
+                    onClick={() => { setMode('login'); setError(''); setNotice(''); }}
                   >
                     {text('Đăng nhập', 'Sign in')}
                   </button>
                   <button
                     type="button"
+                    disabled={busy || isLoading}
                     className={`auth-mode-pill-tab ${mode === 'register' ? 'active' : ''}`}
-                    onClick={() => { setMode('register'); setError(''); }}
+                    onClick={() => { setMode('register'); setError(''); setNotice(''); }}
                   >
                     {text('Đăng ký', 'Sign up')}
                   </button>
@@ -136,6 +156,16 @@ export function AccountPanel() {
               {/* Title & Subtext */}
               <h2 className="auth-form-heading">{guestTitles[mode]}</h2>
               <p className="auth-form-subtext">{guestDescriptions[mode]}</p>
+              {email && ['verify-email', 'reset-password'].includes(mode) && (
+                <p className="auth-flow-recipient">{text('Email nhận mã: ', 'Code recipient: ')}{email.trim()}</p>
+              )}
+              {notice && <p role="status" className="auth-flow-notice">{notice}</p>}
+              {localMailbox && ['register', 'verify-email', 'resend-verification', 'forgot-password', 'reset-password'].includes(mode) && (
+                <p className="auth-mailbox-hint">
+                  {text('Môi trường local nhận thư tại Mailpit. ', 'Local emails are captured in Mailpit. ')}
+                  <a href={localMailbox} target="_blank" rel="noopener noreferrer">{text('Mở hộp thư local', 'Open local inbox')}</a>
+                </p>
+              )}
 
               {/* Error Alert */}
               {error && (
@@ -154,20 +184,27 @@ export function AccountPanel() {
                     showToast(text('Đăng nhập thành công!', 'Signed in successfully!'), 'success');
                     return;
                   }
+                  if (mode === 'register' && data.get('password') !== data.get('confirm_password')) {
+                    throw new Error(text('Mật khẩu xác nhận chưa khớp.', 'Passwords do not match.'));
+                  }
                   const body = mode === 'register'
                     ? { email: fieldValue(data, 'email'), password: String(data.get('password')), display_name: fieldValue(data, 'display_name') }
                     : mode === 'verify-email' ? { token: fieldValue(data, 'token') }
-                    : mode === 'forgot-password' ? { email: fieldValue(data, 'email') }
+                    : ['forgot-password', 'resend-verification'].includes(mode) ? { email: fieldValue(data, 'email') }
                     : { token: fieldValue(data, 'token'), password: String(data.get('password')) };
                   await apiClient.request('identity', `/api/v1/auth/${mode}`, { method: 'POST', body, authenticated: false, idempotencyKey: crypto.randomUUID() });
-                  showToast(
-                    mode === 'register'
-                      ? text('Đã đăng ký. Kiểm tra email để xác minh trước khi đăng nhập.', 'Account created. Check your email to verify it before signing in.')
-                      : mode === 'forgot-password'
-                      ? text('Nếu tài khoản tồn tại, hướng dẫn đặt lại mật khẩu sẽ được gửi qua email.', 'If the account exists, password reset instructions will be sent by email.')
-                      : text('Đã hoàn thành. Bạn có thể đăng nhập.', 'Done. You can now sign in.'),
-                    'success'
-                  );
+                  if (mode === 'register' || mode === 'resend-verification') {
+                    setNotice(text('Đã nhận yêu cầu. Nếu email đủ điều kiện, mã xác minh sẽ được gửi. Chưa nhận được thư? Kiểm tra thư rác hoặc yêu cầu gửi lại mã.', 'Request accepted. Eligible accounts will receive a verification code. Check spam or request another code if needed.'));
+                    setMode('verify-email');
+                  } else if (mode === 'forgot-password') {
+                    setNotice(text('Đã nhận yêu cầu. Nếu tài khoản đủ điều kiện, mã đặt lại mật khẩu sẽ được gửi qua email.', 'Request accepted. Eligible accounts will receive a password reset code.'));
+                    setMode('reset-password');
+                  } else {
+                    setNotice(mode === 'verify-email'
+                      ? text('Email đã được xác minh. Bạn có thể đăng nhập.', 'Email verified. You can now sign in.')
+                      : text('Đã đặt lại mật khẩu. Hãy đăng nhập bằng mật khẩu mới.', 'Password reset. Sign in with your new password.'));
+                    setMode('login');
+                  }
                 })}
               >
                 {mode === 'register' && (
@@ -178,7 +215,7 @@ export function AccountPanel() {
                         id="register-name"
                         name="display_name"
                         required
-                        maxLength={1024}
+                        maxLength={120}
                         className="auth-text-input"
                         placeholder="Nguyễn Văn A"
                       />
@@ -186,13 +223,15 @@ export function AccountPanel() {
                   </div>
                 )}
 
-                {['login', 'register', 'forgot-password'].includes(mode) && (
+                {['login', 'register', 'forgot-password', 'resend-verification'].includes(mode) && (
                   <div className="auth-field">
                     <label htmlFor="login-email" className="auth-field-label">Email</label>
                     <div className="auth-input-wrapper">
                       <input
                         id="login-email"
                         name="email"
+                        value={email}
+                        onChange={event => setEmail(event.target.value)}
                         type="email"
                         autoComplete="email"
                         required
@@ -211,6 +250,9 @@ export function AccountPanel() {
                       <input
                         id="auth-token"
                         name="token"
+                        autoComplete="one-time-code"
+                        autoCapitalize="none"
+                        spellCheck={false}
                         required
                         maxLength={1024}
                         className="auth-text-input"
@@ -228,7 +270,7 @@ export function AccountPanel() {
                         <button
                           type="button"
                           className="auth-forgot-link"
-                          onClick={() => { setMode('forgot-password'); setError(''); }}
+                          onClick={() => { setMode('forgot-password'); setError(''); setNotice(''); }}
                         >
                           {text('Quên mật khẩu?', 'Forgot password?')}
                         </button>
@@ -251,7 +293,6 @@ export function AccountPanel() {
                         className="auth-pw-toggle"
                         onClick={() => setShowPassword(prev => !prev)}
                         aria-label={showPassword ? text('Ẩn mật khẩu', 'Hide password') : text('Hiện mật khẩu', 'Show password')}
-                        tabIndex={-1}
                       >
                         <Icon name={showPassword ? 'eye' : 'lock'} size={16} />
                       </button>
@@ -259,8 +300,13 @@ export function AccountPanel() {
                   </div>
                 )}
 
+                {mode === 'register' && <div className="auth-field">
+                  <label htmlFor="confirm-password" className="auth-field-label">{text('Xác nhận mật khẩu', 'Confirm password')}</label>
+                  <input id="confirm-password" name="confirm_password" type={showPassword ? 'text' : 'password'} required minLength={12} maxLength={128} autoComplete="new-password" className="auth-text-input" />
+                </div>}
+
                 <Button type="submit" className="auth-submit-btn" disabled={busy || isLoading}>
-                  {mode === 'login' ? text('Đăng nhập', 'Sign in') : mode === 'register' ? text('Đăng ký', 'Sign up') : guestTitles[mode]}
+                  {busy ? text('Đang xử lý…', 'Processing…') : mode === 'login' ? text('Đăng nhập', 'Sign in') : mode === 'register' ? text('Đăng ký', 'Sign up') : guestTitles[mode]}
                 </Button>
               </form>
 
@@ -297,7 +343,8 @@ export function AccountPanel() {
                   <button
                     type="button"
                     key={v}
-                    onClick={() => { setMode(v); setError(''); }}
+                    disabled={busy || isLoading}
+                    onClick={() => { setMode(v); setError(''); setNotice(''); }}
                   >
                     {guestTitles[v]}
                   </button>

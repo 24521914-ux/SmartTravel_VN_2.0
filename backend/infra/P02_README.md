@@ -194,3 +194,30 @@ Identity keeps its signing keys in a persistent read-only application volume. A
 short-lived root container initializes mode 0600 files owned by UID 10001 from
 the mode 0600 host key. Repeated startup compares existing bytes and refuses
 a key mismatch; it does not silently replace or rotate persisted signing keys.
+## Gửi email xác minh đến Gmail
+
+P02 mặc định nhận thư trong Mailpit tại `http://localhost:59025`. Để gửi thư thật,
+chạy từ thư mục gốc repository trong terminal tương tác:
+
+```powershell
+python backend/infra/configure_mail.py --apply
+```
+
+Nhập địa chỉ tài khoản Google gửi thư và **Mật khẩu ứng dụng** khi được hỏi.
+Ô mật khẩu được ẩn. Công cụ kiểm STARTTLS/xác thực trước khi lưu vào
+`backend/infra/.local/p02/mail.json` đã được Git ignore, cập nhật cấu hình P02
+và khởi động lại riêng Identity. Thiết lập Vite khác được giữ nguyên;
+gợi ý Mailpit được ẩn khi dùng SMTP thật. Không nhập mật khẩu Google thông thường.
+Xem [hướng dẫn Mật khẩu ứng dụng của Google](https://support.google.com/accounts/answer/185833)
+và [SMTP Gmail](https://support.google.com/mail/answer/7104828).
+
+Kiểm lại xác thực SMTP mà không gửi thư: `python backend/infra/configure_mail.py --check`.
+Email thông báo nghiệp vụ tự động được tắt trong cấu hình Gmail local; email
+xác minh và đặt lại mật khẩu vẫn gửi theo yêu cầu của người dùng.
+
+Sau khi cấu hình, tải lại trang tài khoản → **Xác minh email** → **Gửi lại mã xác minh**.
+Mã mới có hiệu lực 24 giờ và thay thế mã cũ; hai lần gửi cách nhau ít nhất 60 giây.
+Sau khi xác minh, đăng nhập bằng mật khẩu đã tạo; nếu quên thì dùng luồng
+**Quên mật khẩu**. Không chạy các suite browser tạo tài khoản synthetic trên SMTP thật.
+Trạng thái và bằng chứng kiểm thử nằm trong [progress_be.md](../../progress_be.md)
+và [progress_fe.md](../../progress_fe.md).
