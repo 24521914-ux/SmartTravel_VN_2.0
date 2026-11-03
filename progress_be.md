@@ -1,6 +1,6 @@
 # Tiến độ Backend (BE) — SmartTravel VN
 
-Cập nhật: **02/11/2026 01:34** (GMT+7)
+Cập nhật: **03/11/2026 15:48** (GMT+7)
 
 Progress gồm **hai file**: file này (`progress_be.md`) cho backend, Gateway, hạ tầng và **trạng thái kết nối BE ↔ FE**; [`progress_fe.md`](progress_fe.md) cho frontend web. Mỗi file sắp theo phase P00 → P04. Yêu cầu chi tiết của từng phase vẫn nằm trong `plan/phases/`; file này chỉ ghi **đã làm tới đâu, kiểm bằng gì, làm gì tiếp**.
 
@@ -337,6 +337,17 @@ Yêu cầu: `plan/phases/P04-migration-release.md` · Trạng thái phase: **`NO
 
 Cần chuẩn bị trước P04: target triển khai và domain; credential provider email/bản đồ thật; dữ liệu có quyền sử dụng; người vận hành và người nhận cảnh báo; dự toán chi phí được người dùng duyệt.
 
+### 8.1. Chuẩn hóa khởi chạy bằng một lệnh `docker compose up` — 03/11/2026
+
+Mục tiêu: một `docker-compose.yml` tĩnh (DB, RabbitMQ, Mailpit, 6 service, Gateway, container init) + `.env.example`; script Python chỉ còn dùng cho kiểm thử, smoke, gate. Kế hoạch 6 bước do người dùng chấp thuận ngày 03/11/2026; chưa có task tương ứng trong `plan/`. Các vấn đề cấu trúc phát hiện khi lập kế hoạch: F-32…F-35.
+
+- [x] P04-CS-01: Dockerfile multi-stage cho 6 service + Gateway — **LOCAL_VERIFIED** · Người làm: Claude, nhánh `chore/docker-multistage-images`, commit `ba0d301` (checkout sạch). Target mới `source` build trong Docker bằng Maven Wrapper với context có tên `backend` (`backend/.dockerignore` chỉ cho `mvnw`, `.mvn`, `contracts`, `services`); target mặc định `runtime` giữ nguyên hành vi đóng gói JAR đã verify cho CI/gate/`build_service_image.py`. Bằng chứng: `docker build --build-context backend=backend --target source` 7/7 image PASS trên `ba0d301`, context gửi ≈5,7 MB; danh sách file trong JAR build bằng Docker trùng khớp JAR Maven local ở cả 6 service; target mặc định build lại được cho catalog và Gateway; image service chạy UID 10001 và có `curl`, image Gateway có `busybox wget` cho healthcheck. Java 21.0.10: `mvnw verify` 6 service 270 run / 0 failed / 0 errors / 172 skipped (chỉ unit/security; DB/broker skip), Gateway 22/0/0/0. Lần chạy Maven đầu FAIL do lỗi môi trường Windows "Unable to establish loopback connection" (mục 11), chạy lại với `JAVA_TOOL_OPTIONS=-Djdk.net.unixdomain.tmpdir=<thư mục ngắn>`. `test_p03_candidate.py` 7 run / 0 / 0 / 1 skipped (symlink trên Windows). Chưa chạy CI · Next: P04-CS-02.
+- [ ] P04-CS-02: Image `platform-tools` và container init `key-init`, `rabbit-init`, `mongo-init`, `sandbox-init` (tách logic từ `p02.py`) — **NOT_STARTED**.
+- [ ] P04-CS-03: Token service-to-service qua client-credentials của Identity, các service tự gia hạn, thay token tĩnh (F-32) — **NOT_STARTED** · Có đổi contract nội bộ; cần N1/N2 review.
+- [ ] P04-CS-04: `docker-compose.yml` tĩnh + `.env.example`, chuyển `secrets.json` → `.env` giữ volume cũ — **NOT_STARTED**.
+- [ ] P04-CS-05: Rút gọn `p02.py` thành wrapper, cập nhật script FE và workflow `p02-integration.yml` — **NOT_STARTED**.
+- [ ] P04-CS-06: Chạy lại toàn bộ kiểm thử P02/browser trên stack mới, có CI run ID — **NOT_STARTED**.
+
 ---
 
 ## 9. Kết nối BE ↔ FE
@@ -606,6 +617,10 @@ Bảng dưới đối chiếu 171 operation public/admin trong OpenAPI (không t
 | F-24 | Thấp | P03 | Đã cập nhật browser-nonai và thêm suite nghiệp vụ cho UI hiện tại; code FE cũ không còn dùng và clay-ui-check cũ chưa dọn. Không ảnh hưởng entry hiện tại `src/app/App.tsx` | N2 | PARTIAL |
 | F-25 | Trung bình | P00/P01 | OpenAPI `POST /api/v1/interactions/batch` khai báo `security: []` nhưng `SecurityConfiguration` Intelligence yêu cầu `intelligence:write`; chưa thống nhất contract/provider security. Khảo sát tĩnh tại `89eb8cb`, chưa thay code/quyền | N2 + N1 review contract | OPEN |
 | F-26 | Trung bình | P01/P03 (AI) | `BasicRepository.candidates` lấy 1.000 PUBLISHED theo UUID trước bộ lọc, có thể bỏ sót ứng viên hợp lệ; `persist` lấy `data_as_of` max trên candidate pool, chưa phản ánh freshness bảo thủ của kết quả thực dùng. Khảo sát tĩnh `BasicRepository.java:86,115` tại `89eb8cb`; cần regression >1.000 place và mixed freshness trong RC-G1-08/11, chưa có runtime evidence | N2 + N1 review | OPEN |
+| F-32 | Cao | P02/P04 | Token service-to-service do `p02.py` (`workload()`) tự ký bằng khóa riêng của Identity, TTL 24 giờ, nhúng tĩnh vào env/property (`intelligence.catalog-token`…); hết hạn phải chạy `p02.py renew`, script triển khai giữ khóa ký JWT. Khảo sát tĩnh `c7ea5ba` | N1 (Identity) + N2 | OPEN |
+| F-33 | Trung bình | P02/P03 | Mỗi request có token người dùng gọi Identity đồng bộ 2 lần (Gateway `PrincipalExchangeFilter` + `LiveSessionValidator` ở 5 service), không cache, fail-closed: Identity chậm/sập làm mọi chức năng cần đăng nhập ở cả 6 service lỗi. Khảo sát tĩnh `c7ea5ba` | N1 + N2 | OPEN |
+| F-34 | Trung bình | P04 | Không có compose triển khai hoàn chỉnh: `backend/platform/cloud/compose.yaml` thiếu Gateway và RabbitMQ; stack P02 chỉ dựng được qua compose sinh động bởi `p02.py`, port bind loopback. Xử lý theo mục 8.1 | N1 | OPEN |
+| F-35 | Thấp | P00 | Skeleton monolith thừa từ commit đầu: `backend/pom.xml` (artifact `demo`, JPA/Redis/Spring AI) và `backend/src/com/example/demo`, không thuộc service nào | N1 | OPEN |
 
 
 Đã đóng: F-31 (Trung bình, P03, Codex: smoke phụ thuộc candidate của suite trước; fixture độc lập `fc370e8`, CI cũ `41334918573` FAIL, CI mới `41336264376` PASS trên `2f2e702`; PR #23), F-30 (Trung bình, P03, Codex: header cố định che nút quay lại chi tiết; `7b04167`, filters lần đầu FAIL, sau sửa 22/0/0/0), F-18 (khôi phục màn và nối đủ API không AI, còn hai nhánh media tách F-14; `4e020e1`/`edb10cb`, A–G), F-22 (sửa body/path/form thật; `4e020e1`, A/B/C/E/G), F-23 (bỏ bản ghi giả, chỉ cập nhật sau API thành công; `4e020e1`, F/H và negative assertions các suite).
