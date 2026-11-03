@@ -1,0 +1,431 @@
+# SmartTravel integration stack: six services, API Gateway, databases, RabbitMQ, Mailpit.
+#
+#   cp .env.example .env            # or: py -3 backend/infra/p02.py env  (random secrets)
+#   docker compose up -d --build
+#
+# Gateway: http://127.0.0.1:58080  ·  Mailpit: http://127.0.0.1:59025  ·  RabbitMQ UI: http://127.0.0.1:56673
+# Project name, volume names and host ports match the former p02.py stack, so existing data is kept.
+# Every host port binds loopback only. Database host ports are opt-in:
+#   docker compose -f docker-compose.yml -f docker-compose.db-ports.yml up -d
+name: smarttravel-p02
+
+x-postgres: &postgres
+  healthcheck:
+    test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+    interval: 3s
+    timeout: 3s
+    retries: 40
+  restart: unless-stopped
+
+x-service-build: &service-build
+  target: source
+  additional_contexts:
+    backend: ./backend
+
+# Shared by the six Spring services; each service adds its own identity and credentials.
+x-service-env: &service-env
+  SPRING_PROFILES_ACTIVE: p02-local
+  JWT_ISSUER: http://identity:8101
+  JWT_JWKS_URI: http://identity:8101/.well-known/jwks.json
+  BROKER_HOST: identity-broker
+  BROKER_PORT: '5672'
+  BROKER_VHOST: smarttravel
+  IDENTITY_SESSION_URI: http://identity:8101/internal/v1/security/session
+  GATEWAY_EXCHANGE_SECRET: ${GATEWAY_EXCHANGE_SECRET:?required}
+  CATALOG_BASE_URL: http://catalog:8102
+  CATALOG_URL: http://catalog:8102
+  INGESTION_URL: http://ingestion:8105
+  IDENTITY_URL: http://identity:8101
+  COMMUNITY_URL: http://community:8103
+  TRIP_URL: http://trip:8104
+  TRANSPORT_ENABLED: 'true'
+  WORKLOAD_TOKEN_URI: http://identity:8101/internal/v1/security/workload-token
+  SPRING_APPLICATION_JSON: >-
+    {"catalog.base-url":"http://catalog:8102","ingestion.base-url":"http://ingestion:8105",
+    "intelligence.community-url":"http://community:8103","intelligence.identity-url":"http://identity:8101",
+    "intelligence.trip-url":"http://trip:8104","catalog.cursor-key":"${CATALOG_CURSOR_KEY:?required}"}
+
+x-service: &service
+  restart: unless-stopped
+  depends_on: &service-depends
+    rabbit-init: {condition: service_completed_successfully}
+    identity-mail: {condition: service_started}
+
+services:
+  # ---- Platform dependencies -------------------------------------------------------------
+  identity-broker:
+    image: rabbitmq:4.1-management-alpine
+    environment:
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: +S 2:2
+      RABBITMQ_CTL_ERL_ARGS: +S 2:2
+      RABBITMQ_DEFAULT_USER: platform_admin
+      RABBITMQ_DEFAULT_PASS: ${BROKER_ADMIN_PASSWORD:?required}
+    ports: [127.0.0.1:56672:5672, 127.0.0.1:56673:15672]
+    volumes: [identity-broker-data:/var/lib/rabbitmq]
+    healthcheck:
+      test: [CMD-SHELL, su-exec rabbitmq rabbitmq-diagnostics -q check_running && su-exec rabbitmq rabbitmq-diagnostics -q check_port_connectivity]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+    restart: unless-stopped
+
+  identity-mail:
+    image: axllent/mailpit:v1.27
+    ports: [127.0.0.1:52025:1025, 127.0.0.1:59025:8025]
+    restart: unless-stopped
+
+  identity-db:
+    <<: *postgres
+    image: postgres:16-alpine
+    volumes: [identity-data:/var/lib/postgresql/data, ./backend/infra/postgres/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro]
+    environment: {SERVICE: identity, POSTGRES_DB: identity_db, POSTGRES_USER: identity_admin,
+      POSTGRES_PASSWORD: '${IDENTITY_ADMIN_PASSWORD:?required}', MIGRATION_PASSWORD: '${IDENTITY_MIGRATION_PASSWORD:?required}',
+      RUNTIME_PASSWORD: '${IDENTITY_RUNTIME_PASSWORD:?required}'}
+
+  catalog-db:
+    <<: *postgres
+    image: postgis/postgis:16-3.5
+    volumes: [catalog-data:/var/lib/postgresql/data, ./backend/infra/postgres/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro]
+    environment: {SERVICE: catalog, POSTGRES_DB: catalog_db, POSTGRES_USER: catalog_admin,
+      POSTGRES_PASSWORD: '${CATALOG_ADMIN_PASSWORD:?required}', MIGRATION_PASSWORD: '${CATALOG_MIGRATION_PASSWORD:?required}',
+      RUNTIME_PASSWORD: '${CATALOG_RUNTIME_PASSWORD:?required}'}
+
+  trip-db:
+    <<: *postgres
+    image: postgres:16-alpine
+    volumes: [trip-data:/var/lib/postgresql/data, ./backend/infra/postgres/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro]
+    environment: {SERVICE: trip, POSTGRES_DB: trip_db, POSTGRES_USER: trip_admin,
+      POSTGRES_PASSWORD: '${TRIP_ADMIN_PASSWORD:?required}', MIGRATION_PASSWORD: '${TRIP_MIGRATION_PASSWORD:?required}',
+      RUNTIME_PASSWORD: '${TRIP_RUNTIME_PASSWORD:?required}'}
+
+  ingestion-db:
+    <<: *postgres
+    image: postgres:16-alpine
+    volumes: [ingestion-data:/var/lib/postgresql/data, ./backend/infra/postgres/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro]
+    environment: {SERVICE: ingestion, POSTGRES_DB: ingestion_db, POSTGRES_USER: ingestion_admin,
+      POSTGRES_PASSWORD: '${INGESTION_ADMIN_PASSWORD:?required}', MIGRATION_PASSWORD: '${INGESTION_MIGRATION_PASSWORD:?required}',
+      RUNTIME_PASSWORD: '${INGESTION_RUNTIME_PASSWORD:?required}'}
+
+  intelligence-db:
+    <<: *postgres
+    image: pgvector/pgvector:pg16
+    volumes: [intelligence-data:/var/lib/postgresql/data, ./backend/infra/postgres/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro]
+    environment: {SERVICE: intelligence, POSTGRES_DB: intelligence_db, POSTGRES_USER: intelligence_admin,
+      POSTGRES_PASSWORD: '${INTELLIGENCE_ADMIN_PASSWORD:?required}', MIGRATION_PASSWORD: '${INTELLIGENCE_MIGRATION_PASSWORD:?required}',
+      RUNTIME_PASSWORD: '${INTELLIGENCE_RUNTIME_PASSWORD:?required}'}
+
+  community-keygen:
+    image: mongo:8.0
+    entrypoint: [bash, -ec]
+    command: ['if [ ! -s /keys/replica.key ]; then openssl rand -base64 756 > /keys/replica.key; fi; chmod 400 /keys/replica.key; chown 999:999 /keys/replica.key']
+    volumes: [community-key:/keys]
+
+  community-db:
+    image: mongo:8.0
+    command: [mongod, --replSet, rs0, --bind_ip_all, --keyFile, /keys/replica.key]
+    depends_on: {community-keygen: {condition: service_completed_successfully}}
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: community_admin
+      MONGO_INITDB_ROOT_PASSWORD: ${COMMUNITY_ADMIN_PASSWORD:?required}
+    volumes: [community-data:/data/db, community-key:/keys:ro]
+    healthcheck:
+      test: [CMD, mongosh, --quiet, --eval, 'db.adminCommand({ping:1})']
+      interval: 3s
+      timeout: 5s
+      retries: 40
+    restart: unless-stopped
+
+  # ---- One-shot init jobs (idempotent; safe on every `up`) ---------------------------------
+  # Identity signing key; an existing key set is kept, never replaced.
+  key-init:
+    build: {context: ./backend/platform/init}
+    image: smarttravel-platform-tools:local
+    user: '0:0'
+    command: [python, identity_keys.py]
+    volumes: [identity-signing-keys:/keys]
+
+  # Vhost, per-service users/permissions, exchanges and bindings from contracts/registry.json.
+  rabbit-init:
+    build: {context: ./backend/platform/init}
+    image: smarttravel-platform-tools:local
+    depends_on:
+      key-init: {condition: service_completed_successfully}
+      identity-broker: {condition: service_healthy}
+    environment:
+      BROKER_API_URL: http://identity-broker:15672
+      BROKER_ADMIN_PASSWORD: ${BROKER_ADMIN_PASSWORD:?required}
+      IDENTITY_BROKER_PASSWORD: ${IDENTITY_BROKER_PASSWORD:?required}
+      CATALOG_BROKER_PASSWORD: ${CATALOG_BROKER_PASSWORD:?required}
+      COMMUNITY_BROKER_PASSWORD: ${COMMUNITY_BROKER_PASSWORD:?required}
+      TRIP_BROKER_PASSWORD: ${TRIP_BROKER_PASSWORD:?required}
+      INGESTION_BROKER_PASSWORD: ${INGESTION_BROKER_PASSWORD:?required}
+      INTELLIGENCE_BROKER_PASSWORD: ${INTELLIGENCE_BROKER_PASSWORD:?required}
+      CATALOG_BROKER_OPERATOR_PASSWORD: ${CATALOG_BROKER_OPERATOR_PASSWORD:?required}
+    volumes: [./backend/contracts/registry.json:/contracts/registry.json:ro]
+
+  # Replica set, least-privilege users and checksummed schema migrations.
+  mongo-init:
+    image: mongo:8.0
+    depends_on: {community-db: {condition: service_healthy}}
+    environment:
+      MONGO_INITDB_ROOT_PASSWORD: ${COMMUNITY_ADMIN_PASSWORD:?required}
+      COMMUNITY_MIGRATION_PASSWORD: ${COMMUNITY_MIGRATION_PASSWORD:?required}
+      COMMUNITY_RUNTIME_PASSWORD: ${COMMUNITY_RUNTIME_PASSWORD:?required}
+    entrypoint: [bash, -ec]
+    command: ['for s in bootstrap migrate; do mongosh "mongodb://community-db:27017/?directConnection=true" --quiet /p01/$$s.js; done']
+    volumes:
+      - ./backend/infra/mongo:/p01:ro
+      - ./backend/services/community-service/src/main/resources/db/migration:/migrations:ro
+
+  # Sandbox-only boundary for the demo province; runs after Catalog has migrated its schema.
+  sandbox-init:
+    image: postgis/postgis:16-3.5
+    depends_on: {catalog: {condition: service_healthy}}
+    environment: {PGPASSWORD: '${CATALOG_ADMIN_PASSWORD:?required}'}
+    entrypoint: [psql, -h, catalog-db, -U, catalog_admin, -d, catalog_db, -v, ON_ERROR_STOP=1, -f, /init/sandbox_geography.sql]
+    volumes: [./backend/platform/init/sandbox_geography.sql:/init/sandbox_geography.sql:ro]
+
+  source-sandbox:
+    image: python:3.12-alpine
+    user: '10001:10001'
+    command: [python, /provider/source_sandbox.py]
+    volumes: [./backend/infra/providers/source_sandbox.py:/provider/source_sandbox.py:ro]
+    restart: unless-stopped
+
+  # ---- Application services ---------------------------------------------------------------
+  identity:
+    <<: *service
+    build: {<<: *service-build, context: ./backend/services/identity-service}
+    image: smarttravel-identity:p02-local
+    depends_on:
+      <<: *service-depends
+      identity-db: {condition: service_healthy}
+      key-init: {condition: service_completed_successfully}
+    environment:
+      <<: *service-env
+      PORT: '8101'
+      JWT_AUDIENCE: identity
+      BROKER_USERNAME: identity_runtime
+      BROKER_PASSWORD: ${IDENTITY_BROKER_PASSWORD:?required}
+      # Catalog and Community read the service-scoped name for spring.rabbitmq.password.
+      IDENTITY_BROKER_PASSWORD: ${IDENTITY_BROKER_PASSWORD:?required}
+      IDENTITY_TRANSPORT_ENABLED: 'true'
+      DB_URL: jdbc:postgresql://identity-db:5432/identity_db
+      DB_USER: identity_runtime
+      DB_PASSWORD: ${IDENTITY_RUNTIME_PASSWORD:?required}
+      DB_MIGRATION_USER: identity_migrator
+      DB_MIGRATION_PASSWORD: ${IDENTITY_MIGRATION_PASSWORD:?required}
+      IDENTITY_KEYS_FILE: /run/identity/keys.json
+      IDENTITY_ACTIVE_KID: p02-identity-1
+      IDENTITY_MAIL_KEY: ${IDENTITY_MAIL_KEY:?required}
+      MAIL_HOST: identity-mail
+      MAIL_PORT: '1025'
+      IDENTITY_NOTIFICATION_EMAIL_ENABLED: 'true'
+      IDENTITY_FIXTURES_ENABLED: 'true'
+      IDENTITY_FIXTURE_PASSWORD: ${IDENTITY_FIXTURE_PASSWORD:?required}
+      CATALOG_WORKLOAD_SECRET: ${CATALOG_WORKLOAD_SECRET:?required}
+      COMMUNITY_WORKLOAD_SECRET: ${COMMUNITY_WORKLOAD_SECRET:?required}
+      TRIP_WORKLOAD_SECRET: ${TRIP_WORKLOAD_SECRET:?required}
+      INGESTION_WORKLOAD_SECRET: ${INGESTION_WORKLOAD_SECRET:?required}
+      INTELLIGENCE_WORKLOAD_SECRET: ${INTELLIGENCE_WORKLOAD_SECRET:?required}
+    ports: [127.0.0.1:58101:8101]
+    volumes: [identity-objects:/app/.local, identity-signing-keys:/run/identity:ro]
+    healthcheck: &ready
+      test: [CMD-SHELL, 'curl -fsS "http://127.0.0.1:$$PORT/actuator/health/readiness" >/dev/null']
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 20s
+
+  catalog:
+    <<: *service
+    build: {<<: *service-build, context: ./backend/services/catalog-service}
+    image: smarttravel-catalog:p02-local
+    depends_on:
+      <<: *service-depends
+      catalog-db: {condition: service_healthy}
+      identity: {condition: service_healthy}
+    environment:
+      <<: *service-env
+      PORT: '8102'
+      JWT_AUDIENCE: catalog
+      BROKER_USERNAME: catalog_runtime
+      BROKER_PASSWORD: ${CATALOG_BROKER_PASSWORD:?required}
+      # Catalog and Community read the service-scoped name for spring.rabbitmq.password.
+      CATALOG_BROKER_PASSWORD: ${CATALOG_BROKER_PASSWORD:?required}
+      CATALOG_TRANSPORT_ENABLED: 'true'
+      DB_URL: jdbc:postgresql://catalog-db:5432/catalog_db
+      DB_USER: catalog_runtime
+      DB_PASSWORD: ${CATALOG_RUNTIME_PASSWORD:?required}
+      DB_MIGRATION_USER: catalog_migrator
+      DB_MIGRATION_PASSWORD: ${CATALOG_MIGRATION_PASSWORD:?required}
+      CATALOG_CURSOR_KEY: ${CATALOG_CURSOR_KEY:?required}
+      WORKLOAD_CLIENT_ID: catalog
+      WORKLOAD_CLIENT_SECRET: ${CATALOG_WORKLOAD_SECRET:?required}
+    ports: [127.0.0.1:58102:8102]
+    volumes: [catalog-objects:/app/.local]
+    healthcheck: *ready
+
+  community:
+    <<: *service
+    build: {<<: *service-build, context: ./backend/services/community-service}
+    image: smarttravel-community:p02-local
+    depends_on:
+      <<: *service-depends
+      mongo-init: {condition: service_completed_successfully}
+      identity: {condition: service_healthy}
+    environment:
+      <<: *service-env
+      PORT: '8103'
+      JWT_AUDIENCE: community
+      BROKER_USERNAME: community_runtime
+      BROKER_PASSWORD: ${COMMUNITY_BROKER_PASSWORD:?required}
+      # Catalog and Community read the service-scoped name for spring.rabbitmq.password.
+      COMMUNITY_BROKER_PASSWORD: ${COMMUNITY_BROKER_PASSWORD:?required}
+      COMMUNITY_TRANSPORT_ENABLED: 'true'
+      MONGODB_URI: mongodb://community_runtime:${COMMUNITY_RUNTIME_PASSWORD:?required}@community-db:27017/community_db?authSource=community_db&replicaSet=rs0
+      WORKLOAD_CLIENT_ID: community
+      WORKLOAD_CLIENT_SECRET: ${COMMUNITY_WORKLOAD_SECRET:?required}
+    ports: [127.0.0.1:58103:8103]
+    volumes: [community-objects:/app/.local]
+    healthcheck: *ready
+
+  trip:
+    <<: *service
+    build: {<<: *service-build, context: ./backend/services/trip-service}
+    image: smarttravel-trip:p02-local
+    depends_on:
+      <<: *service-depends
+      trip-db: {condition: service_healthy}
+      identity: {condition: service_healthy}
+    environment:
+      <<: *service-env
+      PORT: '8104'
+      JWT_AUDIENCE: trip
+      BROKER_USERNAME: trip_runtime
+      BROKER_PASSWORD: ${TRIP_BROKER_PASSWORD:?required}
+      # Catalog and Community read the service-scoped name for spring.rabbitmq.password.
+      TRIP_BROKER_PASSWORD: ${TRIP_BROKER_PASSWORD:?required}
+      TRIP_TRANSPORT_ENABLED: 'true'
+      DB_URL: jdbc:postgresql://trip-db:5432/trip_db
+      DB_USER: trip_runtime
+      DB_PASSWORD: ${TRIP_RUNTIME_PASSWORD:?required}
+      DB_MIGRATION_USER: trip_migrator
+      DB_MIGRATION_PASSWORD: ${TRIP_MIGRATION_PASSWORD:?required}
+      WORKLOAD_CLIENT_ID: trip
+      WORKLOAD_CLIENT_SECRET: ${TRIP_WORKLOAD_SECRET:?required}
+    ports: [127.0.0.1:58104:8104]
+    volumes: [trip-objects:/app/.local]
+    healthcheck: *ready
+
+  ingestion:
+    <<: *service
+    build: {<<: *service-build, context: ./backend/services/ingestion-service}
+    image: smarttravel-ingestion:p02-local
+    depends_on:
+      <<: *service-depends
+      ingestion-db: {condition: service_healthy}
+      identity: {condition: service_healthy}
+      source-sandbox: {condition: service_started}
+    environment:
+      <<: *service-env
+      PORT: '8105'
+      JWT_AUDIENCE: ingestion
+      BROKER_USERNAME: ingestion_runtime
+      BROKER_PASSWORD: ${INGESTION_BROKER_PASSWORD:?required}
+      # Catalog and Community read the service-scoped name for spring.rabbitmq.password.
+      INGESTION_BROKER_PASSWORD: ${INGESTION_BROKER_PASSWORD:?required}
+      INGESTION_TRANSPORT_ENABLED: 'true'
+      DB_URL: jdbc:postgresql://ingestion-db:5432/ingestion_db
+      DB_USER: ingestion_runtime
+      DB_PASSWORD: ${INGESTION_RUNTIME_PASSWORD:?required}
+      DB_MIGRATION_USER: ingestion_migrator
+      DB_MIGRATION_PASSWORD: ${INGESTION_MIGRATION_PASSWORD:?required}
+      WORKLOAD_CLIENT_ID: ingestion
+      WORKLOAD_CLIENT_SECRET: ${INGESTION_WORKLOAD_SECRET:?required}
+      WORKER_ENABLED: 'true'
+      CONNECTOR_ALLOWED_HOSTS: source-sandbox
+    ports: [127.0.0.1:58105:8105]
+    volumes: [ingestion-objects:/app/.local]
+    healthcheck: *ready
+
+  intelligence:
+    <<: *service
+    build: {<<: *service-build, context: ./backend/services/intelligence-service}
+    image: smarttravel-intelligence:p02-local
+    depends_on:
+      <<: *service-depends
+      intelligence-db: {condition: service_healthy}
+      identity: {condition: service_healthy}
+    environment:
+      <<: *service-env
+      PORT: '8106'
+      JWT_AUDIENCE: intelligence
+      BROKER_USERNAME: intelligence_runtime
+      BROKER_PASSWORD: ${INTELLIGENCE_BROKER_PASSWORD:?required}
+      # Catalog and Community read the service-scoped name for spring.rabbitmq.password.
+      INTELLIGENCE_BROKER_PASSWORD: ${INTELLIGENCE_BROKER_PASSWORD:?required}
+      INTELLIGENCE_TRANSPORT_ENABLED: 'true'
+      DB_URL: jdbc:postgresql://intelligence-db:5432/intelligence_db
+      DB_USER: intelligence_runtime
+      DB_PASSWORD: ${INTELLIGENCE_RUNTIME_PASSWORD:?required}
+      DB_MIGRATION_USER: intelligence_migrator
+      DB_MIGRATION_PASSWORD: ${INTELLIGENCE_MIGRATION_PASSWORD:?required}
+      WORKLOAD_CLIENT_ID: intelligence
+      WORKLOAD_CLIENT_SECRET: ${INTELLIGENCE_WORKLOAD_SECRET:?required}
+    ports: [127.0.0.1:58106:8106]
+    volumes: [intelligence-objects:/app/artifacts]
+    healthcheck: *ready
+
+  gateway:
+    build: {<<: *service-build, context: ./backend/platform/api-gateway}
+    image: smarttravel-api-gateway:p02-local
+    depends_on:
+      identity: {condition: service_healthy}
+      catalog: {condition: service_healthy}
+      community: {condition: service_healthy}
+      trip: {condition: service_healthy}
+      ingestion: {condition: service_healthy}
+      intelligence: {condition: service_healthy}
+    environment:
+      SPRING_PROFILES_ACTIVE: p02-local
+      PORT: '8080'
+      JWT_ISSUER: http://identity:8101
+      JWT_JWKS_URI: http://identity:8101/.well-known/jwks.json
+      GATEWAY_EXCHANGE_SECRET: ${GATEWAY_EXCHANGE_SECRET:?required}
+      GATEWAY_IDENTITY_EXCHANGE_URI: http://identity:8101/internal/v1/security/exchange
+      CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,http://localhost:58080,http://127.0.0.1:58080
+      # AI routes stay deferred unless enabled; p02.py smoke enables them to exercise the backend.
+      AI_ENABLED: ${AI_ENABLED:-false}
+      IDENTITY_URL: http://identity:8101
+      CATALOG_URL: http://catalog:8102
+      COMMUNITY_URL: http://community:8103
+      TRIP_URL: http://trip:8104
+      INGESTION_URL: http://ingestion:8105
+      INTELLIGENCE_URL: http://intelligence:8106
+    ports: [127.0.0.1:58080:8080]
+    healthcheck:
+      test: [CMD-SHELL, 'busybox wget -q -O /dev/null http://127.0.0.1:8080/actuator/health || exit 1']
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 15s
+    restart: unless-stopped
+
+volumes:
+  identity-broker-data:
+  identity-data:
+  catalog-data:
+  trip-data:
+  ingestion-data:
+  intelligence-data:
+  community-data:
+  community-key:
+  identity-objects:
+  catalog-objects:
+  community-objects:
+  trip-objects:
+  ingestion-objects:
+  intelligence-objects:
+  identity-signing-keys:
+    name: smarttravel-p02_identity-signing-keys

@@ -6,7 +6,28 @@ It never reads another service's database to implement a feature.
 
 ## Run
 
-Requirements: Java 21, Docker, Python with `requirements-validation.txt` and
+Quick start (Docker only; images compile from source inside Docker):
+
+```text
+cp .env.example .env            # public local-only values; or: python backend/infra/p02.py env
+docker compose up -d --build
+```
+
+The stack is the static [`docker-compose.yml`](../../docker-compose.yml) at the repository
+root: databases, RabbitMQ, Mailpit, six services, Gateway and one-shot init jobs
+(`key-init`, `rabbit-init`, `mongo-init`, `sandbox-init`, see
+[`backend/platform/README.md`](../platform/README.md)). Services start only after their
+init jobs exit 0 (`depends_on: service_completed_successfully`). Database host ports
+are opt-in: add `-f docker-compose.db-ports.yml` (or `P02_DB_PORTS=1` for `p02.py`);
+on Windows they may fall inside an excluded port range. Gateway AI routes stay off
+unless `AI_ENABLED=true`; `p02.py` turns them on so smoke covers the recommendation backend.
+
+`p02.py` is the verification wrapper around that file: it keeps `.env` and ignored
+`.local/p02/secrets.json` identical (it refuses to continue if they disagree), aligns the
+harness signing key with the Identity key volume, builds images from verified JARs,
+checks init jobs and readiness, and runs smoke, monitor and manifest.
+
+Verified flow, requirements: Java 21, Docker, Python with `requirements-validation.txt` and
 PyYAML, Node dependencies via `npm --prefix frontend ci`.
 Build/verify service JARs and Gateway first (Identity has `--isolated-source`
 when an existing Windows process locks its checkout JAR):
@@ -36,8 +57,9 @@ service ports are 58101–58106. The frontend dev proxy targets this Gateway;
 is on port 56673. All host bindings are loopback. This environment is local
 integration, not production.
 
-Credentials, private keys, generated compose and reports are in ignored
-`backend/infra/.local/p02/`. The four opt-in synthetic accounts are
+Credentials, private keys and reports are in ignored `backend/infra/.local/p02/`
+and the ignored root `.env`. The generated `.local/p02/compose.yaml` is only used by
+P03 isolated environments; `test_p02_compose.py` keeps it equivalent to the static file. The four opt-in synthetic accounts are
 `fixture-u1@example.invalid`, `fixture-u2@example.invalid`,
 `fixture-admin@example.invalid`, `fixture-business@example.invalid`;
 their random password is `IDENTITY_FIXTURE_PASSWORD` in ignored `secrets.json`.
@@ -66,12 +88,12 @@ preferences snapshot; Catalog `/internal/v1/places/features-snapshot`; Intellige
 candidate schemas and checksums stay frozen. Workload tokens carry `client_id`,
 `SERVICE` role, no user `sid`, one destination audience and the required scopes.
 
-The platform provisions per-caller/per-destination credentials with the real
-persisted Identity key. Local tokens expire within 24 hours and are stored only
-in ignored files. Run `python backend/infra/p02.py renew` before expiry; this
-recreates consumers with new credentials and checks readiness. `monitor` alerts
-within an hour of expiration. Production must use an automated credential issuer
-and its own HTTPS configuration; P02 local provisioning is explicit.
+Services obtain workload tokens from Identity `POST /internal/v1/security/workload-token`
+(client credentials, `<SERVICE>_WORKLOAD_SECRET`), cache them and renew them before the
+10-minute expiry; nothing needs restarting. Only test harnesses (smoke, faults, restore)
+still sign their own tokens with the local key; `p02.py renew` resets that cache and
+`monitor` alerts within an hour of its expiry. Production must use its own HTTPS issuer
+URI (`WORKLOAD_TOKEN_URI`) and secrets.
 
 ## Event connections and recovery
 

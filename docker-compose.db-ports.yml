@@ -1,0 +1,11 @@
+# Optional loopback host ports for database diagnostics (psql/mongosh from the host).
+# Not part of the default stack: on Windows these ports can fall inside a dynamically
+# excluded range (netsh interface ipv4 show excludedportrange protocol=tcp) and block `up` (F-37).
+#   docker compose -f docker-compose.yml -f docker-compose.db-ports.yml up -d
+services:
+  identity-db: {ports: ['127.0.0.1:${IDENTITY_DB_HOST_PORT:-57434}:5432']}
+  catalog-db: {ports: ['127.0.0.1:${CATALOG_DB_HOST_PORT:-57432}:5432']}
+  trip-db: {ports: ['127.0.0.1:${TRIP_DB_HOST_PORT:-57435}:5432']}
+  ingestion-db: {ports: ['127.0.0.1:${INGESTION_DB_HOST_PORT:-57436}:5432']}
+  intelligence-db: {ports: ['127.0.0.1:${INTELLIGENCE_DB_HOST_PORT:-57437}:5432']}
+  community-db: {ports: ['127.0.0.1:${COMMUNITY_DB_HOST_PORT:-58117}:27017']}

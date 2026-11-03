@@ -10,6 +10,8 @@ import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+# Static integration stack at the repository root (the real .env stays excluded).
+ROOT_STACK_FILES = {'docker-compose.yml', 'docker-compose.db-ports.yml', '.env.example'}
 _IGNORED_DIRS = {'.git', '.local', '__pycache__', 'target', 'node_modules',
                  'dist', 'build', '.vite', 'coverage', '.pytest_cache'}
 _SECRET_SUFFIXES = {'.pem', '.key', '.p12', '.pfx', '.jks', '.keystore'}
@@ -21,7 +23,8 @@ _CONFIG_SUFFIXES = {'.py', '.java', '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx'
 
 def _excluded(path):
     name = path.name.lower()
-    return (name == '.env' or name.startswith('.env.')
+    # .env.example holds public placeholders only; real .env files stay excluded.
+    return (name == '.env' or name.startswith('.env.') and name != '.env.example'
             or name in {'credentials', 'credentials.json', 'secrets.json'}
             or path.suffix.lower() in _SECRET_SUFFIXES | _OUTPUT_SUFFIXES)
 
@@ -45,6 +48,8 @@ def _selected(path):
     if path.as_posix() in {'backend/mvnw', 'backend/mvnw.cmd', 'backend/pom.xml', 'backend/.dockerignore'}:
         return True
     if path.as_posix() == 'docs/operations/p03-non-ai-runbook.md':
+        return True
+    if path.as_posix() in ROOT_STACK_FILES:
         return True
     if parts[:2] == ('.github', 'workflows'):
         return path.suffix.lower() in {'.yml', '.yaml'}
@@ -81,6 +86,7 @@ def candidate_manifest(root=ROOT):
              'backend/infra', 'backend/.mvn', 'frontend', '.github/workflows', 'plan']
     candidates = [root / 'backend' / name for name in ('mvnw', 'mvnw.cmd', 'pom.xml', '.dockerignore')]
     candidates.append(root / 'docs/operations/p03-non-ai-runbook.md')
+    candidates.extend(root / name for name in sorted(ROOT_STACK_FILES))
     for relative in roots:
         base = root / relative
         if base.is_symlink():
