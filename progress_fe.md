@@ -1,6 +1,6 @@
 # Tiến độ Frontend (FE) — SmartTravel VN
 
-Cập nhật: **03/11/2026 13:01** (GMT+7)
+Cập nhật: **03/11/2026 13:18** (GMT+7)
 
 Progress gồm **hai file**: file này (`progress_fe.md`) cho frontend web; [`progress_be.md`](progress_be.md) cho backend và **trạng thái kết nối BE ↔ FE từng API** (mục 9 của file đó). Quy ước trạng thái, tiêu chuẩn PASS và cách cập nhật dùng chung: `progress_be.md` mục 2.
 
@@ -33,7 +33,7 @@ Phạm vi FE hiện tại: **chỉ web** (React). Ứng dụng di động chưa 
 | **P03** Kiểm thử + giao diện mới | Responsive, bàn phím, loading/error/empty | `PARTIAL` | Browser thật 9 nhóm +36 responsive và suite nghiệp vụ PASS | CI mới, LCP (F-21), WCAG đầy đủ |
 | **P04** Triển khai | Build production, hosting, same-origin với Gateway | `NOT_STARTED` | — | Chờ gate P03 |
 
-**Kết nối BE ↔ FE:** 158 ✅ · 2 🟡 · 0 ❌ · 0 ⚪ · 14 ⏸️ · 1 ➖. Danh sách và bằng chứng từng API chỉ ghi tại [progress_be.md mục 9](progress_be.md#9-kết-nối-be--fe).
+**Kết nối BE ↔ FE:** 159 ✅ · 2 🟡 · 0 ❌ · 0 ⚪ · 14 ⏸️ · 1 ➖. Danh sách và bằng chứng từng API chỉ ghi tại [progress_be.md mục 9](progress_be.md#9-kết-nối-be--fe).
 
 **Tóm tắt một dòng:** FE hiện tại đã gọi Gateway thật, lưu/đọc lại dữ liệu P02 và hiện lỗi đúng; đã bỏ fallback ghi giả, sửa contract, bổ sung nghiệp vụ user/business/admin/trip/collection/ingestion. Chưa có dữ liệu du lịch production có giấy phép hoặc scanner thật theo xác nhận người dùng 30/10/2026; hai nhánh ảnh chưa xác nhận. AI vẫn hoãn; không cấp gate.
 
@@ -97,7 +97,7 @@ Bằng chứng theo màn: các suite A–I và revision tại [progress_be.md m�
 - [x] FE-P02-02: Pending ack khác thành công cuối — **LOCAL_VERIFIED** (dirty) · B verification/claim pending, C contribution → APPLIED/import decision → SUCCEEDED qua broker, G retry/cancel đọc lại CANCELLED; `4e020e1`/`edb10cb`.
 - [ ] FE-P02-03: Nối đủ API không AI — **PARTIAL** · Toàn bộ đã nối và được quan sát, còn hai nhánh media chưa kiểm được với scanner thật (F-14); số lượng/bằng chứng chỉ tại BE mục9. Không có màn còn thiếu trong scope API hiện tại.
 - [x] FE-P02-04: Bỏ fallback ghi giả, sửa body/path theo contract — **LOCAL_VERIFIED** (dirty) · A/B/C/E/G PASS qua Gateway thật, F/H và negative assertions giữ dữ liệu/form khi lỗi, không toast thành công giả; đóng F-22/F-23, source `4e020e1`, scripts `edb10cb`.
-- [ ] FE-P02-AUTH-01: Hoàn thiện luồng tài khoản — **IN_PROGRESS** · Người làm: Codex · Nhánh: `fix/identity-registration-verification` · Tự chuyển đăng ký → xác minh → đăng nhập, gửi lại mã, lỗi và hộp thư local; kiểm browser/Gateway tiếp theo (F-34, xem `progress_be.md` mục 9/10).
+- [x] FE-P02-AUTH-01: Hoàn thiện giao diện luồng tài khoản — **LOCAL_VERIFIED** (dirty) · Codex, nhánh `fix/identity-registration-verification`, source `2f21c75`, HEAD khi chạy `857faf6` dirty. Đăng ký → xác minh → đăng nhập; gửi lại mã; confirm mật khẩu; lỗi pending/mã cũ/sai mật khẩu; quên → đặt lại → đăng nhập; hướng dẫn Mailpit chỉ ở dev và ẩn khi cấu hình SMTP thật. `test:browser:auth-recovery` 13/0/0/0; `test:browser:account` 8 nhóm/32 request; `test:browser:auth-failure` 1 tình huống, tất cả 0 page error. Chromium, Node 24, Gateway/PostgreSQL/Mailpit thật; viewport 375/768/1440 không tràn, đã xem ảnh. Build PASS 4637 modules; client 15/0/0/0. Gmail thật còn chờ cấu hình người dùng; trạng thái kết nối/bằng chứng tại BE mục 9/O/P, F-34; chưa CI/gate.
 
 ### 6.1. Dữ liệu mẫu để test thủ công
 
@@ -220,6 +220,7 @@ Chạy từ thư mục gốc repo; Node 24.
 |---|---|---|
 | 03/11/2026 00:52 | Trang Chuyến đi khi chưa đăng nhập thành bố cục hai cột tích hợp: CTA đăng nhập bên trái, ảnh Vịnh Hạ Long và nội dung cảm hứng bên phải; VI/EN, theme token, mobile xếp dọc. Build PASS; chưa kiểm browser trực quan | Nhánh feature/explore-ui-demo-content, HEAD ca83db7 (checkout dirty) |
 | 03/11/2026 00:46 | Đổi bộ lọc địa lý theo thứ tự tỉnh/thành → khu vực du lịch con → địa điểm; khóa khu vực trước khi chọn tỉnh và xóa lựa chọn cũ khi đổi tỉnh. Seed 12 khu vực cho 29 địa điểm. Browser filters 29/0/0/0, có Gateway thật; build PASS | Nhánh feature/explore-ui-demo-content, HEAD ca83db7 (checkout dirty) |
+| 03/11/2026 13:18 | Hoàn thiện UI xác minh/gửi lại/login/reset và kiểm browser thật 13+8+1, 0 page error; 3 viewport. Gmail thật chờ cấu hình; kết nối chỉ ghi tại BE mục 9/O/P, F-34 | `2f21c75`, nhánh `fix/identity-registration-verification`, dirty |
 | 03/11/2026 00:34 | Hoàn thiện tài khoản/fixture P02 và ma trận test tay; Playwright 21/0 page error qua FE/Gateway thật, gồm preferences account mới, guest, list/detail/review, quyền user, trip, business/admin và account riêng cho thao tác cuối; 8 account, 29 địa điểm public, legacy hidden. Đối chiếu API/status tại BE mục 9; duplicate import F-32; chưa CI/gate | Nhánh `feature/explore-ui-demo-content`, HEAD `ca83db7` (checkout dirty) |
 | 03/11/2026 00:30 | Sửa ảnh thumbnail không giới hạn kích thước làm vỡ phần cận cảnh điểm đến; giới hạn khung ảnh nền, thêm hàng thumbnail cuộn ngang và kiểm đổi lựa chọn; build PASS, browser filters 27/0/0/0 | Nhánh `feature/explore-ui-demo-content`, HEAD `ca83db7` (checkout dirty) |
 | 03/11/2026 00:16 | Sửa chữ bị chìm trong mode sáng ở header, tiêu đề, liên kết, bài viết, trạng thái trống và nhãn; thêm kiểm tương phản chữ trên nền phẳng ≥ 4.5:1 cho hai theme. Build PASS; browser filters 26/0/0/0 | Nhánh `feature/explore-ui-demo-content`, HEAD `ca83db7` (checkout dirty) |

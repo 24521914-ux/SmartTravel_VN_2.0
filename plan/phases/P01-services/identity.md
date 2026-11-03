@@ -1,6 +1,6 @@
 # P01-ID Identity Service — nhóm A
 
-Trạng thái (20/10/2026): **9/10 task LOCAL_VERIFIED; ID-10 (handoff/reviewer N2) còn PARTIAL; finding F-01 (thiếu consumer contribution/model.deployed)**. Code đã merge vào `main` (PR #5–#9, merge `a9ab23a`); người dùng chấp nhận P01 ngày 11/10/2026, chưa có chữ ký reviewer. Evidence chính thức tại [progress](../../../progress_be.md); checkbox trong file này là yêu cầu, không phải trạng thái. Dependency: P00, không chờ service khác. Scope: F01, auth/session/role/preferences/consent/notification/deletion. Reviewer: B.
+Trạng thái (03/11/2026): **9/10 task LOCAL_VERIFIED; ID-10 (handoff/reviewer N2) còn PARTIAL; finding F-01 (thiếu consumer contribution/model.deployed); luồng xác minh/khôi phục đã kiểm local, SMTP Gmail P02 chờ cấu hình người dùng (F-34)**. Code đã merge vào `main` (PR #5–#9, merge `a9ab23a`); người dùng chấp nhận P01 ngày 11/10/2026, chưa có chữ ký reviewer. Evidence chính thức tại [progress](../../../progress_be.md); checkbox trong file này là yêu cầu, không phải trạng thái. Dependency: P00, không chờ service khác. Scope: F01, auth/session/role/preferences/consent/notification/deletion. Reviewer: B.
 
 Đọc [database Identity](../../database/identity.md), [DDL](../../database/sql/identity.sql), [contract](../../04-api-events.md) và [gate chung](README.md). Owner sửa `backend/services/identity-service/**` khi triển khai.
 

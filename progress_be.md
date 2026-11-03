@@ -1,6 +1,6 @@
 # Tiến độ Backend (BE) — SmartTravel VN
 
-Cập nhật: **03/11/2026 13:01** (GMT+7)
+Cập nhật: **03/11/2026 13:18** (GMT+7)
 
 Progress gồm **hai file**: file này (`progress_be.md`) cho backend, Gateway, hạ tầng và **trạng thái kết nối BE ↔ FE**; [`progress_fe.md`](progress_fe.md) cho frontend web. Mỗi file sắp theo phase P00 → P04. Yêu cầu chi tiết của từng phase vẫn nằm trong `plan/phases/`; file này chỉ ghi **đã làm tới đâu, kiểm bằng gì, làm gì tiếp**.
 
@@ -30,7 +30,7 @@ Progress gồm **hai file**: file này (`progress_be.md`) cho backend, Gateway, 
 | **P02** Kết nối thật | Gateway, HTTP, broker giữa 6 service, frontend qua Gateway | `PARTIAL` 12/15 task | Local P02 trên UI hiện tại; CI cũ không đại diện revision mới | P02-01, P02-08, P02-14; chữ ký | Xử lý F-01/F-06/F-07; review các commit tích hợp |
 | **P03** Kiểm thử hệ thống | E2E, bảo mật, lỗi phụ thuộc, tải, restore, browser | `PARTIAL`; P03-07 `LOCAL_VERIFIED` trên UI hiện tại | Browser Gateway P02 thật; chưa chạy lại toàn bộ gate | Gate trên revision sạch; CI mới, chữ ký; AI hoãn | Chạy lại gate khi đủ điều kiện, N1/N2 review |
 | **P04** Phát hành | Triển khai mới, rollback, bàn giao vận hành | `NOT_STARTED` | — | Toàn bộ; bị chặn bởi gate P03 | Chuẩn bị target triển khai, domain, credential provider |
-| **Kết nối BE ↔ FE** | Từng API public/admin qua Gateway | 155 ✅ · 6 🟡 · 0 ❌ · 0 ⚪ · 14 ⏸️ · 1 ➖ (mục 9) | 160 API không AI được quan sát; còn 2 nhánh media chờ scanner và giới hạn import trùng lặp F-32 | Scanner thật (F-14); contract/CI + N1 review cho representation (F-15) | Kiểm scanner khi có; xử lý F-32, chạy contract mới và review N1 |
+| **Kết nối BE ↔ FE** | Từng API public/admin qua Gateway | 159 ✅ · 2 🟡 · 0 ❌ · 0 ⚪ · 14 ⏸️ · 1 ➖ (mục 9) | 161 API không AI được quan sát; còn 2 nhánh media chờ scanner và giới hạn import trùng lặp F-32 | Scanner thật (F-14); contract/CI + N1 review cho representation (F-15) | Kiểm scanner khi có; xử lý F-32, chạy contract mới và review N1 |
 
 **Tóm tắt một dòng:** đã nối và kiểm thử FE hiện tại với Gateway/DB/broker thật trên dữ liệu tổng hợp P02; sửa sai contract và loại bỏ ghi giả khi API lỗi. Chưa xác nhận hai nhánh media phụ thuộc scanner thật; người dùng xác nhận 30/10/2026 tiếp tục bằng P02, chưa có dữ liệu du lịch có giấy phép. AI vẫn `DEFERRED`; không đóng gate hoặc ký thay N1/N2.
 
@@ -191,8 +191,8 @@ Mã task: ID = Identity, CA = Catalog, CO = Community, TR = Trip, IG = Ingestion
 
 ### 5.2. M2 — Nghiệp vụ
 
-- [ ] P01-ID-03: Đăng ký/xác minh/login/logout/refresh/đặt lại/đổi mật khẩu, rate limit — **PARTIAL** · Đang kiểm lại luồng khôi phục mã hết hạn và FE (F-34).
-- [ ] P02-ID-AUTH-01: Hoàn thiện đăng ký/xác minh/gửi lại mã/đăng nhập — **IN_PROGRESS** · Người làm: Codex · Nhánh: `fix/identity-registration-verification`, baseline `6948aff`; giữ thay đổi UI hiện có do checkout main bị chặn bởi file của người dùng · Next: kiểm DB thật, Gateway và browser.
+- [x] P01-ID-03: Đăng ký/xác minh/login/logout/refresh/đặt lại/đổi mật khẩu, rate limit — **LOCAL_VERIFIED** (dirty) · `python backend/services/identity-service/test-local.py --transport --isolated-source`: 64/0/0/0 (run/failed/errors/skipped), riêng AuthDatabaseTests 38; Java 21.0.11, PostgreSQL/RabbitMQ Docker thật, SMTP mock trong DB suite. Chạy tại `857faf6` dirty; source lưu ở `2f21c75`. Browser SMTP thật qua Mailpit: mục 9/O. Gmail thật còn chờ cấu hình tài khoản gửi (F-34).
+- [ ] P02-ID-AUTH-01: Hoàn thiện đăng ký/xác minh/gửi lại mã/đăng nhập — **PARTIAL** · Người làm: Codex · Nhánh: `fix/identity-registration-verification`, source `2f21c75` · Đã sửa và kiểm local: mã hết hạn/thay thế, cooldown/rate limit, lỗi login pending, chuyển bước FE; 64 test BE, 22 Gateway, browser 13+8+1, 0 failure/error; checkout dirty. Người dùng chọn Gmail thật ngày 03/11/2026; thiếu tài khoản gửi/App Password để chạy `configure_mail.py --apply` và xác nhận email thực nhận (F-34). Next: người dùng cấu hình SMTP cục bộ; Codex kiểm lại xác thực/kết quả sau cấu hình.
 - [x] P01-ID-04: Hồ sơ, preferences, consent, admin user/status/role, API batch nội bộ — **LOCAL_VERIFIED** · `PreferencePatchTests`, `CategoryClientTests`.
 - [x] P01-ID-05: Hộp thư thông báo, gửi email có retry; yêu cầu xóa và thu ack — **LOCAL_VERIFIED** · `deletionRevokesAndTombstonesAtomicallyButRequiresAllSixAcknowledgements`.
 - [x] P01-CA-03: Phân cấp địa lý (chống vòng), taxonomy, vòng đời địa điểm + lịch sử — **LOCAL_VERIFIED** · `hierarchyCycleEffectiveOverlapAndEventPublishScheduleAreRejected`.
@@ -364,29 +364,31 @@ Bảng dưới đối chiếu 172 operation public/admin trong OpenAPI (không t
 | L | `python backend/services/trip-service/test-local.py --transport` | 43/0/0/0; sửa CatalogAdapter dùng collection destinations + opaque cursor, bỏ URL detail không tồn tại |
 | M | `backend/mvnw.cmd -B -f backend/platform/api-gateway/pom.xml verify` | 22/0/0/0; multipart media11MB, JSON vẫn1MB, không mở rộng route khác |
 | N | `python backend/platform/validate_contracts.py`; tại `backend/platform`: `python -m unittest test_contract_checksums test_contract_policy` | 183 HTTP / 23 event PASS; checksum 3/0/0/0, policy 7/0/0/0; tổng 10/0/0/0; candidate chưa freeze. Gọi unittest bằng module từ root lỗi import, đã chạy đúng working directory; không tính lượt lỗi là PASS |
+| O | `npm --prefix frontend run test:browser:auth-recovery` / `test:browser:account` / `test:browser:auth-failure` | 13/0/0/0 kiểm khôi phục (gửi lại thật sau 60 giây, mã cũ401, mã mới202, pending login403, sai mật khẩu401), 8 nhóm tài khoản/32 request Gateway (đổi/reset mật khẩu, hồ sơ, phiên, yêu cầu xóa), 1 tình huống lỗi hồ sơ503; 0 page error; viewport 375/768/1440 không tràn và đã xem ảnh. Gateway/PostgreSQL/Mailpit thật; tài khoản synthetic riêng, không ghi đè tài khoản người dùng. Source `2f21c75`, HEAD khi chạy `857faf6` dirty, Node 24/Chromium/Java 21/Docker; chưa CI |
+| P | Identity `test-local.py --transport --isolated-source`; Gateway `mvnw.cmd ... verify`; `validate_contracts.py`; platform `test_contract_checksums test_contract_policy`; infra `test_configure_mail`; FE `build` / `test:contracts` | Lần cuối Identity 64/0/0/0 (PostgreSQL/RabbitMQ thật; lần trước 64/0/0/6 không tính broker PASS); Gateway 22/0/0/0; contract 184 HTTP/23 event và manifest PASS (candidate chưa duyệt/freeze); platform 12/0/0/0; cấu hình Gmail 6/0/0/0 (SMTP mock, không gửi thư thật); FE build 4637 modules, client 15/0/0/0. Source `2f21c75`, checkout dirty; Gmail xác thực/gửi thật chưa kiểm vì thiếu credential |
 
 **Revision:** các lượt J/K/M và lượt đầu chạy trên `d04c13a` dirty; L và browser cuối trên `101912f` dirty. Source kiểm thử đã lưu không đổi ở backend `66e6586`, FE `4e020e1`, scripts `edb10cb`; tài liệu contract `40590cf`. Chưa có CI run cho revision mới; chỉ `LOCAL_VERIFIED`, không cấp gate. ScannerBoundary từng có 2 lượt fail503 lúc JDK khởi động lạnh; sửa handshake fixture (không tăng timeout production), sau đó full37 và full38 PASS; không dùng retry che lỗi.
 
 | Service | ✅ Hoàn thiện | 🟡 Đã nối, chưa kiểm đủ | ❌ Lỗi | ⚪ Chưa thực hiện | ⏸️ Hoãn | ➖ Không áp dụng | Tổng |
 |---|---|---|---|---|---|---|---|
-| Identity | 18 | 4 | 0 | 0 | 0 | 1 | 23 |
+| Identity | 22 | 0 | 0 | 0 | 0 | 1 | 23 |
 | Catalog | 64 | 2 | 0 | 0 | 0 | 0 | 66 |
 | Community | 30 | 0 | 0 | 0 | 0 | 0 | 30 |
 | Trip | 29 | 0 | 0 | 0 | 0 | 0 | 29 |
 | Ingestion | 14 | 0 | 0 | 0 | 0 | 0 | 14 |
 | Intelligence | 0 | 0 | 0 | 0 | 14 | 0 | 14 |
-| **Tổng** | **155** | **6** | **0** | **0** | **14** | **1** | **176** |
+| **Tổng** | **159** | **2** | **0** | **0** | **14** | **1** | **176** |
 
 #### Identity
 
 | API | Trạng thái kết nối | Màn hình FE / ghi chú |
 |---|---|---|
-| `POST /auth/register` | 🟡 Đã nối, đang kiểm lại F-34 | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
-| `POST /auth/login` | 🟡 Đã nối, đang kiểm lại F-34 | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
+| `POST /auth/register` | ✅ Hoàn thiện | `test:browser:auth-recovery`: 13/0/0/0; FE → Gateway → Identity/PostgreSQL/Mailpit thật, gồm gửi lại sau cooldown và mã cũ bị từ chối. Source `2f21c75`, chạy dirty; SMTP Gmail thật chờ F-34 |
+| `POST /auth/login` | ✅ Hoàn thiện | `test:browser:auth-recovery`: 13/0/0/0; FE → Gateway → Identity/PostgreSQL/Mailpit thật, gồm gửi lại sau cooldown và mã cũ bị từ chối. Source `2f21c75`, chạy dirty; SMTP Gmail thật chờ F-34 |
 | `POST /auth/refresh` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
 | `POST /auth/logout` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
-| `POST /auth/verify-email` | 🟡 Đã nối, đang kiểm lại F-34 | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
-| `POST /auth/resend-verification` | 🟡 Đã nối, chưa kiểm | Xác minh email / gửi lại mã (F-34), candidate contract mới |
+| `POST /auth/verify-email` | ✅ Hoàn thiện | `test:browser:auth-recovery`: 13/0/0/0; FE → Gateway → Identity/PostgreSQL/Mailpit thật, gồm gửi lại sau cooldown và mã cũ bị từ chối. Source `2f21c75`, chạy dirty; SMTP Gmail thật chờ F-34 |
+| `POST /auth/resend-verification` | ✅ Hoàn thiện | `test:browser:auth-recovery`: 13/0/0/0; FE → Gateway → Identity/PostgreSQL/Mailpit thật, gồm gửi lại sau cooldown và mã cũ bị từ chối. Source `2f21c75`, chạy dirty; SMTP Gmail thật chờ F-34 |
 | `POST /auth/forgot-password` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
 | `POST /auth/reset-password` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
 | `GET /me` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
@@ -610,7 +612,7 @@ Bảng dưới đối chiếu 172 operation public/admin trong OpenAPI (không t
 | F-26 | Trung bình | P01/P03 (AI) | `BasicRepository.candidates` lấy 1.000 PUBLISHED theo UUID trước bộ lọc, có thể bỏ sót ứng viên hợp lệ; `persist` lấy `data_as_of` max trên candidate pool, chưa phản ánh freshness bảo thủ của kết quả thực dùng. Khảo sát tĩnh `BasicRepository.java:86,115` tại `89eb8cb`; cần regression >1.000 place và mixed freshness trong RC-G1-08/11, chưa có runtime evidence | N2 + N1 review | OPEN |
 | F-32 | Trung bình | P02 | Sandbox import job có 4 item (`APPLIED`×2, `NEEDS_REVIEW`, `FAILED`), chưa có item trùng riêng. Ngoài ra `PipelineService.publicItemStatus` đổi nội bộ `DUPLICATE` thành `APPLIED` và `SKIPPED` thành `APPLIED` (trừ `REVIEW_REJECTED`), nên API/UI không phân biệt trùng với ghi thành công; chưa thể kiểm scenario trùng qua màn hiện tại | N1 | OPEN |
 | F-33 | Cao | P00/P01 | Schema event đang sửa trên checkout dirty yêu cầu thêm `name_en`, `address`, `description`, `price_min`, `price_max`, `rating_avg`, `review_count` nhưng `CatalogRepository.emit` vẫn phát whitelist cũ. `python backend/services/catalog-service/test-local.py` ngày 03/11/2026, HEAD `ca83db7`, dirty, Java 21/PostGIS Docker: toàn suite 39/1/0/5 (run/failed/errors/skipped), FAIL tại `CatalogProviderTests.allSixtySixFrozenOperationsReturnValidatedProviderResponses`; riêng `CatalogDatabaseTests` 20/0/0/0. Hạ P01-CA-09; chưa sửa contract/event ngoài phạm vi bản đồ. Cần thống nhất schema/producer/consumer và chạy lại provider/broker trên cùng revision | N1 + N2 review consumer | OPEN |
-| F-34 | Cao | P01/P02 | Đăng ký trùng trả 202 nhưng không gửi lại mã; tài khoản chờ xác minh hết hạn bị kẹt. Đang bổ sung resend có cooldown/rate limit, chuyển bước FE và hướng dẫn Mailpit; candidate contract chưa review/CI | Codex; N1/N2 review | PARTIAL |
+| F-34 | Cao | P01/P02 | Đã sửa khôi phục xác minh/email hết hạn, chống gửi dồn và chuyển bước FE (`2f21c75`), kiểm local BE/Gateway/browser/SMTP Mailpit PASS (mục 9/O/P). Người dùng chọn Gmail thật 03/11/2026; máy chưa có SMTP credential, chờ nhập cục bộ qua `python backend/infra/configure_mail.py --apply` và xác nhận thư thực nhận. Candidate contract mới chưa CI/review; không nâng gate | Người dùng cấu hình Gmail; Codex kiểm; N1/N2 review | PARTIAL |
 
 
 Đã đóng: F-31 (Trung bình, P03, Codex: smoke phụ thuộc candidate của suite trước; fixture độc lập `fc370e8`, CI cũ `41334918573` FAIL, CI mới `41336264376` PASS trên `2f2e702`; PR #23), F-30 (Trung bình, P03, Codex: header cố định che nút quay lại chi tiết; `7b04167`, filters lần đầu FAIL, sau sửa 22/0/0/0), F-18 (khôi phục màn và nối đủ API không AI, còn hai nhánh media tách F-14; `4e020e1`/`edb10cb`, A–G), F-22 (sửa body/path/form thật; `4e020e1`, A/B/C/E/G), F-23 (bỏ bản ghi giả, chỉ cập nhật sau API thành công; `4e020e1`, F/H và negative assertions các suite).
@@ -648,6 +650,7 @@ Mới nhất ở trên. Mỗi dòng: ngày giờ · thay đổi · PR/commit.
 | Thời điểm | Thay đổi | PR / commit |
 |---|---|---|
 | 03/11/2026 00:46 | Seed thêm 12 khu vực du lịch con và chuyển 29 địa điểm từ phạm vi tỉnh sang khu vực qua Catalog API; 18 test seed và browser filters 29/0/0/0 PASS, có xác nhận Gateway thật; build FE PASS. Giữ trạng thái API tổng, không đổi contract, chưa CI/review | Nhánh feature/explore-ui-demo-content, HEAD ca83db7 (checkout dirty) |
+| 03/11/2026 13:18 | Sửa luồng đăng ký/xác minh/gửi lại/login và khôi phục mật khẩu; local BE64/Gateway22/browser13+8+1/client15 PASS; cập nhật 4 API tài khoản về ✅, tổng159✅/2🟡/176. Đã cập nhật riêng Identity/Gateway local; SMTP Gmail thật chờ người dùng cấu hình, F-34 PARTIAL; chưa CI/gate | Nhánh `fix/identity-registration-verification`, source `2f21c75`, chạy dirty |
 | 03/11/2026 00:34 | Mở rộng fixture P02 lên 8 tài khoản/29 địa điểm/29 review và các queue; 16 test seed PASS, seed + `--verify-only` PASS, lượt lặp tạo 0/cập nhật 0; 21 kiểm tra Playwright thật qua Vite/Gateway, 0 lỗi trang; ẩn 2 legacy public qua Catalog, tổng 50 ID hidden; mở F-32. Contract validator dừng tại checksum manifest dirty, chưa refresh khi chưa review; chưa CI/gate | Nhánh `feature/explore-ui-demo-content`, HEAD `ca83db7` |
 | 02/11/2026 23:23 | Mở rộng representation/schema Place và Review cho giá, điểm, số review, tên người đánh giá; build Catalog/Community `-DskipTests`, P02 health và GET qua Gateway thủ công PASS; suite/CI chưa chạy. Hạ ba API về 🟡 do chưa có kiểm thử contract/FE trên revision mới; giữ F-15 PARTIAL | Nhánh `feature/explore-ui-demo-content`, HEAD `ca83db7` (checkout dirty) |
 | 02/11/2026 01:33 | Merge tích hợp BE–FE, seed mẫu, path/bộ lọc/giao diện; 11 check CI PASS trên revision PR `2f2e702`; sửa F-30/F-31, không đóng gate | [PR #23](https://github.com/24521914-ux/SmartTravel_VN/pull/23), merge `4223631bc955ca47475fe2bb630a7a48576a3681` |
