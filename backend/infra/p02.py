@@ -166,6 +166,7 @@ def configuration(values):
                    JWT_AUDIENCE=service, BROKER_HOST='identity-broker', BROKER_PORT='5672',
                    BROKER_USERNAME=service+'_runtime', BROKER_PASSWORD=values[service.upper()+'_BROKER_PASSWORD'],
                    BROKER_VHOST='smarttravel', IDENTITY_SESSION_URI='http://identity:8101/internal/v1/security/session',
+                   IDENTITY_SESSION_CACHE_SECONDS='15',
                    GATEWAY_EXCHANGE_SECRET=values['GATEWAY_EXCHANGE_SECRET'],
                    CATALOG_BASE_URL='http://catalog:8102', CATALOG_URL='http://catalog:8102',
                    INGESTION_URL='http://ingestion:8105', IDENTITY_URL='http://identity:8101',

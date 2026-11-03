@@ -31,6 +31,8 @@ x-service-env: &service-env
   BROKER_PORT: '5672'
   BROKER_VHOST: smarttravel
   IDENTITY_SESSION_URI: http://identity:8101/internal/v1/security/session
+  # Downstream services reuse a positive session answer for 15 s (F-33); the Gateway still checks every request.
+  IDENTITY_SESSION_CACHE_SECONDS: '15'
   GATEWAY_EXCHANGE_SECRET: ${GATEWAY_EXCHANGE_SECRET:?required}
   CATALOG_BASE_URL: http://catalog:8102
   CATALOG_URL: http://catalog:8102
