@@ -41,7 +41,7 @@ class CandidateManifestTests(unittest.TestCase):
                  'backend/platform/validate_contracts.py',
                  'backend/platform/cloud/compose.yaml', 'backend/contracts/fixtures/places.json',
                  'backend/infra/compose.p01.yaml', 'backend/infra/postgres/01-roles.sh',
-                 'backend/.mvn/wrapper/maven-wrapper.properties', 'backend/mvnw',
+                 'backend/.mvn/wrapper/maven-wrapper.properties', 'backend/mvnw', 'backend/.dockerignore',
                  'backend/mvnw.cmd', 'frontend/src/ĐịaĐiểm.tsx',
                  'frontend/src/assets/map.svg', 'frontend/scripts/browser.mjs',
                  'frontend/index.html', 'frontend/package.json', 'frontend/package-lock.json',

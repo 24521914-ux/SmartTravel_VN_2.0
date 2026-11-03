@@ -1,8 +1,26 @@
-FROM eclipse-temurin:21-jre
+# Default target "runtime" packages a jar already built and verified in target/
+# (CI, P03 gates, build_service_image.py). Target "source" compiles inside Docker
+# and needs the named context "backend" (docker compose additional_contexts, or
+# docker build --build-context backend=backend --target source ...).
+FROM eclipse-temurin:21-jdk AS build
+WORKDIR /workspace
+COPY --from=backend mvnw ./
+COPY --from=backend .mvn .mvn
+COPY --from=backend contracts contracts
+COPY --from=backend services services
+RUN --mount=type=cache,target=/root/.m2 \
+    sh mvnw -B -q -f services/pom.xml -pl intelligence-service -am -Dmaven.test.skip=true package
+
+FROM eclipse-temurin:21-jre AS base
 WORKDIR /app
 RUN mkdir -p /app/artifacts && chown 10001:10001 /app/artifacts
 ENV INTELLIGENCE_ARTIFACT_ROOT=/app/artifacts
-COPY --chown=10001:10001 target/intelligence-service-0.0.1-SNAPSHOT.jar /app/application.jar
 USER 10001:10001
 EXPOSE 8106
 ENTRYPOINT ["java", "-jar", "/app/application.jar"]
+
+FROM base AS source
+COPY --from=build --chown=10001:10001 /workspace/services/intelligence-service/target/intelligence-service-0.0.1-SNAPSHOT.jar /app/application.jar
+
+FROM base AS runtime
+COPY --chown=10001:10001 target/intelligence-service-0.0.1-SNAPSHOT.jar /app/application.jar

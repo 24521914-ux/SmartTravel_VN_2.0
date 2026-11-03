@@ -1,0 +1,12 @@
+# Named build context "backend" for the Dockerfile "source" targets.
+# Allowlist only what Maven needs; never send build output, local secrets or keys.
+**
+!mvnw
+!.mvn/**
+!contracts/**
+!services/**
+services/**/target
+services/**/.local
+services/**/.env*
+services/**/*.py
+services/**/README.md

@@ -42,7 +42,7 @@ def _selected(path):
                 or name in {'Dockerfile', '.dockerignore', 'requirements-validation.txt'})
     if parts[:2] == ('backend', '.mvn'):
         return True
-    if path.as_posix() in {'backend/mvnw', 'backend/mvnw.cmd', 'backend/pom.xml'}:
+    if path.as_posix() in {'backend/mvnw', 'backend/mvnw.cmd', 'backend/pom.xml', 'backend/.dockerignore'}:
         return True
     if path.as_posix() == 'docs/operations/p03-non-ai-runbook.md':
         return True
@@ -79,7 +79,7 @@ def candidate_manifest(root=ROOT):
     files = {}
     roots = ['backend/services', 'backend/platform', 'backend/contracts',
              'backend/infra', 'backend/.mvn', 'frontend', '.github/workflows', 'plan']
-    candidates = [root / 'backend' / name for name in ('mvnw', 'mvnw.cmd', 'pom.xml')]
+    candidates = [root / 'backend' / name for name in ('mvnw', 'mvnw.cmd', 'pom.xml', '.dockerignore')]
     candidates.append(root / 'docs/operations/p03-non-ai-runbook.md')
     for relative in roots:
         base = root / relative

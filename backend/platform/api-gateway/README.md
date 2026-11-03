@@ -7,7 +7,10 @@ Các HTTP tests dùng partner server loopback và JWKS RS256 thật; không boot
 backend/mvnw.cmd -B -f backend/platform/api-gateway/pom.xml clean verify
 java -jar backend/platform/api-gateway/target/api-gateway-0.0.1-SNAPSHOT.jar
 docker build -t smarttravel-api-gateway:<revision> backend/platform/api-gateway
+docker build --build-context backend=backend --target source -t smarttravel-api-gateway:<revision> backend/platform/api-gateway
 ```
+
+Dòng thứ hai build từ source trong Docker (không cần JAR có sẵn).
 
 Inject `JWT_ISSUER`, `JWT_JWKS_URI`, `JWT_AUDIENCE` và `{SERVICE}_URL` cho Identity/Catalog/
 Community/Trip/Ingestion/Intelligence. `CORS_ALLOWED_ORIGINS` là danh sách origin cụ thể,

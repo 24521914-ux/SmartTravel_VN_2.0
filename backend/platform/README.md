@@ -118,6 +118,15 @@ docker build -t smarttravel-catalog:p00 backend/services/catalog-service
 docker build -t smarttravel-p00-template:local backend/platform/p00-template
 ```
 
+Lệnh trên dùng target mặc định `runtime`: đóng gói JAR đã build/verify sẵn trong `target/`. Build từ source ngay trong Docker, không cần Maven/Java trên máy (target `source`, context có tên `backend` cung cấp Maven Wrapper, parent pom và `contracts/`):
+
+```bash
+docker build --build-context backend=backend --target source -t smarttravel-catalog:local backend/services/catalog-service
+docker build --build-context backend=backend --target source -t smarttravel-api-gateway:local backend/platform/api-gateway
+```
+
+`backend/.dockerignore` chỉ cho phép `mvnw`, `.mvn/`, `contracts/`, `services/` (bỏ `target/`, `.local/`, `.env*`). Target `source` bỏ qua test (`-Dmaven.test.skip=true`); bằng chứng test vẫn lấy từ `mvnw verify`/CI.
+
 Dockerfiles UID/GID10001, không root. Mỗi gói có image độc lập, DBpassword chỉ truyền environment, không bake vào image. Rebuild sau source changes.
 
 Evidence thực tế ngày08/10/2026: 18 service Java tests +4 platform tests PASS; 6 standalone apps own DB/JWKS PASS; DB/PostGIS/pgvector/MongoDB/sáu Redis PASS; 183 HTTP/23 messages validate; 7 policy +3 HTTP suite +2 event suite PASS; frontend build/proxy và npm audit0 PASS; 6 service images +platform image build PASS. Chi tiết/giới hạn tại [manifest](P00_HANDOFF.md). CI workflow mới có source, chưa có remote run.
