@@ -1,6 +1,6 @@
 # Tiến độ Backend (BE) — SmartTravel VN
 
-Cập nhật: **03/11/2026 01:32** (GMT+7)
+Cập nhật: **03/11/2026 13:01** (GMT+7)
 
 Progress gồm **hai file**: file này (`progress_be.md`) cho backend, Gateway, hạ tầng và **trạng thái kết nối BE ↔ FE**; [`progress_fe.md`](progress_fe.md) cho frontend web. Mỗi file sắp theo phase P00 → P04. Yêu cầu chi tiết của từng phase vẫn nằm trong `plan/phases/`; file này chỉ ghi **đã làm tới đâu, kiểm bằng gì, làm gì tiếp**.
 
@@ -30,7 +30,7 @@ Progress gồm **hai file**: file này (`progress_be.md`) cho backend, Gateway, 
 | **P02** Kết nối thật | Gateway, HTTP, broker giữa 6 service, frontend qua Gateway | `PARTIAL` 12/15 task | Local P02 trên UI hiện tại; CI cũ không đại diện revision mới | P02-01, P02-08, P02-14; chữ ký | Xử lý F-01/F-06/F-07; review các commit tích hợp |
 | **P03** Kiểm thử hệ thống | E2E, bảo mật, lỗi phụ thuộc, tải, restore, browser | `PARTIAL`; P03-07 `LOCAL_VERIFIED` trên UI hiện tại | Browser Gateway P02 thật; chưa chạy lại toàn bộ gate | Gate trên revision sạch; CI mới, chữ ký; AI hoãn | Chạy lại gate khi đủ điều kiện, N1/N2 review |
 | **P04** Phát hành | Triển khai mới, rollback, bàn giao vận hành | `NOT_STARTED` | — | Toàn bộ; bị chặn bởi gate P03 | Chuẩn bị target triển khai, domain, credential provider |
-| **Kết nối BE ↔ FE** | Từng API public/admin qua Gateway | 158 ✅ · 2 🟡 · 0 ❌ · 0 ⚪ · 14 ⏸️ · 1 ➖ (mục 9) | 160 API không AI được quan sát; còn 2 nhánh media chờ scanner và giới hạn import trùng lặp F-32 | Scanner thật (F-14); contract/CI + N1 review cho representation (F-15) | Kiểm scanner khi có; xử lý F-32, chạy contract mới và review N1 |
+| **Kết nối BE ↔ FE** | Từng API public/admin qua Gateway | 155 ✅ · 6 🟡 · 0 ❌ · 0 ⚪ · 14 ⏸️ · 1 ➖ (mục 9) | 160 API không AI được quan sát; còn 2 nhánh media chờ scanner và giới hạn import trùng lặp F-32 | Scanner thật (F-14); contract/CI + N1 review cho representation (F-15) | Kiểm scanner khi có; xử lý F-32, chạy contract mới và review N1 |
 
 **Tóm tắt một dòng:** đã nối và kiểm thử FE hiện tại với Gateway/DB/broker thật trên dữ liệu tổng hợp P02; sửa sai contract và loại bỏ ghi giả khi API lỗi. Chưa xác nhận hai nhánh media phụ thuộc scanner thật; người dùng xác nhận 30/10/2026 tiếp tục bằng P02, chưa có dữ liệu du lịch có giấy phép. AI vẫn `DEFERRED`; không đóng gate hoặc ký thay N1/N2.
 
@@ -191,7 +191,8 @@ Mã task: ID = Identity, CA = Catalog, CO = Community, TR = Trip, IG = Ingestion
 
 ### 5.2. M2 — Nghiệp vụ
 
-- [x] P01-ID-03: Đăng ký/xác minh/login/logout/refresh/đặt lại/đổi mật khẩu, rate limit — **LOCAL_VERIFIED** · `AuthDatabaseTests`.
+- [ ] P01-ID-03: Đăng ký/xác minh/login/logout/refresh/đặt lại/đổi mật khẩu, rate limit — **PARTIAL** · Đang kiểm lại luồng khôi phục mã hết hạn và FE (F-34).
+- [ ] P02-ID-AUTH-01: Hoàn thiện đăng ký/xác minh/gửi lại mã/đăng nhập — **IN_PROGRESS** · Người làm: Codex · Nhánh: `fix/identity-registration-verification`, baseline `6948aff`; giữ thay đổi UI hiện có do checkout main bị chặn bởi file của người dùng · Next: kiểm DB thật, Gateway và browser.
 - [x] P01-ID-04: Hồ sơ, preferences, consent, admin user/status/role, API batch nội bộ — **LOCAL_VERIFIED** · `PreferencePatchTests`, `CategoryClientTests`.
 - [x] P01-ID-05: Hộp thư thông báo, gửi email có retry; yêu cầu xóa và thu ack — **LOCAL_VERIFIED** · `deletionRevokesAndTombstonesAtomicallyButRequiresAllSixAcknowledgements`.
 - [x] P01-CA-03: Phân cấp địa lý (chống vòng), taxonomy, vòng đời địa điểm + lịch sử — **LOCAL_VERIFIED** · `hierarchyCycleEffectiveOverlapAndEventPublishScheduleAreRejected`.
@@ -341,7 +342,7 @@ Cần chuẩn bị trước P04: target triển khai và domain; credential prov
 
 ## 9. Kết nối BE ↔ FE
 
-Bảng dưới đối chiếu 171 operation public/admin trong OpenAPI (không tính 12 `/internal`) và 4 operation media mở rộng đã triển khai: **175 API**. Nguồn quan sát: `integration-coverage.mjs` đọc phản hồi Gateway của các suite PASS, không suy coverage từ source. Extension media và giới hạn contract: [catalog-media.md](docs/contracts/catalog-media.md).
+Bảng dưới đối chiếu 172 operation public/admin trong OpenAPI (không tính 12 `/internal`) và 4 operation media mở rộng đã triển khai: **176 API**. Nguồn quan sát: `integration-coverage.mjs` đọc phản hồi Gateway của các suite PASS, không suy coverage từ source. Extension media và giới hạn contract: [catalog-media.md](docs/contracts/catalog-media.md).
 
 **Kiểm lại 30/10/2026:** 160 API không AI đã được gọi qua Gateway; 158 có phản hồi 2xx. Membership DELETE đã kiểm nhánh bảo vệ chủ sở hữu (422, bản ghi giữ nguyên). GET ảnh cách ly trả 404 đúng; review REJECT 202 đúng, nhưng APPROVE 503 vì chưa có scanner thật. Vì vậy hai API media vẫn 🟡, chưa xác nhận nhánh thành công đầy đủ. JWKS chỉ dành cho Gateway (➖); 14 API AI hoãn theo quyết định trước đó.
 
@@ -368,23 +369,24 @@ Bảng dưới đối chiếu 171 operation public/admin trong OpenAPI (không t
 
 | Service | ✅ Hoàn thiện | 🟡 Đã nối, chưa kiểm đủ | ❌ Lỗi | ⚪ Chưa thực hiện | ⏸️ Hoãn | ➖ Không áp dụng | Tổng |
 |---|---|---|---|---|---|---|---|
-| Identity | 21 | 0 | 0 | 0 | 0 | 1 | 22 |
+| Identity | 18 | 4 | 0 | 0 | 0 | 1 | 23 |
 | Catalog | 64 | 2 | 0 | 0 | 0 | 0 | 66 |
 | Community | 30 | 0 | 0 | 0 | 0 | 0 | 30 |
 | Trip | 29 | 0 | 0 | 0 | 0 | 0 | 29 |
 | Ingestion | 14 | 0 | 0 | 0 | 0 | 0 | 14 |
 | Intelligence | 0 | 0 | 0 | 0 | 14 | 0 | 14 |
-| **Tổng** | **158** | **2** | **0** | **0** | **14** | **1** | **175** |
+| **Tổng** | **155** | **6** | **0** | **0** | **14** | **1** | **176** |
 
 #### Identity
 
 | API | Trạng thái kết nối | Màn hình FE / ghi chú |
 |---|---|---|
-| `POST /auth/register` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
-| `POST /auth/login` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
+| `POST /auth/register` | 🟡 Đã nối, đang kiểm lại F-34 | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
+| `POST /auth/login` | 🟡 Đã nối, đang kiểm lại F-34 | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
 | `POST /auth/refresh` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
 | `POST /auth/logout` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
-| `POST /auth/verify-email` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
+| `POST /auth/verify-email` | 🟡 Đã nối, đang kiểm lại F-34 | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
+| `POST /auth/resend-verification` | 🟡 Đã nối, chưa kiểm | Xác minh email / gửi lại mã (F-34), candidate contract mới |
 | `POST /auth/forgot-password` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
 | `POST /auth/reset-password` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
 | `GET /me` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
@@ -608,6 +610,7 @@ Bảng dưới đối chiếu 171 operation public/admin trong OpenAPI (không t
 | F-26 | Trung bình | P01/P03 (AI) | `BasicRepository.candidates` lấy 1.000 PUBLISHED theo UUID trước bộ lọc, có thể bỏ sót ứng viên hợp lệ; `persist` lấy `data_as_of` max trên candidate pool, chưa phản ánh freshness bảo thủ của kết quả thực dùng. Khảo sát tĩnh `BasicRepository.java:86,115` tại `89eb8cb`; cần regression >1.000 place và mixed freshness trong RC-G1-08/11, chưa có runtime evidence | N2 + N1 review | OPEN |
 | F-32 | Trung bình | P02 | Sandbox import job có 4 item (`APPLIED`×2, `NEEDS_REVIEW`, `FAILED`), chưa có item trùng riêng. Ngoài ra `PipelineService.publicItemStatus` đổi nội bộ `DUPLICATE` thành `APPLIED` và `SKIPPED` thành `APPLIED` (trừ `REVIEW_REJECTED`), nên API/UI không phân biệt trùng với ghi thành công; chưa thể kiểm scenario trùng qua màn hiện tại | N1 | OPEN |
 | F-33 | Cao | P00/P01 | Schema event đang sửa trên checkout dirty yêu cầu thêm `name_en`, `address`, `description`, `price_min`, `price_max`, `rating_avg`, `review_count` nhưng `CatalogRepository.emit` vẫn phát whitelist cũ. `python backend/services/catalog-service/test-local.py` ngày 03/11/2026, HEAD `ca83db7`, dirty, Java 21/PostGIS Docker: toàn suite 39/1/0/5 (run/failed/errors/skipped), FAIL tại `CatalogProviderTests.allSixtySixFrozenOperationsReturnValidatedProviderResponses`; riêng `CatalogDatabaseTests` 20/0/0/0. Hạ P01-CA-09; chưa sửa contract/event ngoài phạm vi bản đồ. Cần thống nhất schema/producer/consumer và chạy lại provider/broker trên cùng revision | N1 + N2 review consumer | OPEN |
+| F-34 | Cao | P01/P02 | Đăng ký trùng trả 202 nhưng không gửi lại mã; tài khoản chờ xác minh hết hạn bị kẹt. Đang bổ sung resend có cooldown/rate limit, chuyển bước FE và hướng dẫn Mailpit; candidate contract chưa review/CI | Codex; N1/N2 review | PARTIAL |
 
 
 Đã đóng: F-31 (Trung bình, P03, Codex: smoke phụ thuộc candidate của suite trước; fixture độc lập `fc370e8`, CI cũ `41334918573` FAIL, CI mới `41336264376` PASS trên `2f2e702`; PR #23), F-30 (Trung bình, P03, Codex: header cố định che nút quay lại chi tiết; `7b04167`, filters lần đầu FAIL, sau sửa 22/0/0/0), F-18 (khôi phục màn và nối đủ API không AI, còn hai nhánh media tách F-14; `4e020e1`/`edb10cb`, A–G), F-22 (sửa body/path/form thật; `4e020e1`, A/B/C/E/G), F-23 (bỏ bản ghi giả, chỉ cập nhật sau API thành công; `4e020e1`, F/H và negative assertions các suite).

@@ -1,6 +1,6 @@
 # Tiến độ Frontend (FE) — SmartTravel VN
 
-Cập nhật: **03/11/2026 01:57** (GMT+7)
+Cập nhật: **03/11/2026 13:01** (GMT+7)
 
 Progress gồm **hai file**: file này (`progress_fe.md`) cho frontend web; [`progress_be.md`](progress_be.md) cho backend và **trạng thái kết nối BE ↔ FE từng API** (mục 9 của file đó). Quy ước trạng thái, tiêu chuẩn PASS và cách cập nhật dùng chung: `progress_be.md` mục 2.
 
@@ -97,6 +97,7 @@ Bằng chứng theo màn: các suite A–I và revision tại [progress_be.md m�
 - [x] FE-P02-02: Pending ack khác thành công cuối — **LOCAL_VERIFIED** (dirty) · B verification/claim pending, C contribution → APPLIED/import decision → SUCCEEDED qua broker, G retry/cancel đọc lại CANCELLED; `4e020e1`/`edb10cb`.
 - [ ] FE-P02-03: Nối đủ API không AI — **PARTIAL** · Toàn bộ đã nối và được quan sát, còn hai nhánh media chưa kiểm được với scanner thật (F-14); số lượng/bằng chứng chỉ tại BE mục9. Không có màn còn thiếu trong scope API hiện tại.
 - [x] FE-P02-04: Bỏ fallback ghi giả, sửa body/path theo contract — **LOCAL_VERIFIED** (dirty) · A/B/C/E/G PASS qua Gateway thật, F/H và negative assertions giữ dữ liệu/form khi lỗi, không toast thành công giả; đóng F-22/F-23, source `4e020e1`, scripts `edb10cb`.
+- [ ] FE-P02-AUTH-01: Hoàn thiện luồng tài khoản — **IN_PROGRESS** · Người làm: Codex · Nhánh: `fix/identity-registration-verification` · Tự chuyển đăng ký → xác minh → đăng nhập, gửi lại mã, lỗi và hộp thư local; kiểm browser/Gateway tiếp theo (F-34, xem `progress_be.md` mục 9/10).
 
 ### 6.1. Dữ liệu mẫu để test thủ công
 
