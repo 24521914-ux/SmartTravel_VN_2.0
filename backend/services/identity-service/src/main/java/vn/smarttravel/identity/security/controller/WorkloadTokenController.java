@@ -22,14 +22,41 @@ public class WorkloadTokenController {
 
     @PostMapping(value="/internal/v1/security/workload-token", consumes=MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public Map<String,Object> token(@RequestHeader(value="Authorization", defaultValue="") String authorization,
-            @RequestParam(value="grant_type", defaultValue="") String grantType,
-            @RequestParam(value="audience", defaultValue="") String audience,
-            @RequestParam(value="scope", required=false) String scope) {
-        if (!grantType.equals("client_credentials")) throw new IdentityException(400,"UNSUPPORTED_GRANT_TYPE");
+            jakarta.servlet.http.HttpServletRequest request) throws java.io.IOException {
+        // RequestSizeFilter consumes the servlet stream first, so Tomcat (and Spring's form-POST
+        // @RequestBody) see no parameters; read the buffered copy, else parameters parsed earlier.
+        String body=new String(request.getInputStream().readAllBytes(),StandardCharsets.UTF_8);
+        Map<String,String> form=body.isBlank() ? parameters(request.getParameterMap()) : form(body);
+        String audience=form.getOrDefault("audience",""), scope=form.get("scope");
+        if (!"client_credentials".equals(form.get("grant_type"))) throw new IdentityException(400,"UNSUPPORTED_GRANT_TYPE");
         String[] credential=basic(authorization);
         var scopes=clients.authorize(credential[0],credential[1],audience,scope);
         return Map.of("access_token",keys.workload(credential[0],audience,scopes),"token_type","Bearer",
                 "expires_in",IssuerKeys.ACCESS_TTL_SECONDS,"scope",String.join(" ",scopes));
+    }
+
+    private static Map<String,String> form(String body) {
+        var values=new java.util.HashMap<String,String>();
+        if (body==null || body.isBlank()) return values;
+        try {
+            for (String pair:body.split("&")) {
+                int equals=pair.indexOf('=');
+                String name=URLDecoder.decode(equals<0?pair:pair.substring(0,equals),StandardCharsets.UTF_8);
+                // Repeated parameters are ambiguous for a credential request (RFC 6749 §3.2).
+                if (values.putIfAbsent(name,equals<0?"":URLDecoder.decode(pair.substring(equals+1),StandardCharsets.UTF_8))!=null)
+                    throw new IdentityException(400,"INVALID_INPUT");
+            }
+        } catch (IllegalArgumentException e) { throw new IdentityException(400,"INVALID_INPUT"); }
+        return values;
+    }
+
+    private static Map<String,String> parameters(Map<String,String[]> parameters) {
+        var values=new java.util.HashMap<String,String>();
+        parameters.forEach((name,list) -> {
+            if (list.length!=1) throw new IdentityException(400,"INVALID_INPUT");
+            values.put(name,list[0]);
+        });
+        return values;
     }
 
     private static String[] basic(String header) {
