@@ -6,6 +6,10 @@ on:
       - 'backend/infra/p03_*.py'
       - 'backend/infra/test_p03_*.py'
       - 'backend/platform/validate_contracts.py'
+      - 'backend/infra/p02.py'
+      - 'backend/infra/test_p02_compose.py'
+      - 'docker-compose*.yml'
+      - '.env.example'
       - 'backend/contracts/**'
       - 'frontend/**'
       - '.github/workflows/p03-tooling.yml'
@@ -34,6 +38,8 @@ jobs:
           python backend/infra/p03_nonai_tests.py
           python -m unittest discover -s backend/platform -p test_contract_checksums.py
           python -m unittest discover -s backend/platform/init -p "test_*.py"
+          python -m unittest discover -s backend/infra -p test_p02_compose.py
+          docker compose --env-file .env.example config --quiet
           python backend/platform/validate_contracts.py
       - name: Validate frontend
         run: |

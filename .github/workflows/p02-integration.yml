@@ -2,7 +2,7 @@ name: P02 real service integration
 on:
   workflow_dispatch:
   pull_request:
-    paths: ['backend/**', 'frontend/**', '.github/workflows/p02-integration.yml']
+    paths: ['backend/**', 'frontend/**', 'docker-compose*.yml', '.env.example', '.github/workflows/p02-integration.yml']
 permissions:
   contents: read
 jobs:
@@ -43,6 +43,7 @@ jobs:
           npm --prefix frontend run test:contracts
           npm --prefix frontend run build
       - name: Build and connect all real service images
+        # Images come from the JARs verified above (runtime target); the stack is docker-compose.yml.
         run: |
           python backend/infra/p02.py build
           python backend/infra/p02.py up
