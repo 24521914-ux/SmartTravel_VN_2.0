@@ -86,6 +86,32 @@ public class IssuerKeys {
                 expires.isBefore(Instant.now().plusSeconds(60)) ? expires : Instant.now().plusSeconds(60));
     }
 
+    /** Client-credentials token: no session, one destination, only scopes already granted to the client. */
+    public String workload(String client, String audience, List<String> scopes) {
+        if (client == null || client.isBlank() || scopes.isEmpty() || scopes.stream().anyMatch(s -> !s.startsWith(audience + ":")))
+            throw new IllegalArgumentException("Scope must belong to destination");
+        var now = Instant.now();
+        var claims = new JWTClaimsSet.Builder().issuer(issuer).subject(workloadSubject(client).toString()).audience(List.of(audience))
+                .issueTime(Date.from(now)).expirationTime(Date.from(now.plusSeconds(ACCESS_TTL_SECONDS)))
+                .jwtID(UUID.randomUUID().toString()).claim("roles", List.of("SERVICE")).claim("client_id", client)
+                .claim("scope", String.join(" ", scopes))
+                .build();
+        return sign(claims);
+    }
+
+    /** UUIDv5(NAMESPACE_URL, "smarttravel-workload:" + client), the subject the P02 provisioning tool used. */
+    static UUID workloadSubject(String client) {
+        try {
+            var sha1 = java.security.MessageDigest.getInstance("SHA-1");
+            sha1.update(java.util.HexFormat.of().parseHex("6ba7b8119dad11d180b400c04fd430c8"));
+            byte[] hash = sha1.digest(("smarttravel-workload:" + client).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            hash[6] = (byte) ((hash[6] & 0x0f) | 0x50);
+            hash[8] = (byte) ((hash[8] & 0x3f) | 0x80);
+            var buffer = java.nio.ByteBuffer.wrap(hash, 0, 16);
+            return new UUID(buffer.getLong(), buffer.getLong());
+        } catch (java.security.NoSuchAlgorithmException e) { throw new IllegalStateException("Hash unavailable"); }
+    }
+
     private String sign(UUID user, UUID session, List<String> roles, List<String> targetAudiences, String scope, Instant expires) {
         var now = Instant.now();
         var claims = new JWTClaimsSet.Builder().issuer(issuer).subject(user.toString()).audience(targetAudiences)
@@ -93,6 +119,10 @@ public class IssuerKeys {
                 .jwtID(UUID.randomUUID().toString()).claim("sid", session.toString()).claim("roles", roles)
                 .claim("scope", scope)
                 .build();
+        return sign(claims);
+    }
+
+    private String sign(JWTClaimsSet claims) {
         var jwt = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(active.getKeyID()).build(), claims);
         try { jwt.sign(new RSASSASigner(active)); String serialized = jwt.serialize();
             if (serialized.length() > 1024) throw new IllegalStateException("Access token exceeds frozen contract bound");

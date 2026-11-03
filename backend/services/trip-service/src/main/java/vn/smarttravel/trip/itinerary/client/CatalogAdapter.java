@@ -15,13 +15,14 @@ import static vn.smarttravel.trip.shared.web.ApiValues.*;
 
 @Component
 public class CatalogAdapter {
-    private final String base,token;
+    private final String base;
+    private final java.util.function.Supplier<String> token;
     private final ObjectMapper json;
     private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();
-    public CatalogAdapter(ObjectMapper json,@Value("${trip.catalog.base-url:http://127.0.0.1:8302}") String base,@Value("${trip.catalog.token:}") String token) {this.json=json;this.base=base;this.token=token;}
+    public CatalogAdapter(ObjectMapper json,@Value("${trip.catalog.base-url:http://127.0.0.1:8302}") String base,@Value("${trip.catalog.token:}") String token,vn.smarttravel.trip.shared.http.WorkloadTokens workloads) {this.json=json;this.base=base;this.token=()->workloads.token(token,"catalog","catalog:places:read");}
     @SuppressWarnings("unchecked") public Map<String,Object> place(UUID id) {
         try {
-            var req=HttpRequest.newBuilder(URI.create(base+"/internal/v1/places/batch")).timeout(Duration.ofSeconds(3)).header("Content-Type","application/json").header("Authorization","Bearer "+token).POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(Map.of("ids",List.of(id))))).build();
+            var req=HttpRequest.newBuilder(URI.create(base+"/internal/v1/places/batch")).timeout(Duration.ofSeconds(3)).header("Content-Type","application/json").header("Authorization","Bearer "+token.get()).POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(Map.of("ids",List.of(id))))).build();
             var res=http.send(req,new vn.smarttravel.trip.shared.http.LimitedBodyHandler(262144)); require(res.statusCode()==200,503,"CATALOG_UNAVAILABLE");
             require(res.body().length<=262144,503,"CATALOG_INVALID_RESPONSE");
             var b=json.readValue(res.body(),Map.class); var rows=(List<Map<String,Object>>)b.get("items");
@@ -38,7 +39,7 @@ public class CatalogAdapter {
             String cursor=null;var seen=new HashSet<String>();
             do {
                 String path="/api/v1/destinations?limit=100"+(cursor==null?"":"&cursor="+java.net.URLEncoder.encode(cursor,java.nio.charset.StandardCharsets.UTF_8));
-                var req=HttpRequest.newBuilder(URI.create(base+path)).timeout(Duration.ofSeconds(3)).header("Authorization","Bearer "+token).GET().build();
+                var req=HttpRequest.newBuilder(URI.create(base+path)).timeout(Duration.ofSeconds(3)).header("Authorization","Bearer "+token.get()).GET().build();
                 var res=http.send(req,new vn.smarttravel.trip.shared.http.LimitedBodyHandler(262144));require(res.statusCode()==200,503,"CATALOG_UNAVAILABLE");
                 var page=json.readValue(res.body(),Map.class);require(page.get("items") instanceof List<?>,503,"CATALOG_INVALID_RESPONSE");
                 for(Object item:(List<?>)page.get("items")) {

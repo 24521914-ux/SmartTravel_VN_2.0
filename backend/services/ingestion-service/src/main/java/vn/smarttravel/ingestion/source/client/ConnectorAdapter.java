@@ -17,10 +17,11 @@ import static vn.smarttravel.ingestion.shared.web.ApiValues.*;
 @Component
 public class ConnectorAdapter {
     private final ObjectMapper json;
-    private final String catalog,token;
+    private final String catalog;
+    private final java.util.function.Supplier<String> token;
     private final Set<String> hosts;private final boolean local;
     private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).followRedirects(HttpClient.Redirect.NEVER).build();
-    public ConnectorAdapter(ObjectMapper json,@Value("${ingestion.catalog.base-url:http://127.0.0.1:8302}")String catalog,@Value("${ingestion.catalog.token:}")String token,@Value("${ingestion.connector.allowed-hosts:127.0.0.1,localhost}")String hosts,org.springframework.core.env.Environment env) {this.local=Arrays.stream(env.getActiveProfiles()).anyMatch(p->Set.of("local","test","p01local","p02-local").contains(p));this.json=json;this.catalog=catalog;this.token=token;this.hosts=Set.of(hosts.split(","));}
+    public ConnectorAdapter(ObjectMapper json,@Value("${ingestion.catalog.base-url:http://127.0.0.1:8302}")String catalog,@Value("${ingestion.catalog.token:}")String token,vn.smarttravel.ingestion.shared.http.WorkloadTokens workloads,@Value("${ingestion.connector.allowed-hosts:127.0.0.1,localhost}")String hosts,org.springframework.core.env.Environment env) {this.local=Arrays.stream(env.getActiveProfiles()).anyMatch(p->Set.of("local","test","p01local","p02-local").contains(p));this.json=json;this.catalog=catalog;this.token=()->workloads.token(token,"catalog","catalog:candidates:read");this.hosts=Set.of(hosts.split(","));}
     @SuppressWarnings("unchecked") private Map<String,Object> send(HttpRequest request) {
         try {var response=http.send(request,new vn.smarttravel.ingestion.shared.http.LimitedBodyHandler(1048576));require(response.statusCode()==200,503,response.statusCode()==429?"SOURCE_QUOTA":"DEPENDENCY_UNAVAILABLE");return json.readValue(response.body(),Map.class);}
 
@@ -34,6 +35,6 @@ public class ConnectorAdapter {
         var response=send(request.build());require(response.get("records") instanceof List<?> && ((List<?>)response.get("records")).size()<=100,422,"SOURCE_PAGE_LIMIT");return response;
     }
     public Map<String,Object> candidates(Map<String,Object>normalized) {
-        try {var request=HttpRequest.newBuilder(URI.create(catalog+"/internal/v1/places/candidates")).timeout(Duration.ofSeconds(3)).header("Content-Type","application/json").header("Authorization","Bearer "+token).POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(map("name",normalized.get("name"),"latitude",normalized.get("latitude"),"longitude",normalized.get("longitude"))))).build();return send(request);}catch(com.fasterxml.jackson.core.JsonProcessingException e){throw new IllegalStateException(e);}
+        try {var request=HttpRequest.newBuilder(URI.create(catalog+"/internal/v1/places/candidates")).timeout(Duration.ofSeconds(3)).header("Content-Type","application/json").header("Authorization","Bearer "+token.get()).POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(map("name",normalized.get("name"),"latitude",normalized.get("latitude"),"longitude",normalized.get("longitude"))))).build();return send(request);}catch(com.fasterxml.jackson.core.JsonProcessingException e){throw new IllegalStateException(e);}
     }
 }

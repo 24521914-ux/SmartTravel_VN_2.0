@@ -30,7 +30,7 @@ class CommunityDatabaseTests {
         @Bean SimpleMongoClientDatabaseFactory factory(MongoClient client){return new SimpleMongoClientDatabaseFactory(client,"community_db");}
         @Bean MongoTemplate mongo(SimpleMongoClientDatabaseFactory factory){return new MongoTemplate(factory);}
         @Bean MongoTransactionManager transactionManager(SimpleMongoClientDatabaseFactory factory){return new MongoTransactionManager(factory);}
-        @Bean CatalogClient catalog(){return new CatalogClient("http://127.0.0.1:"+stub.getAddress().getPort(),"fixture");}
+        @Bean CatalogClient catalog(){return new CatalogClient("http://127.0.0.1:"+stub.getAddress().getPort(),"fixture",vn.smarttravel.community.shared.http.WorkloadTokens.disabled());}
         @Bean com.fasterxml.jackson.databind.ObjectMapper json(){return new com.fasterxml.jackson.databind.ObjectMapper();}
         @Bean vn.smarttravel.community.infrastructure.events.repository.EventRepository events(MongoTemplate mongo,CommunityRepository reviews,ContributionRepository contributions,com.fasterxml.jackson.databind.ObjectMapper json){return new vn.smarttravel.community.infrastructure.events.repository.EventRepository(mongo,reviews,contributions,json);}
         @Bean vn.smarttravel.community.infrastructure.events.service.EventService eventService(vn.smarttravel.community.infrastructure.events.repository.EventRepository repository){return new vn.smarttravel.community.infrastructure.events.service.EventService(repository);}

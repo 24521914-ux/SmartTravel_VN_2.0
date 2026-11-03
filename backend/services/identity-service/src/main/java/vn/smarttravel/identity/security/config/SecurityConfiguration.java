@@ -32,6 +32,8 @@ public class SecurityConfiguration {
                         .requestMatchers("/internal/v1/users/preferences/batch").hasAuthority("SCOPE_identity:preferences:read")
                         .requestMatchers("/internal/v1/users/preferences/snapshot").hasAuthority("SCOPE_identity:preferences:read")
                         .requestMatchers("/internal/v1/deletion-requests/**").hasAuthority("SCOPE_identity:deletion:read")
+                        // Client-credentials grant authenticates the client itself (HTTP Basic), not a bearer token.
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/internal/v1/security/workload-token").permitAll()
                         .requestMatchers("/internal/v1/security/exchange", "/internal/v1/security/session").authenticated()
                         .requestMatchers("/internal/**").denyAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/me", "/api/v1/me/**", "/api/v1/preference-options")

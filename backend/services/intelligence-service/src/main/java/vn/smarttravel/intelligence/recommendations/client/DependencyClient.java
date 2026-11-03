@@ -25,7 +25,10 @@ public class DependencyClient {
     @Value("${intelligence.trip-token:}") private String tripToken="";
     @Value("${intelligence.trip-url:http://127.0.0.1:8104}") private String trip;
     @Value("${intelligence.identity-token:}") private String identityToken="";
-    private String credential(String base){String scoped=base.equals(catalog)?catalogToken:base.equals(ingestion)?ingestionToken:base.equals(community)?communityToken:base.equals(trip)?tripToken:identityToken;return scoped==null||scoped.isBlank()?token:scoped;}
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private vn.smarttravel.intelligence.shared.http.WorkloadTokens workloads=vn.smarttravel.intelligence.shared.http.WorkloadTokens.disabled();
+    private static final Map<String,String> SCOPES=Map.of("catalog","catalog:places:read","ingestion","ingestion:policy:read","community","community:ratings:read","identity","identity:preferences:read","trip","trip:internal");
+    // Scoped static token, then an Identity-issued client-credentials token, then the legacy shared token.
+    private String credential(String base){String audience=base.equals(catalog)?"catalog":base.equals(ingestion)?"ingestion":base.equals(community)?"community":base.equals(trip)?"trip":"identity";String scoped=audience.equals("catalog")?catalogToken:audience.equals("ingestion")?ingestionToken:audience.equals("community")?communityToken:audience.equals("trip")?tripToken:identityToken;String access=workloads.token(scoped,audience,SCOPES.get(audience));return access.isBlank()?token:access;}
     @Value("${intelligence.community-url:http://127.0.0.1:8103}") private String community;
     @Value("${intelligence.identity-url:http://127.0.0.1:8101}") private String identity;
     public DependencyClient(@Value("${intelligence.catalog-url:http://127.0.0.1:8102}") String catalog,

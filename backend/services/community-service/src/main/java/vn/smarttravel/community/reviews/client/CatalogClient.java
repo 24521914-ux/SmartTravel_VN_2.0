@@ -10,8 +10,8 @@ import org.springframework.http.HttpStatus;
 @Component
 public class CatalogClient {
     private final vn.smarttravel.community.shared.http.BoundedJsonClient client;
-    public CatalogClient(@Value("${catalog.base-url:http://127.0.0.1:8102}") String base,@Value("${catalog.service-token:}") String token){
-        client=new vn.smarttravel.community.shared.http.BoundedJsonClient(base,token);
+    public CatalogClient(@Value("${catalog.base-url:http://127.0.0.1:8102}") String base,@Value("${catalog.service-token:}") String token,vn.smarttravel.community.shared.http.WorkloadTokens workloads){
+        client=new vn.smarttravel.community.shared.http.BoundedJsonClient(base,()->workloads.token(token,"catalog","catalog:places:read"));
     }
     public void validate(String id){
         try{

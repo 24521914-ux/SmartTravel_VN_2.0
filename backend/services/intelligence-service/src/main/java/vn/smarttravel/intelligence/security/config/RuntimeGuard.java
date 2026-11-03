@@ -39,7 +39,8 @@ public class RuntimeGuard implements InitializingBean {
                 throw new IllegalStateException("Explicit HTTPS dependency endpoint required: " + key);
             }
         }
-        if (environment.getProperty("intelligence.workload-token", "").isBlank())
+        if (environment.getProperty("intelligence.workload-token", "").isBlank()
+                && !vn.smarttravel.intelligence.shared.http.WorkloadTokens.deployable(environment))
             throw new IllegalStateException("Dependency workload credential required");
         if (!environment.getProperty("intelligence.transport.enabled", Boolean.class, false)
                 || environment.getProperty("spring.rabbitmq.password", "").isBlank())

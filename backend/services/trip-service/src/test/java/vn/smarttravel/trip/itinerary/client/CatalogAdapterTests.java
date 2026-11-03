@@ -21,7 +21,7 @@ class CatalogAdapterTests {
             byte[] bytes=json.writeValueAsBytes(body);exchange.sendResponseHeaders(200,bytes.length);exchange.getResponseBody().write(bytes);exchange.close();
         });server.start();
         try {
-            var adapter=new CatalogAdapter(json,"http://127.0.0.1:"+server.getAddress().getPort(),"fixture");
+            var adapter=new CatalogAdapter(json,"http://127.0.0.1:"+server.getAddress().getPort(),"fixture",vn.smarttravel.trip.shared.http.WorkloadTokens.disabled());
             assertThat(adapter.destination(target).get("destination_id")).isEqualTo(target.toString());
             assertThat(queries).hasSize(2);assertThat(queries.getFirst()).isEqualTo("/api/v1/destinations?limit=100");
             assertThat(queries.getLast()).contains("cursor=opaque%2B%2F%3D+cursor");
@@ -35,7 +35,7 @@ class CatalogAdapterTests {
             byte[] bytes=json.writeValueAsBytes(body);exchange.sendResponseHeaders(200,bytes.length);exchange.getResponseBody().write(bytes);exchange.close();
         });server.start();
         try {
-            var adapter=new CatalogAdapter(json,"http://127.0.0.1:"+server.getAddress().getPort(),"fixture");
+            var adapter=new CatalogAdapter(json,"http://127.0.0.1:"+server.getAddress().getPort(),"fixture",vn.smarttravel.trip.shared.http.WorkloadTokens.disabled());
             assertThatThrownBy(()->adapter.destination(UUID.randomUUID())).isInstanceOfSatisfying(ResponseStatusException.class,e->assertThat(e.getStatusCode().value()).isEqualTo(422));
             cycle.set(true);
             assertThatThrownBy(()->adapter.destination(UUID.randomUUID())).isInstanceOfSatisfying(ResponseStatusException.class,e->assertThat(e.getStatusCode().value()).isEqualTo(503));

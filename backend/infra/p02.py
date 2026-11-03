@@ -33,6 +33,10 @@ PORTS = dict(identity=58101, catalog=58102, community=58103, trip=58104,
              ingestion=58105, intelligence=58106)
 
 
+# Client-credentials callers; Identity holds every secret, each caller only its own.
+WORKLOAD_SECRETS = [s.upper()+'_WORKLOAD_SECRET' for s in SERVICES if s != 'identity']
+
+
 def exclusive(path, content):
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open('x', encoding='utf-8') as stream:
@@ -54,8 +58,11 @@ def prepare():
                       CATALOG_CURSOR_KEY=secrets.token_hex(32))
         exclusive(secret_file, json.dumps(values, indent=2))
     values = json.loads(secret_file.read_text(encoding='utf-8'))
-    if 'CATALOG_BROKER_OPERATOR_PASSWORD' not in values:
-        values['CATALOG_BROKER_OPERATOR_PASSWORD'] = secrets.token_hex(24)
+    # Values added after a volume set was first provisioned are appended, never rotated.
+    added = {name: secrets.token_hex(32 if name.endswith('_WORKLOAD_SECRET') else 24)
+             for name in ['CATALOG_BROKER_OPERATOR_PASSWORD', *WORKLOAD_SECRETS] if name not in values}
+    if added:
+        values.update(added)
         secret_file.write_text(json.dumps(values, indent=2), encoding='utf-8')
     key_file = LOCAL / 'keys.json'
     if not key_file.exists():
@@ -124,7 +131,8 @@ def configuration(values):
             env.update(IDENTITY_KEYS_FILE='/run/identity/keys.json', IDENTITY_ACTIVE_KID='p02-identity-1',
                        IDENTITY_MAIL_KEY=values['IDENTITY_MAIL_KEY'], MAIL_HOST='identity-mail', MAIL_PORT='1025',
                        IDENTITY_NOTIFICATION_EMAIL_ENABLED='true', IDENTITY_FIXTURES_ENABLED='true',
-                       IDENTITY_FIXTURE_PASSWORD=values['IDENTITY_FIXTURE_PASSWORD'])
+                       IDENTITY_FIXTURE_PASSWORD=values['IDENTITY_FIXTURE_PASSWORD'],
+                       **{name: values[name] for name in WORKLOAD_SECRETS})
             cfg['volumes']['identity-signing-keys'] = {'name': 'smarttravel-p02_identity-signing-keys'}
             volumes.append('identity-signing-keys:/run/identity:ro')
         if service == 'catalog':
@@ -135,19 +143,10 @@ def configuration(values):
                       'intelligence.identity-url': 'http://identity:8101',
                       'intelligence.trip-url': 'http://trip:8104',
                       'catalog.cursor-key': values['CATALOG_CURSOR_KEY']}
-        if service in ['community', 'trip', 'ingestion', 'intelligence']:
-            scopes = ['catalog:candidates:read'] if service == 'ingestion' else ['catalog:places:read']
-            token = workload(service, 'catalog', scopes)
-            env['CATALOG_TOKEN'] = token
-            properties['catalog.service-token'] = token
-            properties['intelligence.catalog-token'] = token
-        if service in ['catalog', 'intelligence']:
-            properties['ingestion.service-token'] = workload(service, 'ingestion', ['ingestion:policy:read'])
-            properties['intelligence.ingestion-token'] = properties['ingestion.service-token']
-        if service == 'intelligence':
-            properties['intelligence.community-token'] = workload(service, 'community', ['community:ratings:read'])
-            properties['intelligence.identity-token'] = workload(service, 'identity', ['identity:preferences:read'])
-            properties['intelligence.trip-token'] = workload(service, 'trip', ['trip:internal'])
+        if service != 'identity':
+            # Identity issues 10-minute client-credentials tokens; services renew them in memory (F-32).
+            env.update(WORKLOAD_TOKEN_URI='http://identity:8101/internal/v1/security/workload-token',
+                       WORKLOAD_CLIENT_ID=service, WORKLOAD_CLIENT_SECRET=values[service.upper()+'_WORKLOAD_SECRET'])
         if service == 'ingestion':
             env.update(WORKER_ENABLED='true', CONNECTOR_ALLOWED_HOSTS='source-sandbox')
         env['SPRING_APPLICATION_JSON'] = json.dumps(properties)
@@ -183,7 +182,8 @@ def provision_identity_keys():
 def workload(client, audience, scopes):
     """Local platform provisioning with the real persisted Identity signing key.
 
-    Separate destination credentials; cached until near expiry. `renew` reloads consumers.
+    Test-harness credentials only (smoke, faults, restore); running services obtain their
+    own tokens from Identity. Separate destination credentials; cached until near expiry.
     """
     sys.path.insert(0, str(ROOT / 'backend/platform'))
     from provision_workload_token import issue
@@ -267,6 +267,9 @@ def monitor():
         if queue['name'].endswith('.inbox') and (queue['consumers'] == 0 or queue['ready'] > 1000):
             alarms.append(queue['name']+' consumer down/backlog')
     for path in LOCAL.glob('token-*.json'):
+        # Files left by services before client credentials (F-32) are no longer used.
+        if path.name.split('-')[1] in SERVICES:
+            continue
         if json.loads(path.read_text(encoding='utf-8'))['expires_at']-time.time() < 3600:
             alarms.append('Workload credentials expire soon: run p02.py renew')
     report = {'timestamp': time.time(), 'services': states, 'queues': queues, 'alarms': alarms}

@@ -36,7 +36,7 @@ class CatalogDatabaseTests {
         @Bean BusinessRepository business(JdbcTemplate db,CatalogRepository places,ObjectMapper json){return new BusinessRepository(db,places,json);}
         @Bean TaxonomyRepository taxonomy(JdbcTemplate db,CatalogRepository places){return new TaxonomyRepository(db,places);}
         @Bean OfferingRepository offerings(JdbcTemplate db,CatalogRepository places){return new OfferingRepository(db,places);}
-        @Bean vn.smarttravel.catalog.infrastructure.events.client.SourcePolicyClient policy(){return new vn.smarttravel.catalog.infrastructure.events.client.SourcePolicyClient("http://127.0.0.1:"+policyStub.getAddress().getPort(),"fixture");}
+        @Bean vn.smarttravel.catalog.infrastructure.events.client.SourcePolicyClient policy(){return new vn.smarttravel.catalog.infrastructure.events.client.SourcePolicyClient("http://127.0.0.1:"+policyStub.getAddress().getPort(),"fixture",vn.smarttravel.catalog.shared.http.WorkloadTokens.disabled());}
         @Bean vn.smarttravel.catalog.infrastructure.events.repository.EventRepository events(JdbcTemplate db,CatalogRepository places,IdempotencyRepository idempotency,vn.smarttravel.catalog.infrastructure.events.client.SourcePolicyClient policy,ObjectMapper json,DataSourceTransactionManager manager){return new vn.smarttravel.catalog.infrastructure.events.repository.EventRepository(db,places,idempotency,policy,json,manager);}
         @Bean IdempotencyRepository idempotency(JdbcTemplate db,ObjectMapper json){return new IdempotencyRepository(db,json);}
     }

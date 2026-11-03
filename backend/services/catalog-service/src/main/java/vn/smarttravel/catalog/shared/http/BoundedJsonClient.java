@@ -15,15 +15,17 @@ public final class BoundedJsonClient {
             .followRedirects(HttpClient.Redirect.NEVER).build();
     private final ObjectMapper json = new ObjectMapper();
     private final String base;
-    private final String token;
-    public BoundedJsonClient(String base, String token) {
+    private final java.util.function.Supplier<String> token;
+    public BoundedJsonClient(String base, String token) { this(base, () -> token); }
+    /** Token is resolved per request so renewed workload credentials are picked up. */
+    public BoundedJsonClient(String base, java.util.function.Supplier<String> token) {
         this.base = base.replaceAll("/$", "");
         this.token = token;
     }
     public Map<String, Object> request(String method, String path, Map<String, ?> body) {
         try {
             var request = HttpRequest.newBuilder(URI.create(base + path)).timeout(Duration.ofSeconds(2))
-                    .header("Authorization", "Bearer " + token).header("Accept", "application/json");
+                    .header("Authorization", "Bearer " + token.get()).header("Accept", "application/json");
             if (body == null) request.method(method, HttpRequest.BodyPublishers.noBody());
             else request.header("Content-Type", "application/json")
                     .method(method, HttpRequest.BodyPublishers.ofByteArray(json.writeValueAsBytes(body)));
