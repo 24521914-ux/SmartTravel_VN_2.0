@@ -174,7 +174,13 @@ services:
       COMMUNITY_MIGRATION_PASSWORD: ${COMMUNITY_MIGRATION_PASSWORD:?required}
       COMMUNITY_RUNTIME_PASSWORD: ${COMMUNITY_RUNTIME_PASSWORD:?required}
     entrypoint: [bash, -ec]
-    command: ['for s in bootstrap migrate; do mongosh "mongodb://community-db:27017/?directConnection=true" --quiet /p01/$$s.js; done']
+    # On a new volume the image first runs a localhost-only mongod (the healthcheck already passes
+    # inside it), so wait until the real server accepts network connections.
+    command:
+      - >-
+        uri="mongodb://community-db:27017/?directConnection=true";
+        for i in $$(seq 1 60); do mongosh "$$uri" --quiet --eval 'db.adminCommand({ping:1})' >/dev/null 2>&1 && break; sleep 2; done;
+        for s in bootstrap migrate; do mongosh "$$uri" --quiet /p01/$$s.js; done
     volumes:
       - ./backend/infra/mongo:/p01:ro
       - ./backend/services/community-service/src/main/resources/db/migration:/migrations:ro
