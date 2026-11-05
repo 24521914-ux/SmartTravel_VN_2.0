@@ -49,10 +49,10 @@ try {
   await page.getByLabel('Email', { exact: true }).fill(email); await page.getByLabel('Tên hiển thị', { exact: true }).fill('Browser registration');
   await page.getByLabel('Mật khẩu', { exact: true }).fill(password);
   await page.getByLabel('Xác nhận mật khẩu', { exact: true }).fill(password);
-  await submit('Đăng ký', '/auth/register'); checks.push('register SMTP');
-  const token = await tokenFromMail();
-  await page.getByRole('heading', { name: 'Xác minh email', exact: true }).waitFor();
-  await page.getByLabel('Mã xác nhận trong email').fill(token); await submit('Xác minh email', '/auth/verify-email'); checks.push('verify email');
+  await submit('Đăng ký', '/auth/register'); checks.push('register without verification');
+  await page.waitForFunction(() => !document.querySelector('[name=confirm_password]'));
+  assert.equal(await page.locator('[name=email]').inputValue(), email);
+  assert.equal(await page.locator('[name=password]').inputValue(), '');
   await login(password);
   await page.getByLabel('Tên hiển thị', { exact: true }).fill('Browser updated profile'); await submit('Lưu hồ sơ', '/me');
   await page.getByRole('heading', { name: 'Browser updated profile', exact: true }).waitFor(); checks.push('profile persists');

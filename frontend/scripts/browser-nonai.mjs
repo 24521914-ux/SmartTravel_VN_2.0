@@ -4,12 +4,13 @@ import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
+import { loadP02Secrets } from './p02-secrets.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const repo = resolve(root, '..');
 const output = resolve(repo, 'backend/infra/.local/p03/frontend-browser');
 mkdirSync(output, { recursive: true });
-const secrets = JSON.parse(readFileSync(process.env.P02_SECRETS_FILE ?? resolve(repo, 'backend/infra/.local/p02/secrets.json'), 'utf8'));
+const secrets = loadP02Secrets();
 const snapshot = () => {
   const result = spawnSync('python', ['-c', "import sys,json;sys.path.insert(0,'backend/infra');from p03_candidate import candidate_manifest;print(json.dumps(candidate_manifest()))"], { cwd: repo, encoding: 'utf8' });
   assert.equal(result.status, 0, 'Candidate manifest unavailable');
@@ -51,7 +52,8 @@ async function navigate(name) {
     else await page.locator('.more-toggle').click();
   }
   await button.click();
-  if (name !== 'Khám phá') await page.getByRole('heading', { name, exact: true, level: 1 }).waitFor();
+  if (name === 'Tài khoản') await page.locator('.account-panel-container').waitFor();
+  else if (name !== 'Khám phá') await page.getByRole('heading', { name, exact: true, level: 1 }).waitFor();
   await idle();
 }
 async function createdArticle(name) {
@@ -126,18 +128,20 @@ try {
   await page.getByRole('button', { name: 'Tạo bộ sưu tập', exact: true }).click(); await idle();
   await createdArticle(name);
   await navigate('Chuyến đi');
+  await page.getByRole('button', { name: '+ Chuyến đi mới', exact: true }).first().click();
   await page.getByLabel('Tên chuyến đi', { exact: true }).fill(name);
   await page.getByLabel('Ngày bắt đầu', { exact: true }).fill('2026-12-01');
   await page.getByLabel('Ngày kết thúc', { exact: true }).fill('2026-12-02');
-  await page.getByLabel('Ngân sách (VND)', { exact: true }).fill('2000000');
+  await page.getByLabel('Ngân sách dự kiến', { exact: true }).fill('2000000');
   await page.getByRole('button', { name: 'Tạo chuyến đi', exact: true }).click(); await idle();
-  await (await createdArticle(name)).getByRole('button', { name: 'Xem chi tiết' }).click(); await idle();
-  await page.getByLabel(/^Ngày tham quan/).fill('2026-12-01');
+  await page.getByRole('heading', { name, exact: true }).waitFor();
+  await page.getByLabel('Ngày tham quan', { exact: true }).and(page.locator('input')).fill('2026-12-01');
   await page.getByRole('button', { name: 'Thêm ngày', exact: true }).click(); await idle();
-  await page.getByRole('tab', { name: '2026-12-01', exact: true }).click(); await idle();
-  await page.getByRole('heading', { name: 'Lịch trình ngày: 2026-12-01', exact: true }).waitFor();
+  await page.getByRole('tab', { name: /01\/12\/2026/ }).click(); await idle();
+  await page.getByRole('heading', { name: 'Ngày 01/12/2026', exact: true }).waitFor();
   assert.equal(await page.locator('input[name=recommendation]').count(), 0);
   await page.getByRole('button', { name: '+ Thêm vào ngày', exact: true }).first().click(); await idle();
+  await page.getByTestId('trip-timeline-item').first().locator('summary').click();
   await page.getByRole('button', { name: 'Khóa địa điểm', exact: true }).click(); await idle();
   await page.getByRole('button', { name: 'Mở khóa địa điểm', exact: true }).click(); await idle();
   await responsiveCheck('user', 'Chuyến đi');
@@ -164,10 +168,8 @@ try {
   await responsiveCheck('user', 'Bản đồ');
   await page.getByRole('button', { name: 'Xem vị trí', exact: true }).first().click(); await idle();
   assert.match(await page.getByRole('link', { name: /Mở OpenStreetMap/ }).getAttribute('href'), /^https:\/\/www.openstreetmap.org\//);
-  await page.getByRole('region', { name: 'Bản đồ địa điểm tương tác', exact: true }).waitFor();
-  await page.locator('.leaflet-marker-icon').first().waitFor();
-  assert.equal(await page.locator('iframe').count(), 0);
-  mark('map', 'Location coordinates, OSM link and interactive Leaflet markers');
+  await page.locator('iframe').waitFor();
+  mark('map', 'Location coordinates, OSM link and opt-in map iframe');
   await logout(); await login('business');
   await responsiveCheck('business', 'Khám phá');
   await responsiveCheck('business', 'Tài khoản');
