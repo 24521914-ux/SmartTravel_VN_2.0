@@ -98,7 +98,7 @@ npm run test:browser
 ```
 
 Hai smoke cuối gọi Gateway thật; cần user fixture đã được khởi tạo và mật khẩu từ
-file ignored `backend/infra/.local/p02/secrets.json`, hoặc `.env` ở gốc repo nếu stack được bật bằng `docker compose up` (xem `scripts/p02-secrets.mjs`). Có thể override bằng
+file ignored `.env` ở gốc repo do `python backend/platform/init_env.py` tạo (xem `scripts/p02-secrets.mjs`). Có thể override bằng
 `P02_SECRETS_FILE`, `P02_USER_EMAIL`, `P02_USER_PASSWORD`, `P02_GATEWAY_TARGET`
 và `P02_FRONTEND_URL`. Không in token/password. Browser smoke tạo tài nguyên được
 đặt tên `Browser smoke`/`Browser journey` trên dữ liệu kiểm thử, lưu ảnh trong

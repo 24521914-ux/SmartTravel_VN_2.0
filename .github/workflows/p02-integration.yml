@@ -43,10 +43,15 @@ jobs:
           npm --prefix frontend run test:contracts
           npm --prefix frontend run build
       - name: Build and connect all real service images
-        # Images come from the JARs verified above (runtime target); the stack is docker-compose.yml.
+        # Images package the JARs verified above (runtime target); the stack is docker-compose.yml
+        # plus the automatically loaded docker-compose.override.yml (local databases).
+        env:
+          SERVICE_BUILD_TARGET: runtime
         run: |
-          python backend/infra/p02.py build
-          python backend/infra/p02.py up
+          python backend/platform/init_env.py
+          # The backend integration suites exercise the deferred AI routes too (F-36).
+          sed -i 's/^AI_ENABLED=.*/AI_ENABLED=true/' .env
+          docker compose up -d --build --wait --wait-timeout 600
       - name: Real gateway domain transport and deletion flows
         run: |
           python backend/infra/p03_nonai_e2e.py --release-id p03-non-ai-${{ github.sha }}
@@ -82,4 +87,4 @@ jobs:
           retention-days: 7
       - name: Stop only owned P02 environment
         if: always()
-        run: python backend/infra/p02.py down
+        run: docker compose down

@@ -39,7 +39,7 @@ class CandidateManifestTests(unittest.TestCase):
                  'backend/platform/api-gateway/pom.xml',
                  'backend/platform/api-gateway/Dockerfile',
                  'backend/platform/validate_contracts.py',
-                 'backend/platform/cloud/compose.yaml', 'backend/contracts/fixtures/places.json',
+                 'backend/platform/cloud/compose.tools.yaml', 'backend/contracts/fixtures/places.json',
                  'backend/infra/compose.p01.yaml', 'backend/infra/postgres/01-roles.sh',
                  'backend/.mvn/wrapper/maven-wrapper.properties', 'backend/mvnw', 'backend/.dockerignore',
                  'backend/mvnw.cmd', 'frontend/src/ĐịaĐiểm.tsx',
@@ -47,7 +47,8 @@ class CandidateManifestTests(unittest.TestCase):
                  'frontend/index.html', 'frontend/package.json', 'frontend/package-lock.json',
                  'frontend/tsconfig.app.json', 'frontend/vite.config.ts',
                  '.github/workflows/p03-tooling.yml', 'plan/P00-DECISIONS.md',
-                 'docker-compose.yml', 'docker-compose.db-ports.yml', '.env.example']
+                 'docker-compose.yml', 'docker-compose.override.yml', 'docker-compose.db-ports.yml',
+                 '.env.example', '.env.cloud.example', 'backend/platform/init_env.py']
         for name in paths:
             self.write(name)
         self.assertEqual(set(candidate_manifest(self.root)['files']), set(paths))

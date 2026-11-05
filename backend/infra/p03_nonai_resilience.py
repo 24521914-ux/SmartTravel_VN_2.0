@@ -120,7 +120,7 @@ def run(release_id, output=OUTPUT):
         old = json.loads(sql('catalog', "SELECT payload FROM catalog.outbox_events WHERE aggregate_id='" + place_id +
                              "' AND event_type='catalog.place.upserted.v1' ORDER BY aggregate_version DESC LIMIT 1"))
 
-        with disrupted(disrupt, 'identity-broker'):
+        with disrupted(disrupt, 'rabbitmq'):
             place = call('catalog', path + '/status', 'PUT', {'status': 'HIDDEN'}, admin, version=place['version'])
             assert int(sql('catalog', "SELECT count(*) FROM catalog.outbox_events WHERE aggregate_id='" + place_id +
                            "' AND aggregate_version=" + str(place['version']) + ' AND published_at IS NULL')) > 0

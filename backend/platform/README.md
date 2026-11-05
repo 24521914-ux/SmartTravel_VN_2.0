@@ -133,10 +133,11 @@ Container init cho stack compose nằm ở `backend/platform/init` (image `platf
 |---|---|---|
 | `key-init` | `python identity_keys.py` (user `0:0`, volume khóa tại `/keys`) | Tạo khóa ký RS256 của Identity nếu chưa có; không bao giờ thay khóa đã có |
 | `rabbit-init` | `python broker_topology.py` (mount `backend/contracts` tại `/contracts:ro`) | Vhost, user runtime least-privilege, exchange, binding theo `registry.json` |
-| `mongo-init` | image `mongo:8.0`, `mongosh` chạy `infra/mongo/bootstrap.js` rồi `migrate.js` | Replica set, user migrator/runtime, migration Community |
-| `sandbox-init` | image PostGIS, `psql -f sandbox_geography.sql` | Ranh giới giả lập cho source sandbox; chỉ local/dev |
+| `community-migrate` | image `mongo:8.0`, `mongosh "$COMMUNITY_MONGODB_MIGRATION_URI" migrate.js` | Migration schema Community, xác thực bằng user migrator trong URI (local hoặc Atlas) |
+| `mongo-init` (chỉ local) | image `mongo:8.0`, `mongosh` chạy `infra/mongo/bootstrap.js` | Replica set, user migrator/runtime (trên cloud do Atlas đảm nhận) |
+| `sandbox-init` (chỉ local) | image PostGIS, `psql -f sandbox_geography.sql` | Ranh giới giả lập cho source sandbox; chỉ local/dev |
 
-`p02.py` dùng chung `broker_topology.plan()`, `identity_keys.generate()` và `sandbox_geography.sql`, nên topology và khóa giống hệt giữa runner Python và compose.
+`key-init`, `rabbit-init`, `community-migrate` nằm trong `docker-compose.yml`; `mongo-init`, `sandbox-init` nằm trong `docker-compose.override.yml`. File `.env` do [`init_env.py`](init_env.py) tạo (`--mode cloud` cho `.env.cloud`). P03 isolated (`p03_environment.py`) dùng chung `broker_topology.plan()` và `identity_keys.generate()`, nên topology và khóa giống hệt giữa runner Python và compose.
 
 Dockerfiles UID/GID10001, không root. Mỗi gói có image độc lập, DBpassword chỉ truyền environment, không bake vào image. Rebuild sau source changes.
 

@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 # Static integration stack at the repository root (the real .env stays excluded).
-ROOT_STACK_FILES = {'docker-compose.yml', 'docker-compose.db-ports.yml', '.env.example'}
+ROOT_STACK_FILES = {'docker-compose.yml', 'docker-compose.override.yml', 'docker-compose.db-ports.yml', '.env.example', '.env.cloud.example'}
 _IGNORED_DIRS = {'.git', '.local', '__pycache__', 'target', 'node_modules',
                  'dist', 'build', '.vite', 'coverage', '.pytest_cache'}
 _SECRET_SUFFIXES = {'.pem', '.key', '.p12', '.pfx', '.jks', '.keystore'}
@@ -23,8 +23,8 @@ _CONFIG_SUFFIXES = {'.py', '.java', '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx'
 
 def _excluded(path):
     name = path.name.lower()
-    # .env.example holds public placeholders only; real .env files stay excluded.
-    return (name == '.env' or name.startswith('.env.') and name != '.env.example'
+    # .env*.example templates hold public placeholders only; real .env files stay excluded.
+    return (name == '.env' or name.startswith('.env.') and not name.endswith('.example')
             or name in {'credentials', 'credentials.json', 'secrets.json'}
             or path.suffix.lower() in _SECRET_SUFFIXES | _OUTPUT_SUFFIXES)
 

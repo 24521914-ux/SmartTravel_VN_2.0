@@ -6,39 +6,40 @@ It never reads another service's database to implement a feature.
 
 ## Run
 
-Quick start (Docker only; images compile from source inside Docker):
+The stack uses the standard Compose layout at the repository root:
+
+| File | Contents |
+|---|---|
+| [`docker-compose.yml`](../../docker-compose.yml) | Application only: Gateway, six services, RabbitMQ, init jobs `key-init`, `rabbit-init`, `community-migrate`. Databases come from `.env`; only the Gateway publishes a port. |
+| [`docker-compose.override.yml`](../../docker-compose.override.yml) | Local dependencies, loaded automatically: five PostgreSQL, MongoDB replica set (`community-keygen`, `mongo-init`), Mailpit, source sandbox (`sandbox-init`) and loopback debug ports for services/RabbitMQ. |
+| [`docker-compose.db-ports.yml`](../../docker-compose.db-ports.yml) | Opt-in database host ports (Windows excluded port ranges, F-37). |
+| `.env.example` / `.env.cloud.example` | Templates for local mode and for Neon + Atlas ([cloud README](../platform/cloud/README.md)). |
 
 ```text
-cp .env.example .env            # public local-only values; or: python backend/infra/p02.py env
-docker compose up -d --build
+python backend/platform/init_env.py         # .env from .env.example: random secrets, local DB URLs
+docker compose up -d --build --wait         # images compile from source inside Docker
 ```
 
-The stack is the static [`docker-compose.yml`](../../docker-compose.yml) at the repository
-root: databases, RabbitMQ, Mailpit, six services, Gateway and one-shot init jobs
-(`key-init`, `rabbit-init`, `mongo-init`, `sandbox-init`, see
-[`backend/platform/README.md`](../platform/README.md)). Services start only after their
-init jobs exit 0 (`depends_on: service_completed_successfully`). Database host ports
-are opt-in: add `-f docker-compose.db-ports.yml` (or `P02_DB_PORTS=1` for `p02.py`);
-on Windows they may fall inside an excluded port range. Gateway AI routes stay off
-unless `AI_ENABLED=true`; `p02.py` turns them on so smoke covers the recommendation backend.
+`init_env.py` only fills missing values and never rotates an existing one (volumes keep the
+password they were created with). Services start only after their init jobs exit 0
+(`depends_on: service_completed_successfully`); `--wait` returns when every service is
+healthy. Gateway AI routes stay off unless `AI_ENABLED=true` in `.env`; the backend smoke
+needs `true`. Stop with `docker compose down` (volumes kept); never add `-v`.
 
-`p02.py` is the verification wrapper around that file: it keeps `.env` and ignored
-`.local/p02/secrets.json` identical (it refuses to continue if they disagree), aligns the
-harness signing key with the Identity key volume, builds images from verified JARs,
-checks init jobs and readiness, and runs smoke, monitor and manifest.
+`p02.py` is only the **test and operations harness** for the running stack: `smoke`,
+`monitor`, `manifest`, `renew`, `replay-catalog-dlq`. It reads `.env`, never builds or
+starts containers, and its helpers (`compose`, `request`, `workload`) are shared by the
+`p02_*`/`p03_*` suites. `P02_DB_PORTS=1` makes its `compose` helper include the db-ports file.
 
 Verified flow, requirements: Java 21, Docker, Python with `requirements-validation.txt` and
-PyYAML, Node dependencies via `npm --prefix frontend ci`.
-Build/verify service JARs and Gateway first (Identity has `--isolated-source`
-when an existing Windows process locks its checkout JAR):
+PyYAML, Node dependencies via `npm --prefix frontend ci`:
 
 ```text
 python backend/platform/validate_contracts.py
 backend/mvnw.cmd -B -f backend/services/pom.xml verify
 backend/mvnw.cmd -B -f backend/platform/api-gateway/pom.xml verify
-python backend/infra/p02.py prepare
-python backend/infra/p02.py build
-python backend/infra/p02.py up
+python backend/platform/init_env.py
+docker compose up -d --build --wait         # SERVICE_BUILD_TARGET=runtime packages the verified JARs
 python backend/infra/p02.py smoke
 npm --prefix frontend run test:gateway
 npm --prefix frontend run dev
@@ -52,23 +53,22 @@ python backend/infra/p02.py monitor
 ```
 
 Open `http://127.0.0.1:5173/app`. Gateway is `http://127.0.0.1:58080`;
-service ports are 58101–58106. The frontend dev proxy targets this Gateway;
-`P02_GATEWAY_TARGET` overrides it. Mailpit is on port 59025. RabbitMQ management
+service ports are 58101–58106 (local override only). The frontend dev proxy targets this
+Gateway; `P02_GATEWAY_TARGET` overrides it. Mailpit is on port 59025. RabbitMQ management
 is on port 56673. All host bindings are loopback. This environment is local
 integration, not production.
 
-Credentials, private keys and reports are in ignored `backend/infra/.local/p02/`
-and the ignored root `.env`. The generated `.local/p02/compose.yaml` is only used by
-P03 isolated environments; `test_p02_compose.py` keeps it equivalent to the static file. The four opt-in synthetic accounts are
-`fixture-u1@example.invalid`, `fixture-u2@example.invalid`,
+Credentials are in the ignored root `.env`; reports in ignored `backend/infra/.local/p02/`.
+The generated `.local/p03/.../compose.yaml` is only used by P03 isolated environments;
+`test_p02_compose.py` keeps it equivalent to the local stack. The four opt-in synthetic
+accounts are `fixture-u1@example.invalid`, `fixture-u2@example.invalid`,
 `fixture-admin@example.invalid`, `fixture-business@example.invalid`;
-their random password is `IDENTITY_FIXTURE_PASSWORD` in ignored `secrets.json`.
+their random password is `IDENTITY_FIXTURE_PASSWORD` in `.env`.
 Only this isolated synthetic environment enables account seed; it never resets
 an existing account or re-enables a deleted account at startup.
 
 The `smarttravel-p02` Compose project owns its volumes, networks and containers;
-P00/P01 are retained. `python backend/infra/p02.py down` stops P02 without deleting
-volumes. Running dependencies/up again retains migration history and checkpoints.
+P00/P01 are retained. Running `up` again retains migration history and checkpoints.
 
 ## Credentials and routes
 
@@ -91,7 +91,8 @@ candidate schemas and checksums stay frozen. Workload tokens carry `client_id`,
 Services obtain workload tokens from Identity `POST /internal/v1/security/workload-token`
 (client credentials, `<SERVICE>_WORKLOAD_SECRET`), cache them and renew them before the
 10-minute expiry; nothing needs restarting. Only test harnesses (smoke, faults, restore)
-still sign their own tokens with the local key; `p02.py renew` resets that cache and
+sign their own tokens with the Identity key read from the `key-init` volume (in memory only),
+because they call internal scopes no runtime client is granted; `p02.py renew` resets that cache and
 `monitor` alerts within an hour of its expiry. Production must use its own HTTPS issuer
 URI (`WORKLOAD_TOKEN_URI`) and secrets.
 
@@ -131,7 +132,7 @@ python backend/infra/p02.py replay-catalog-dlq
 ```
 
 P02 provisions `catalog_operator` separately with a random password held only in
-ignored `secrets.json`. Its broker ACL permits reading `catalog.dlq`, writing
+the ignored root `.env` (`CATALOG_BROKER_OPERATOR_PASSWORD`). Its broker ACL permits reading `catalog.dlq`, writing
 `catalog.inbound` on registered Catalog-consumer topics, and no resource
 configuration. The command launches the implemented Catalog replay operator in
 a temporary container with normal workers/transport disabled. Replay preserves
@@ -156,7 +157,7 @@ HTTP from the separate **synthetic licensed source sandbox**, then processed by
 real Ingestion/Catalog services. Routing uses the implemented application fallback
 until a permitted external routing endpoint is configured.
 The synthetic source uses point (longitude 108.20623, latitude 16.047079).
-`up` fills the DNG boundary only when absent with the synthetic EPSG:4326
+The `sandbox-init` job fills the DNG boundary only when absent with the synthetic EPSG:4326
 box (107.8, 15.7)-(108.5, 16.4), allowing the real Catalog spatial matcher
 to validate this test point. This box is local fixture geometry, not the real
 Da Nang administrative boundary; it must never be used as production geography. Media scanner/provider
@@ -212,7 +213,6 @@ after replay, so successful audit/publish completion returns exit0.
 
 Monitor scope note: zero backlog applies to the six service inboxes and their DLQs. The bounded `platform.audit` sink intentionally retains 288 audit messages without a consumer; it is not claimed empty. Actual monitor status field is `alarms=[]`.
 
-Identity keeps its signing keys in a persistent read-only application volume. A
-short-lived root container initializes mode 0600 files owned by UID 10001 from
-the mode 0600 host key. Repeated startup compares existing bytes and refuses
-a key mismatch; it does not silently replace or rotate persisted signing keys.
+Identity keeps its signing keys in a persistent read-only application volume. The
+`key-init` job creates mode 0600 files owned by UID 10001 on first start and never
+replaces or rotates an existing key set; no copy of the private key lives on the host.

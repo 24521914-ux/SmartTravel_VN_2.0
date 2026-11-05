@@ -1,0 +1,176 @@
+# Local development databases and sandboxes. Docker Compose loads this file automatically with
+# docker-compose.yml when no -f is given, so `docker compose up -d --build --wait` runs everything
+# offline. The cloud stack passes `-f docker-compose.yml` explicitly and never loads this file.
+#
+# Adds: five PostgreSQL databases, MongoDB replica set (+ key and bootstrap jobs), Mailpit,
+# the ingestion source sandbox and its demo geography, and loopback debug ports for the
+# services and RabbitMQ (used by the integration harness backend/infra/p02.py).
+# Mailpit UI: http://127.0.0.1:59025  ·  RabbitMQ UI: http://127.0.0.1:56673
+# Database host ports stay opt-in (Windows excluded port ranges, F-37):
+#   docker compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.db-ports.yml up -d
+
+x-postgres: &postgres
+  healthcheck:
+    test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+    interval: 3s
+    timeout: 3s
+    retries: 40
+  restart: unless-stopped
+
+services:
+  # ---- Local databases ----------------------------------------------------------------------
+  identity-db:
+    <<: *postgres
+    image: postgres:16-alpine
+    volumes: [identity-data:/var/lib/postgresql/data, ./backend/infra/postgres/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro]
+    environment: {SERVICE: identity, POSTGRES_DB: identity_db, POSTGRES_USER: identity_admin,
+      POSTGRES_PASSWORD: '${IDENTITY_ADMIN_PASSWORD:?run backend/platform/init_env.py}', MIGRATION_PASSWORD: '${IDENTITY_MIGRATION_PASSWORD:?run backend/platform/init_env.py}',
+      RUNTIME_PASSWORD: '${IDENTITY_RUNTIME_PASSWORD:?run backend/platform/init_env.py}'}
+
+  catalog-db:
+    <<: *postgres
+    image: postgis/postgis:16-3.5
+    volumes: [catalog-data:/var/lib/postgresql/data, ./backend/infra/postgres/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro]
+    environment: {SERVICE: catalog, POSTGRES_DB: catalog_db, POSTGRES_USER: catalog_admin,
+      POSTGRES_PASSWORD: '${CATALOG_ADMIN_PASSWORD:?run backend/platform/init_env.py}', MIGRATION_PASSWORD: '${CATALOG_MIGRATION_PASSWORD:?run backend/platform/init_env.py}',
+      RUNTIME_PASSWORD: '${CATALOG_RUNTIME_PASSWORD:?run backend/platform/init_env.py}'}
+
+  trip-db:
+    <<: *postgres
+    image: postgres:16-alpine
+    volumes: [trip-data:/var/lib/postgresql/data, ./backend/infra/postgres/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro]
+    environment: {SERVICE: trip, POSTGRES_DB: trip_db, POSTGRES_USER: trip_admin,
+      POSTGRES_PASSWORD: '${TRIP_ADMIN_PASSWORD:?run backend/platform/init_env.py}', MIGRATION_PASSWORD: '${TRIP_MIGRATION_PASSWORD:?run backend/platform/init_env.py}',
+      RUNTIME_PASSWORD: '${TRIP_RUNTIME_PASSWORD:?run backend/platform/init_env.py}'}
+
+  ingestion-db:
+    <<: *postgres
+    image: postgres:16-alpine
+    volumes: [ingestion-data:/var/lib/postgresql/data, ./backend/infra/postgres/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro]
+    environment: {SERVICE: ingestion, POSTGRES_DB: ingestion_db, POSTGRES_USER: ingestion_admin,
+      POSTGRES_PASSWORD: '${INGESTION_ADMIN_PASSWORD:?run backend/platform/init_env.py}', MIGRATION_PASSWORD: '${INGESTION_MIGRATION_PASSWORD:?run backend/platform/init_env.py}',
+      RUNTIME_PASSWORD: '${INGESTION_RUNTIME_PASSWORD:?run backend/platform/init_env.py}'}
+
+  intelligence-db:
+    <<: *postgres
+    image: pgvector/pgvector:pg16
+    volumes: [intelligence-data:/var/lib/postgresql/data, ./backend/infra/postgres/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro]
+    environment: {SERVICE: intelligence, POSTGRES_DB: intelligence_db, POSTGRES_USER: intelligence_admin,
+      POSTGRES_PASSWORD: '${INTELLIGENCE_ADMIN_PASSWORD:?run backend/platform/init_env.py}', MIGRATION_PASSWORD: '${INTELLIGENCE_MIGRATION_PASSWORD:?run backend/platform/init_env.py}',
+      RUNTIME_PASSWORD: '${INTELLIGENCE_RUNTIME_PASSWORD:?run backend/platform/init_env.py}'}
+
+  community-keygen:
+    image: mongo:8.0
+    entrypoint: [bash, -ec]
+    command: ['if [ ! -s /keys/replica.key ]; then openssl rand -base64 756 > /keys/replica.key; fi; chmod 400 /keys/replica.key; chown 999:999 /keys/replica.key']
+    volumes: [community-key:/keys]
+
+  community-db:
+    image: mongo:8.0
+    command: [mongod, --replSet, rs0, --bind_ip_all, --keyFile, /keys/replica.key]
+    depends_on: {community-keygen: {condition: service_completed_successfully}}
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: community_admin
+      MONGO_INITDB_ROOT_PASSWORD: ${COMMUNITY_ADMIN_PASSWORD:?run backend/platform/init_env.py}
+    volumes: [community-data:/data/db, community-key:/keys:ro]
+    healthcheck:
+      test: [CMD, mongosh, --quiet, --eval, 'db.adminCommand({ping:1})']
+      interval: 3s
+      timeout: 5s
+      retries: 40
+    restart: unless-stopped
+
+  # Replica set and least-privilege users (the platform role Atlas plays in the cloud stack).
+  mongo-init:
+    image: mongo:8.0
+    depends_on: {community-db: {condition: service_healthy}}
+    environment:
+      MONGO_INITDB_ROOT_PASSWORD: ${COMMUNITY_ADMIN_PASSWORD:?run backend/platform/init_env.py}
+      COMMUNITY_MIGRATION_PASSWORD: ${COMMUNITY_MIGRATION_PASSWORD:?run backend/platform/init_env.py}
+      COMMUNITY_RUNTIME_PASSWORD: ${COMMUNITY_RUNTIME_PASSWORD:?run backend/platform/init_env.py}
+    entrypoint: [bash, -ec]
+    # On a new volume the image first runs a localhost-only mongod (the healthcheck already passes
+    # inside it), so wait until the real server accepts network connections.
+    command:
+      - >-
+        uri="mongodb://community-db:27017/?directConnection=true";
+        for i in $$(seq 1 60); do mongosh "$$uri" --quiet --eval 'db.adminCommand({ping:1})' >/dev/null 2>&1 && break; sleep 2; done;
+        mongosh "$$uri" --quiet /p01/bootstrap.js
+    volumes: [./backend/infra/mongo:/p01:ro]
+
+  # ---- Local sandboxes ---------------------------------------------------------------------
+  identity-mail:
+    image: axllent/mailpit:v1.27
+    ports: [127.0.0.1:52025:1025, 127.0.0.1:59025:8025]
+    restart: unless-stopped
+
+  source-sandbox:
+    image: python:3.12-alpine
+    user: '10001:10001'
+    command: [python, /provider/source_sandbox.py]
+    volumes: [./backend/infra/providers/source_sandbox.py:/provider/source_sandbox.py:ro]
+    restart: unless-stopped
+
+  # Sandbox-only boundary for the demo province; runs after Catalog has migrated its schema.
+  sandbox-init:
+    image: postgis/postgis:16-3.5
+    depends_on: {catalog: {condition: service_healthy}}
+    environment: {PGPASSWORD: '${CATALOG_ADMIN_PASSWORD:?run backend/platform/init_env.py}'}
+    entrypoint: [psql, -h, catalog-db, -U, catalog_admin, -d, catalog_db, -v, ON_ERROR_STOP=1, -f, /init/sandbox_geography.sql]
+    volumes: [./backend/platform/init/sandbox_geography.sql:/init/sandbox_geography.sql:ro]
+
+  # ---- Wiring of the application stack to the local dependencies ----------------------------
+  rabbitmq:
+    ports: [127.0.0.1:56672:5672, 127.0.0.1:56673:15672]
+
+  community-migrate:
+    depends_on: {mongo-init: {condition: service_completed_successfully}}
+
+  identity:
+    depends_on:
+      identity-db: {condition: service_healthy}
+      identity-mail: {condition: service_started}
+    environment:
+      MAIL_HOST: identity-mail
+      MAIL_PORT: '1025'
+      MAIL_AUTH: 'false'
+      MAIL_TLS_REQUIRED: 'false'
+      IDENTITY_NOTIFICATION_EMAIL_ENABLED: 'true'
+      IDENTITY_FIXTURES_ENABLED: ${IDENTITY_FIXTURES_ENABLED:-true}
+    ports: [127.0.0.1:58101:8101]
+
+  catalog:
+    depends_on: {catalog-db: {condition: service_healthy}}
+    ports: [127.0.0.1:58102:8102]
+
+  community:
+    ports: [127.0.0.1:58103:8103]
+
+  trip:
+    depends_on: {trip-db: {condition: service_healthy}}
+    ports: [127.0.0.1:58104:8104]
+
+  ingestion:
+    depends_on:
+      ingestion-db: {condition: service_healthy}
+      source-sandbox: {condition: service_started}
+    environment:
+      CONNECTOR_ALLOWED_HOSTS: source-sandbox
+    ports: [127.0.0.1:58105:8105]
+
+  intelligence:
+    depends_on: {intelligence-db: {condition: service_healthy}}
+    ports: [127.0.0.1:58106:8106]
+
+  gateway:
+    # Lets `up --wait` accept the finished sandbox job (a one-shot job needs a dependent).
+    depends_on: {sandbox-init: {condition: service_completed_successfully}}
+
+volumes:
+  identity-data:
+  catalog-data:
+  trip-data:
+  ingestion-data:
+  intelligence-data:
+  community-data:
+  community-key:

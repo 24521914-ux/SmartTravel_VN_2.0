@@ -1,0 +1,28 @@
+# Cloud tools overlay, used only by manage.py together with the root docker-compose.yml:
+#   docker compose --env-file .env.cloud -f docker-compose.yml -f backend/platform/cloud/compose.tools.yaml --profile tools ...
+# Relative paths resolve from the repository root (the directory of the first compose file).
+services:
+  # Read-only TLS/connectivity/extension preflight against Neon and Atlas.
+  db-check:
+    build:
+      context: ./backend/platform
+      dockerfile: cloud/Dockerfile.tools
+    image: smarttravel-cloud-tools:dev
+    profiles: [tools]
+    environment:
+      IDENTITY_DB_URL: ${IDENTITY_DB_URL:?set IDENTITY_DB_URL in .env.cloud}
+      IDENTITY_DB_USER: identity_runtime
+      IDENTITY_DB_PASSWORD: ${IDENTITY_RUNTIME_PASSWORD:?set IDENTITY_RUNTIME_PASSWORD in .env.cloud}
+      CATALOG_DB_URL: ${CATALOG_DB_URL:?set CATALOG_DB_URL in .env.cloud}
+      CATALOG_DB_USER: catalog_runtime
+      CATALOG_DB_PASSWORD: ${CATALOG_RUNTIME_PASSWORD:?set CATALOG_RUNTIME_PASSWORD in .env.cloud}
+      TRIP_DB_URL: ${TRIP_DB_URL:?set TRIP_DB_URL in .env.cloud}
+      TRIP_DB_USER: trip_runtime
+      TRIP_DB_PASSWORD: ${TRIP_RUNTIME_PASSWORD:?set TRIP_RUNTIME_PASSWORD in .env.cloud}
+      INGESTION_DB_URL: ${INGESTION_DB_URL:?set INGESTION_DB_URL in .env.cloud}
+      INGESTION_DB_USER: ingestion_runtime
+      INGESTION_DB_PASSWORD: ${INGESTION_RUNTIME_PASSWORD:?set INGESTION_RUNTIME_PASSWORD in .env.cloud}
+      INTELLIGENCE_DB_URL: ${INTELLIGENCE_DB_URL:?set INTELLIGENCE_DB_URL in .env.cloud}
+      INTELLIGENCE_DB_USER: intelligence_runtime
+      INTELLIGENCE_DB_PASSWORD: ${INTELLIGENCE_RUNTIME_PASSWORD:?set INTELLIGENCE_RUNTIME_PASSWORD in .env.cloud}
+      MONGODB_URI: ${COMMUNITY_MONGODB_URI:?set COMMUNITY_MONGODB_URI in .env.cloud}

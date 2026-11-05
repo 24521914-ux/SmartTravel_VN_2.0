@@ -28,7 +28,9 @@ def issue(key_file, kid, issuer, client, audience, scopes, ttl=3600):
         raise ValueError("Unknown destination")
     if not client or not scopes or any(not s.startswith(audience + ":") for s in scopes):
         raise ValueError("Scope must belong to destination")
-    key = next(k for k in json.loads(Path(key_file).read_text(encoding="utf-8"))["keys"] if k["kid"] == kid)
+    # key_file: path of a JWK set, or the already loaded set (kept in memory by the caller).
+    keys = key_file if isinstance(key_file, dict) else json.loads(Path(key_file).read_text(encoding="utf-8"))
+    key = next(k for k in keys["keys"] if k["kid"] == kid)
     private = rsa.RSAPrivateNumbers(number(key["p"]), number(key["q"]), number(key["d"]),
         number(key["dp"]), number(key["dq"]), number(key["qi"]),
         rsa.RSAPublicNumbers(number(key["e"]), number(key["n"]))).private_key()

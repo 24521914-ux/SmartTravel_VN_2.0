@@ -6,21 +6,24 @@ import subprocess
 import tempfile
 import unittest
 
-from manage import HERE, INTERNAL_SECRETS, PLACEHOLDER, POSTGRES_SERVICES, SERVICES, prepare, validate_configuration
+from manage import (COMPOSE_FILE, ENV_FILE, INTERNAL_SECRETS, LOCAL_ONLY_SERVICES, PLACEHOLDER, POSTGRES_SERVICES,
+                    ROOT, SERVICES, TOOLS_FILE, prepare, validate_configuration)
+
+EXAMPLE = ROOT / '.env.cloud.example'
 
 
 def render(env_file):
     result = subprocess.run([
         'docker', 'compose', '--env-file', str(env_file),
-        '-f', str(HERE / 'compose.yaml'), '--profile', 'tools', 'config', '--format', 'json',
-    ], check=True, capture_output=True, text=True, encoding='utf-8')
+        '-f', str(COMPOSE_FILE), '-f', str(TOOLS_FILE), '--profile', 'tools', 'config', '--format', 'json',
+    ], check=True, capture_output=True, text=True, encoding='utf-8', cwd=ROOT)
     return json.loads(result.stdout)
 
 
 class CloudSetupTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.template = render(HERE / '.env.example')
+        cls.template = render(EXAMPLE)
 
     def setUp(self):
         self.config = copy.deepcopy(self.template)
@@ -67,7 +70,7 @@ class CloudSetupTests(unittest.TestCase):
 
     def test_mongo_tls_bypass_rejected(self):
         env = self.config['services']['community-migrate']['environment']
-        env['ATLAS_MONGODB_MIGRATION_URI'] += '&tlsAllowInvalidCertificates=true'
+        env['COMMUNITY_MONGODB_MIGRATION_URI'] += '&tlsAllowInvalidCertificates=true'
         with self.assertRaises(ValueError):
             validate_configuration(self.config)
 
@@ -85,10 +88,11 @@ class CloudSetupTests(unittest.TestCase):
 
     def test_only_gateway_rabbitmq_services_and_init_jobs(self):
         services = self.template['services']
+        self.assertEqual(self.template['name'], 'smarttravel-cloud')
         self.assertEqual(set(services), {'gateway', 'rabbitmq', 'rabbit-init', 'key-init', 'community-migrate',
                                          'db-check', *SERVICES})
         for name, spec in services.items():
-            self.assertFalse(name.endswith('-db') or name in {'mongo-init', 'identity-mail'}, name)
+            self.assertNotIn(name, LOCAL_ONLY_SERVICES)
             if name != 'gateway':
                 self.assertFalse(spec.get('ports'), name)
             for dependency in spec.get('depends_on', {}):
@@ -109,6 +113,7 @@ class CloudSetupTests(unittest.TestCase):
             self.assertEqual(env['JWT_JWKS_URI'], 'http://identity:8101/.well-known/jwks.json')
             self.assertEqual(env['BROKER_HOST'], 'rabbitmq')
             self.assertTrue((Path(spec['build']['context']) / 'Dockerfile').is_file(), service)
+            self.assertEqual(spec['build']['target'], 'source', service)
         for service in POSTGRES_SERVICES:
             env = services[service]['environment']
             self.assertIn('.neon.tech', env['DB_URL'])
@@ -120,7 +125,7 @@ class CloudSetupTests(unittest.TestCase):
         self.assertEqual(services['identity']['depends_on']['key-init']['condition'], 'service_completed_successfully')
 
     def test_real_env_ignored(self):
-        result = subprocess.run(['git', 'check-ignore', str(HERE / '.env')], capture_output=True)
+        result = subprocess.run(['git', 'check-ignore', str(ENV_FILE)], capture_output=True, cwd=ROOT)
         self.assertEqual(result.returncode, 0)
 
 
@@ -128,39 +133,40 @@ class PrepareTests(unittest.TestCase):
     def test_generates_internal_secrets_only_and_never_overwrites(self):
         with tempfile.TemporaryDirectory() as folder:
             env_file = Path(folder) / '.env'
-            generated = prepare(env_file)
+            generated = prepare(env_file, 'cloud')
             self.assertEqual(set(generated), set(INTERNAL_SECRETS))
             first = env_file.read_text(encoding='utf-8')
             self.assertFalse([l for l in first.splitlines() if PLACEHOLDER in l and not l.startswith('#')])
             # Cloud database settings stay exactly as the example until the user fills them.
-            for line in (HERE / '.env.example').read_text(encoding='utf-8').splitlines():
-                if line.startswith(('NEON_', 'ATLAS_')):
+            for line in EXAMPLE.read_text(encoding='utf-8').splitlines():
+                if 'YOUR_' in line:
                     self.assertIn(line, first.splitlines())
             values = dict(line.split('=', 1) for line in first.splitlines() if '=' in line and not line.startswith('#'))
             self.assertGreaterEqual(len(values['TRIP_WORKLOAD_SECRET']), 32)
             # A second run, and a user-edited database URL, keep every existing value.
             edited = first.replace('YOUR_TRIP_HOST', 'real-trip-host')
             env_file.write_text(edited, encoding='utf-8')
-            self.assertEqual(prepare(env_file), [])
+            self.assertEqual(prepare(env_file, 'cloud'), [])
             self.assertEqual(env_file.read_text(encoding='utf-8'), edited)
 
     def test_fills_only_missing_or_placeholder_secrets_in_existing_file(self):
         with tempfile.TemporaryDirectory() as folder:
             env_file = Path(folder) / '.env'
             env_file.write_text(f'BROKER_ADMIN_PASSWORD=keep-me\nGATEWAY_EXCHANGE_SECRET={PLACEHOLDER}\n'
-                                'NEON_TRIP_RUNTIME_PASSWORD=\n', encoding='utf-8')
-            generated = prepare(env_file)
+                                'TRIP_RUNTIME_PASSWORD=\n', encoding='utf-8')
+            generated = prepare(env_file, 'cloud')
             text = env_file.read_text(encoding='utf-8')
             self.assertIn('BROKER_ADMIN_PASSWORD=keep-me', text)
             self.assertNotIn('BROKER_ADMIN_PASSWORD', generated)
             self.assertIn('GATEWAY_EXCHANGE_SECRET', generated)
-            self.assertIn('NEON_TRIP_RUNTIME_PASSWORD=\n', text)
+            # Cloud mode never generates database credentials, even when they are empty.
+            self.assertIn('TRIP_RUNTIME_PASSWORD=\n', text)
             self.assertEqual(set(generated), set(INTERNAL_SECRETS) - {'BROKER_ADMIN_PASSWORD'})
 
     def test_prepared_file_renders_a_complete_compose_configuration(self):
         with tempfile.TemporaryDirectory() as folder:
-            env_file = Path(folder) / '.env'
-            prepare(env_file)
+            env_file = Path(folder) / '.env.cloud'
+            prepare(env_file, 'cloud')
             config = render(env_file)
             self.assertEqual(config['services']['gateway']['environment']['GATEWAY_EXCHANGE_SECRET'],
                              config['services']['identity']['environment']['GATEWAY_EXCHANGE_SECRET'])

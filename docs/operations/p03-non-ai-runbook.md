@@ -29,7 +29,7 @@ Mailpit `59925`, RabbitMQ management `59673`. Các project P03 dùng chung bộ 
 host này nên chỉ chạy một project P03 tại một thời điểm. P02 có thể tiếp tục chạy.
 
 ```powershell
-python backend/infra/p02.py status
+docker compose ps
 python backend/infra/p03_environment.py status --project smarttravel-p03-load-a03e2026
 ```
 
