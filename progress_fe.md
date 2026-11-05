@@ -1,6 +1,6 @@
 # Tiến độ Frontend (FE) — SmartTravel VN
 
-Cập nhật: **02/11/2026 01:34** (GMT+7)
+Cập nhật: **05/11/2026 16:21** (GMT+7)
 
 Progress gồm **hai file**: file này (`progress_fe.md`) cho frontend web; [`progress_be.md`](progress_be.md) cho backend và **trạng thái kết nối BE ↔ FE từng API** (mục 9 của file đó). Quy ước trạng thái, tiêu chuẩn PASS và cách cập nhật dùng chung: `progress_be.md` mục 2.
 
@@ -193,7 +193,7 @@ Chạy từ thư mục gốc repo; Node 24.
 | Contract client | `npm --prefix frontend run test:contracts` | Không cần backend |
 | Build | `npm --prefix frontend run build` | `tsc --noEmit` + Vite build |
 | UI giả lập API | `npm --prefix frontend run test:ui` · `test:ui:editorial` · `node frontend/scripts/cinematic-ui-check.mjs` | Cần dev server; không chứng minh kết nối backend |
-| Gateway thật | `npm --prefix frontend run test:gateway` | Cần stack P02 (`python backend/infra/p02.py up`) |
+| Gateway thật | `npm --prefix frontend run test:gateway` | Cần stack P02 (`python backend/platform/init_env.py` rồi `docker compose up -d --build --wait`) |
 | Trình duyệt với Gateway | `npm --prefix frontend run test:browser` | Cần stack P02 + dev server; đã cập nhật UI hiện tại |
 | Path và lịch sử điều hướng | `npm --prefix frontend run test:browser:routing` | 10 path, tải lại trang, bookmark hash cũ, Back/Forward và trang không tìm thấy; chỉ đọc, không đăng nhập |
 | Bộ lọc và danh mục | `npm --prefix frontend run test:browser:filters` | Responsive với Gateway thật; fixture API cho tham số lọc, validation, đặt lại, phân trang, danh mục và giá dịch vụ |
