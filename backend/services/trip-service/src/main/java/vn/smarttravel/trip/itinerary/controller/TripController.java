@@ -10,7 +10,8 @@ import static vn.smarttravel.trip.shared.web.ApiValues.*;
 @RestController
 public class TripController {
  private final TripService service;
- public TripController(TripService service){this.service=service;}
+ private final DayTravelService travel;
+ public TripController(TripService service,DayTravelService travel){this.service=service;this.travel=travel;}
  private UUID actor(Jwt jwt,String scope){var scopes=jwt.getClaimAsString("scope");require(scopes!=null&&Arrays.asList(scopes.split(" ")).contains(scope),403,"FORBIDDEN");return id(jwt.getSubject());}
  private ResponseEntity<Object> ok(Object body,int status){var builder=ResponseEntity.status(status).cacheControl(org.springframework.http.CacheControl.noStore());if(body instanceof Map<?,?>m&&m.get("version")!=null)builder.eTag(m.get("version").toString());var attributes=org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();if(attributes instanceof org.springframework.web.context.request.ServletRequestAttributes request){String path=request.getRequest().getRequestURI();if(path.startsWith("/api/v1/trips/")&&status!=204){String trip=path.substring(14).split("/")[0];var auth=org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();if(auth.getPrincipal() instanceof Jwt jwt){var warnings=service.warnings(id(trip),id(jwt.getSubject()));if(!warnings.isEmpty())builder.header("X-Trip-Warnings",String.join(",",warnings));}}}return builder.body(body);}
  @GetMapping("/api/v1/me/trips") public Object list(@AuthenticationPrincipal Jwt jwt,@RequestParam(defaultValue="20")int limit,@RequestParam(required=false)String cursor){return ok(service.list(actor(jwt,"trip:read"),limit,cursor),200);}
@@ -42,5 +43,7 @@ public class TripController {
  @PutMapping("/api/v1/trips/{trip}/days/{day}/items/order") public Object order(@AuthenticationPrincipal Jwt jwt,@PathVariable UUID trip,@PathVariable UUID day,@RequestHeader(value="If-Match",required=false)String v,@RequestBody Map<String,Object>b){return ok(service.order(trip,actor(jwt,"trip:write"),day,v,ids(b)),200);}
  @PostMapping("/api/v1/trips/{trip}/snapshots/refresh") public Object refresh(@AuthenticationPrincipal Jwt jwt,@PathVariable UUID trip,@RequestHeader(value="If-Match",required=false)String v,@RequestBody Map<String,Object>b){return ok(service.refresh(trip,actor(jwt,"trip:write"),v,ids(b)),202);}
  @PostMapping("/api/v1/trips/{trip}/route-estimates") public Object estimate(@AuthenticationPrincipal Jwt jwt,@PathVariable UUID trip,@RequestHeader(value="If-Match",required=false)String v,@RequestBody Map<String,Object>b){return ok(service.transfer(trip,actor(jwt,"trip:write"),null,v,b,true),200);}
+ @GetMapping("/api/v1/trips/{trip}/days/{day}/travel-legs") public Object legs(@AuthenticationPrincipal Jwt jwt,@PathVariable UUID trip,@PathVariable UUID day){return ok(travel.list(trip,actor(jwt,"trip:read"),day),200);}
+ @PatchMapping("/api/v1/trips/{trip}/days/{day}/travel-legs/{leg}") public Object mode(@AuthenticationPrincipal Jwt jwt,@PathVariable UUID trip,@PathVariable UUID day,@PathVariable UUID leg,@RequestHeader(value="If-Match",required=false)String v,@RequestBody Map<String,Object>b){return ok(travel.mode(trip,actor(jwt,"trip:write"),day,leg,v,b),200);}
  private List<UUID> ids(Map<String,Object>b){require(b.get("item_ids") instanceof List<?>,400,"INVALID_ITEM_IDS");return ((List<?>)b.get("item_ids")).stream().map(vn.smarttravel.trip.shared.web.ApiValues::id).toList();}
 }
