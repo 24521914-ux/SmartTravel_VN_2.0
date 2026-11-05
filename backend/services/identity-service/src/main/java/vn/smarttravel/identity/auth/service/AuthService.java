@@ -32,6 +32,8 @@ public class AuthService {
     private final IdentityMutations mutations;
     private final CurrentUser currentUser;
     private final String dummyHash;
+    @org.springframework.beans.factory.annotation.Value("${identity.email-verification.required:false}")
+    private boolean emailVerificationRequired;
 
     public AuthService(AuthRepository repository, TransactionTemplate tx, PasswordEncoder passwords, IssuerKeys issuer,
                        AccountMail mail, IdentityMutations mutations, CurrentUser currentUser) {
@@ -56,7 +58,8 @@ public class AuthService {
             if (repository.findUserByEmail(canonicalEmail) == null) {
                 UUID user = UUID.randomUUID();
                 repository.createUser(user, canonicalEmail, passwordHash, displayName);
-                accountToken(user, "VERIFY_EMAIL", Duration.ofHours(24));
+                if (emailVerificationRequired) accountToken(user, "VERIFY_EMAIL", Duration.ofHours(24));
+                else repository.activateWithoutVerification(user);
                 mutations.event(user, 1, "identity.user.registered.v1", Map.of("user_id", user, "display_name", displayName));
                 mutations.audit(user, user, "REGISTER");
             }

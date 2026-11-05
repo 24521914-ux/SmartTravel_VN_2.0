@@ -160,7 +160,7 @@ export function AccountPanel() {
                 <p className="auth-flow-recipient">{text('Email nhận mã: ', 'Code recipient: ')}{email.trim()}</p>
               )}
               {notice && <p role="status" className="auth-flow-notice">{notice}</p>}
-              {localMailbox && ['register', 'verify-email', 'resend-verification', 'forgot-password', 'reset-password'].includes(mode) && (
+              {localMailbox && ['verify-email', 'resend-verification', 'forgot-password', 'reset-password'].includes(mode) && (
                 <p className="auth-mailbox-hint">
                   {text('Môi trường local nhận thư tại Mailpit. ', 'Local emails are captured in Mailpit. ')}
                   <a href={localMailbox} target="_blank" rel="noopener noreferrer">{text('Mở hộp thư local', 'Open local inbox')}</a>
@@ -177,6 +177,7 @@ export function AccountPanel() {
 
               {/* Form */}
               <form
+                key={mode}
                 className="clay-form auth-form-body"
                 onSubmit={e => submit(e, async data => {
                   if (mode === 'login') {
@@ -193,7 +194,12 @@ export function AccountPanel() {
                     : ['forgot-password', 'resend-verification'].includes(mode) ? { email: fieldValue(data, 'email') }
                     : { token: fieldValue(data, 'token'), password: String(data.get('password')) };
                   await apiClient.request('identity', `/api/v1/auth/${mode}`, { method: 'POST', body, authenticated: false, idempotencyKey: crypto.randomUUID() });
-                  if (mode === 'register' || mode === 'resend-verification') {
+                  if (mode === 'register') {
+                    setEmail(fieldValue(data, 'email'));
+                    setShowPassword(false);
+                    setNotice(text('Đăng ký thành công. Nhập mật khẩu để đăng nhập.', 'Registration successful. Enter your password to sign in.'));
+                    setMode('login');
+                  } else if (mode === 'resend-verification') {
                     setNotice(text('Đã nhận yêu cầu. Nếu email đủ điều kiện, mã xác minh sẽ được gửi. Chưa nhận được thư? Kiểm tra thư rác hoặc yêu cầu gửi lại mã.', 'Request accepted. Eligible accounts will receive a verification code. Check spam or request another code if needed.'));
                     setMode('verify-email');
                   } else if (mode === 'forgot-password') {

@@ -37,7 +37,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 
 @SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties={"security.jwt.issuer=identity-test", "identity.mail.poll-ms=3600000", "management.health.mail.enabled=false",
+        properties={"identity.email-verification.required=true", "security.jwt.issuer=identity-test", "identity.mail.poll-ms=3600000", "management.health.mail.enabled=false",
                 "identity.fixtures.enabled=true", "identity.fixtures.password=synthetic-fixture-password-123",
                 "identity.notifications.email-enabled=true", "identity.notifications.poll-ms=3600000",
                 "identity.gateway-exchange-secret=p02-test-gateway-credential-32-bytes"})

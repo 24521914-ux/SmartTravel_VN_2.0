@@ -66,6 +66,11 @@ public class AuthRepository {
         return first("SELECT * FROM identity.account_tokens WHERE token_hash=? AND purpose=? FOR UPDATE", hash, purpose);
     }
 
+    public void activateWithoutVerification(UUID user) {
+        // Temporary registration policy; do not claim the email was verified.
+        db.update("UPDATE identity.users SET status='ACTIVE' WHERE user_id=?", user);
+    }
+
     public void verifyEmail(UUID user) {
         db.update("UPDATE identity.users SET status='ACTIVE',email_verified_at=now(),version=version+1,updated_at=now() WHERE user_id=?", user);
     }
