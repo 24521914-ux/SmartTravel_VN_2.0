@@ -1,6 +1,6 @@
 # Tiến độ Backend (BE) — SmartTravel VN
 
-Cập nhật: **05/11/2026 19:00** (GMT+7)
+Cập nhật: **05/11/2026 19:16** (GMT+7)
 
 Kiểm lại runtime 05/11/2026: **PARTIAL**, Codex, nhánh `feature/identity-skip-email-verification`, SHA `91f15aa`, dirty. Image Identity cũ đóng gói JAR trước thay đổi; đã `mvn -f backend/services/identity-service/pom.xml package -DskipTests -q`, `python backend/platform/build_service_image.py identity --tag smarttravel-identity:p02-local`, recreate riêng Identity, readiness 200. Kiểm API qua Gateway/PostgreSQL Docker thật, Java 21: 4/0/0/0 (admin login 200, kích hoạt tài khoản PENDING qua admin status 200, đăng ký synthetic 202, đăng nhập ngay 200). Không đổi mật khẩu tài khoản người dùng. Chưa kiểm đăng nhập bằng mật khẩu người dùng sau kích hoạt; mật khẩu thử trước đó trả 401. F-35 vẫn PARTIAL: chưa full DB/broker suite/FE end-to-end/CI; không đóng gate. Các ghi chú chưa kiểm runtime bên dưới là mốc trước lần kiểm này.
 
@@ -690,4 +690,4 @@ Mới nhất ở trên. Mỗi dòng: ngày giờ · thay đổi · PR/commit.
 | 10/10/2026 | Cấu hình database cloud | PR #4, `5319942` |
 | 08/10/2026 | P00 nền tảng; quy tắc Git; landing frontend | PR #1–#3 |
 
-- [ ] Chu?n b? PR t?ch h?p ? **IN_PROGRESS** ? Codex, nh?nh `feature/travel-timeline-account-integration`, baseline `91f15aa`, dirty. GitHub ch?a k?t n?i ???c; ch?a push/PR/CI, kh?ng ??ng gate.
+- [ ] Chuẩn bị PR tích hợp — **BLOCKED** · Codex, nhánh `feature/travel-timeline-account-integration`, source `4e6651e`, checkout dirty chỉ do `.env`/`.ai-memory/` chưa theo dõi. Java 21: Identity `mvn -f backend/services/identity-service/pom.xml test -q` 66/0/0/44; Trip `mvn -f backend/services/trip-service/pom.xml test -q` 54/0/0/41 (run/failed/errors/skipped); chỉ unit/security, DB/broker bị skip, không dùng đóng gate. `python backend/platform/validate_contracts.py` PASS: 184 HTTP, 23 event/command, 1 additive contract. Quét secret: không có credential thật; hai chuỗi mật khẩu synthetic trong test. GitHub cổng 443 timeout, chưa fetch/push/PR/CI; Codex tiếp tục đồng bộ main và tạo PR khi kết nối phục hồi. `origin/main` cache lệch 19 commit so với baseline; chưa tích hợp cache vì chưa xác nhận remote mới nhất.

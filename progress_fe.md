@@ -1,6 +1,6 @@
 # Tiến độ Frontend (FE) — SmartTravel VN
 
-Cập nhật: **05/11/2026 19:00** (GMT+7)
+Cập nhật: **05/11/2026 19:16** (GMT+7)
 
 
 Kiểm lại 05/11/2026: backend local đã cập nhật image Identity và kiểm API đăng ký/đăng nhập thật; chi tiết bằng chứng tại [progress_be.md](progress_be.md). FE end-to-end thật chưa chạy lại; giữ PARTIAL.
@@ -248,4 +248,4 @@ Chạy từ thư mục gốc repo; Node 24.
 | 15/10/2026 | API client + refresh xoay vòng | PR #15, `42eac23` |
 | 08/10/2026 | Khung React/TS/Vite (P00); landing page | PR #2, PR #3 |
 
-- [ ] Chu?n b? PR t?ch h?p ? **IN_PROGRESS** ? Codex, nh?nh `feature/travel-timeline-account-integration`, baseline `91f15aa`, dirty. GitHub ch?a k?t n?i ???c; ch?a push/PR/CI, kh?ng ??ng gate.
+- [ ] Chuẩn bị PR tích hợp — **BLOCKED** · Codex, nhánh `feature/travel-timeline-account-integration`, source `4e6651e`, checkout dirty chỉ do `.env`/`.ai-memory/` chưa theo dõi. `npm --prefix frontend run build` PASS; `npm --prefix frontend run test:contracts` 15/0/0/0 (run/failed/errors/skipped), Node/TypeScript/Vite, API stub. Chưa chạy lại browser/Gateway/DB thật; chưa nâng trạng thái API hay gate. GitHub cổng 443 timeout, chưa push/PR/CI; bằng chứng backend và việc đồng bộ main tại [progress_be.md](progress_be.md).
