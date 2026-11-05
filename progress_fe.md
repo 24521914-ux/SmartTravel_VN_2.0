@@ -1,6 +1,11 @@
 # Tiến độ Frontend (FE) — SmartTravel VN
 
-Cập nhật: **03/11/2026 13:18** (GMT+7)
+Cập nhật: **05/11/2026 19:00** (GMT+7)
+
+
+Kiểm lại 05/11/2026: backend local đã cập nhật image Identity và kiểm API đăng ký/đăng nhập thật; chi tiết bằng chứng tại [progress_be.md](progress_be.md). FE end-to-end thật chưa chạy lại; giữ PARTIAL.
+
+- [ ] P01 Tài khoản — **PARTIAL** · Codex, nhánh `feature/identity-skip-email-verification`, baseline `91f15aa`, dirty: đăng ký thành công tự chuyển sang tab đăng nhập, giữ email, xóa mật khẩu và tắt hiển thị mật khẩu; user tự nhập mật khẩu để đăng nhập. `node frontend/scripts/browser-registration.mjs`: 1/0/0/0, Chromium với API stub, 0 lỗi trang; `npm --prefix frontend run build` PASS (TypeScript/Vite). Chưa kiểm Gateway/DB thật; trạng thái kết nối và F-35 tại [progress_be.md](progress_be.md#9-kết-nối-be--fe); không nâng gate.
 
 Progress gồm **hai file**: file này (`progress_fe.md`) cho frontend web; [`progress_be.md`](progress_be.md) cho backend và **trạng thái kết nối BE ↔ FE từng API** (mục 9 của file đó). Quy ước trạng thái, tiêu chuẩn PASS và cách cập nhật dùng chung: `progress_be.md` mục 2.
 
@@ -33,7 +38,7 @@ Phạm vi FE hiện tại: **chỉ web** (React). Ứng dụng di động chưa 
 | **P03** Kiểm thử + giao diện mới | Responsive, bàn phím, loading/error/empty | `PARTIAL` | Browser thật 9 nhóm +36 responsive và suite nghiệp vụ PASS | CI mới, LCP (F-21), WCAG đầy đủ |
 | **P04** Triển khai | Build production, hosting, same-origin với Gateway | `NOT_STARTED` | — | Chờ gate P03 |
 
-**Kết nối BE ↔ FE:** 159 ✅ · 2 🟡 · 0 ❌ · 0 ⚪ · 14 ⏸️ · 1 ➖. Danh sách và bằng chứng từng API chỉ ghi tại [progress_be.md mục 9](progress_be.md#9-kết-nối-be--fe).
+**Kết nối BE ↔ FE:** 155 ✅ · 5 🟡 · 0 ❌ · 0 ⚪ · 14 ⏸️ · 4 ➖. Danh sách và bằng chứng từng API chỉ ghi tại [progress_be.md mục 9](progress_be.md#9-kết-nối-be--fe).
 
 **Tóm tắt một dòng:** FE hiện tại đã gọi Gateway thật, lưu/đọc lại dữ liệu P02 và hiện lỗi đúng; đã bỏ fallback ghi giả, sửa contract, bổ sung nghiệp vụ user/business/admin/trip/collection/ingestion. Chưa có dữ liệu du lịch production có giấy phép hoặc scanner thật theo xác nhận người dùng 30/10/2026; hai nhánh ảnh chưa xác nhận. AI vẫn hoãn; không cấp gate.
 
@@ -69,7 +74,7 @@ Phạm vi FE hiện tại: **chỉ web** (React). Ứng dụng di động chưa 
 | Tài khoản | Đăng ký/verify/login/refresh/logout; quên/reset/đổi mật khẩu; hồ sơ, preferences/options/consent, session revoke, deletion request | Review và CI mới |
 | Thông báo | Phân trang, đọc đúng notification_id, giữ trạng thái khi lỗi | Consumer backend thiếu một số event F-01 |
 | Bộ sưu tập / Đánh giá / Đóng góp | CRUD, item/order/public/private; review pending/edit/delete/report; contribution ADD/EDIT/withdraw và APPLIED sau duyệt | Không có nhánh AI |
-| Chuyến đi | CRUD/state/days/items/lock/order, destinations, transfers, route estimate fallback, snapshot; hiển thị field state đúng | Routing production chưa cấu hình, không bịa duration |
+| Chuyến đi | Timeline theo ngày, chặng tự động, Leaflet markers, tự lưu và phục hồi xung đột; giữ draft theo từng item, destinations/chặng riêng trong cài đặt | Routing production chưa cấu hình, khoảng cách chim bay có nhãn, không bịa duration/geometry |
 | Doanh nghiệp | CRUD, membership, verification, claims, yêu cầu sửa và đọc lại sau admin duyệt | Claim/KYC queue thiếu API, nhập ID tay F-16 |
 | Quản trị / Kiểm duyệt | Catalog 7 nhóm tài nguyên, user role/status, reports/reviews/contributions, upload/media metadata/reject; ingestion source/policy/job/item/error/candidate/decision/retry/cancel | APPROVE cần scanner F-14; queue claim/KYC/media F-16 |
 | Gợi ý | Ẩn khi AI tắt | Người dùng hoãn AI |
@@ -92,6 +97,8 @@ Bằng chứng theo màn: các suite A–I và revision tại [progress_be.md m�
 - [ ] Review FE P01 (N1) — **NOT_STARTED**.
 
 ## 6. P02 — Gọi Gateway thật
+
+- [ ] P02 Bộ sưu tập — **PARTIAL** · Codex, nhánh `feature/collections-province-picker`, baseline `91f15aa`, dirty: thay tìm tự do bằng chọn tỉnh/thành từ Catalog; tìm theo `geographicUnitId`, đếm đủ phân trang, khóa địa điểm trước khi tìm và ghi chú trước khi chọn địa điểm; đổi tỉnh xóa lựa chọn cũ. Build TypeScript/Vite PASS; contract 15/0/0/0 (Node, stub); `P02_FRONTEND_URL=http://127.0.0.1:5181 node frontend/scripts/browser-collection-province.mjs`: 5/0/0/0 nhóm kiểm tra, Chromium, HTTP giả lập, 0 lỗi trang. Các lần lỗi chuẩn bị harness (server 5173 trả UI cũ/locator) đã sửa; chưa dùng làm bằng chứng nghiệp vụ. Chưa kiểm lại Gateway/DB thật; không nâng gate.
 
 - [x] FE-P02-01: Màn nghiệp vụ gọi Gateway thật, lỗi/pending rõ — **LOCAL_VERIFIED** (dirty) · suite F 9 nhóm +36 responsive, H login/me503 không báo giả; business/admin/trip suite PASS; `4e020e1`/`edb10cb`, môi trường và request count tại BE mục9. Tương ứng P02-09.
 - [x] FE-P02-02: Pending ack khác thành công cuối — **LOCAL_VERIFIED** (dirty) · B verification/claim pending, C contribution → APPLIED/import decision → SUCCEEDED qua broker, G retry/cancel đọc lại CANCELLED; `4e020e1`/`edb10cb`.
@@ -133,6 +140,8 @@ Hãy đổi mật khẩu/xóa dữ liệu cuối cùng bằng hai alias riêng; 
 - Kiểm CI bàn giao — **CI_VERIFIED** trong phạm vi 11 check của PR #23, revision `2f2e702e3b57eaec29879ebd35682265573f0e33`: P00 `41336264353`, P01 `41336264348`, P02 `41336264376`, P03 tooling `41336264372` đều SUCCESS (11/11). CI Linux/Java 21/Node 24, DB/broker/container thật theo workflow; không suy rộng sang các gate hoặc toàn bộ task. P02 run trước `41334918573` FAIL tại smoke chờ NEEDS_REVIEW; `fc370e8` bổ sung candidate PUBLISHED độc lập và chẩn đoán, giữ assertion; local sau refresh stack/Gateway PASS (1 lượt), DB xác nhận NEEDS_REVIEW → CANCELLED. Gateway unit/security local Java 21 22/0/0/0. Đã merge PR #23 bằng `Truong102006`, merge `4223631bc955ca47475fe2bb630a7a48576a3681`; giữ nguyên trạng thái gate/chữ ký.
 
 ## 7. P03 — Kiểm thử và thiết kế lại giao diện
+
+- [x] P03-FE-TR-TIMELINE: Đồng bộ planner vào workspace hiện tại, tự lưu không làm mất draft ở item khác — **LOCAL_VERIFIED** (dirty) · Codex; source `91f15aa` dirty, thay đổi draft lưu tại `e287595` trên nhánh `feature/trip-timeline-planner`. `test:browser:trip:timeline` 11 nhóm/0 failure/0 page error; Gateway timeline 5 nhóm/0 failure, build PASS 4639 modules, client 15/0/0/0; Node24.21.0/Chromium/Gateway/DB thật. Collection bundle vẫn FAIL, không suy cả suite PASS; chi tiết T/F-42 tại [progress_be.md](progress_be.md#9-kết-nối-be--fe). Push/PR bị chặn bởi mạng F-41; chưa CI/gate.
 
 **Bằng chứng giao diện mới** (theo ghi chép nhánh FE, checkout dirty `cfd121d` → `544dd08`, Windows, Node 24.21.0, Chromium Playwright):
 - `npm run test:ui` (`clay-ui-check.mjs`): 52 kiểm tra, 0 fail, API giả lập; 9 màn × 375/768/1440 px, màn con, trạng thái rỗng/lỗi, reduced motion.
@@ -238,3 +247,5 @@ Chạy từ thư mục gốc repo; Node 24.
 | 15/10/2026 | Màn nghiệp vụ gọi Gateway thật | PR #16, `14b342c` |
 | 15/10/2026 | API client + refresh xoay vòng | PR #15, `42eac23` |
 | 08/10/2026 | Khung React/TS/Vite (P00); landing page | PR #2, PR #3 |
+
+- [ ] Chu?n b? PR t?ch h?p ? **IN_PROGRESS** ? Codex, nh?nh `feature/travel-timeline-account-integration`, baseline `91f15aa`, dirty. GitHub ch?a k?t n?i ???c; ch?a push/PR/CI, kh?ng ??ng gate.

@@ -1,6 +1,10 @@
 # Tiến độ Backend (BE) — SmartTravel VN
 
-Cập nhật: **03/11/2026 13:18** (GMT+7)
+Cập nhật: **05/11/2026 19:00** (GMT+7)
+
+Kiểm lại runtime 05/11/2026: **PARTIAL**, Codex, nhánh `feature/identity-skip-email-verification`, SHA `91f15aa`, dirty. Image Identity cũ đóng gói JAR trước thay đổi; đã `mvn -f backend/services/identity-service/pom.xml package -DskipTests -q`, `python backend/platform/build_service_image.py identity --tag smarttravel-identity:p02-local`, recreate riêng Identity, readiness 200. Kiểm API qua Gateway/PostgreSQL Docker thật, Java 21: 4/0/0/0 (admin login 200, kích hoạt tài khoản PENDING qua admin status 200, đăng ký synthetic 202, đăng nhập ngay 200). Không đổi mật khẩu tài khoản người dùng. Chưa kiểm đăng nhập bằng mật khẩu người dùng sau kích hoạt; mật khẩu thử trước đó trả 401. F-35 vẫn PARTIAL: chưa full DB/broker suite/FE end-to-end/CI; không đóng gate. Các ghi chú chưa kiểm runtime bên dưới là mốc trước lần kiểm này.
+
+- [ ] P01 Identity — đăng ký không cần xác minh email: **PARTIAL** · Codex, nhánh `feature/identity-skip-email-verification`, baseline `91f15aa`, dirty. Theo yêu cầu người dùng 05/11/2026: mặc định `IDENTITY_EMAIL_VERIFICATION_REQUIRED=false`, tài khoản mới ACTIVE nhưng `email_verified_at` vẫn null; không gửi mã, giữ xác minh cho tài khoản PENDING cũ. FE chuyển sang đăng nhập, giữ email, xóa mật khẩu. Playwright `node frontend/scripts/browser-registration.mjs`: 1/0/0/0, Chromium + API stub; build FE PASS. Chưa kiểm DB/Gateway thật hoặc CI; suite xác minh cũ cần cấu hình bật xác minh. F-35; không đóng gate. Backend: `mvn -f backend/services/identity-service/pom.xml test -q`, Java 21, 66/0/0/44; 22 unit/security chạy thật, DB/broker skip. Lần đầu FAIL do fixture Mockito trả Map rỗng cho idempotency, đã sửa stub null; không phải flaky.
 
 Progress gồm **hai file**: file này (`progress_be.md`) cho backend, Gateway, hạ tầng và **trạng thái kết nối BE ↔ FE**; [`progress_fe.md`](progress_fe.md) cho frontend web. Mỗi file sắp theo phase P00 → P04. Yêu cầu chi tiết của từng phase vẫn nằm trong `plan/phases/`; file này chỉ ghi **đã làm tới đâu, kiểm bằng gì, làm gì tiếp**.
 
@@ -30,7 +34,7 @@ Progress gồm **hai file**: file này (`progress_be.md`) cho backend, Gateway, 
 | **P02** Kết nối thật | Gateway, HTTP, broker giữa 6 service, frontend qua Gateway | `PARTIAL` 12/15 task | Local P02 trên UI hiện tại; CI cũ không đại diện revision mới | P02-01, P02-08, P02-14; chữ ký | Xử lý F-01/F-06/F-07; review các commit tích hợp |
 | **P03** Kiểm thử hệ thống | E2E, bảo mật, lỗi phụ thuộc, tải, restore, browser | `PARTIAL`; P03-07 `LOCAL_VERIFIED` trên UI hiện tại | Browser Gateway P02 thật; chưa chạy lại toàn bộ gate | Gate trên revision sạch; CI mới, chữ ký; AI hoãn | Chạy lại gate khi đủ điều kiện, N1/N2 review |
 | **P04** Phát hành | Triển khai mới, rollback, bàn giao vận hành | `NOT_STARTED` | — | Toàn bộ; bị chặn bởi gate P03 | Chuẩn bị target triển khai, domain, credential provider |
-| **Kết nối BE ↔ FE** | Từng API public/admin qua Gateway | 159 ✅ · 2 🟡 · 0 ❌ · 0 ⚪ · 14 ⏸️ · 1 ➖ (mục 9) | 161 API không AI được quan sát; còn 2 nhánh media chờ scanner và giới hạn import trùng lặp F-32 | Scanner thật (F-14); contract/CI + N1 review cho representation (F-15) | Kiểm scanner khi có; xử lý F-32, chạy contract mới và review N1 |
+| **Kết nối BE ↔ FE** | Từng API public/admin qua Gateway | 155 ✅ · 5 🟡 · 0 ❌ · 0 ⚪ · 14 ⏸️ · 4 ➖ (mục 9) | Bằng chứng lịch sử 161 API; timeline mới xem T; còn scanner và F-32 | Scanner thật (F-14); contract/CI + N1 review cho representation (F-15) | Kiểm scanner khi có; xử lý F-32, chạy contract mới và review N1 |
 
 **Tóm tắt một dòng:** đã nối và kiểm thử FE hiện tại với Gateway/DB/broker thật trên dữ liệu tổng hợp P02; sửa sai contract và loại bỏ ghi giả khi API lỗi. Chưa xác nhận hai nhánh media phụ thuộc scanner thật; người dùng xác nhận 30/10/2026 tiếp tục bằng P02, chưa có dữ liệu du lịch có giấy phép. AI vẫn `DEFERRED`; không đóng gate hoặc ký thay N1/N2.
 
@@ -260,6 +264,8 @@ Mã task: ID = Identity, CA = Catalog, CO = Community, TR = Trip, IG = Ingestion
 
 ## 6. P02 — Kết nối các service
 
+P02 Bộ sưu tập: FE chọn tỉnh/thành từ `GET /geographic-units`, tìm `GET /places?geographicUnitId=…` và đếm đủ phân trang; chưa chạy lại Gateway/DB thật cho thay đổi này nên giữ nguyên ký hiệu kết nối và gate. Chi tiết kiểm tra frontend tại [progress_fe.md](progress_fe.md#6-p02--gọi-gateway-thật).
+
 Yêu cầu: `plan/phases/P02-service-integration.md` · Trạng thái phase: **`PARTIAL`** 12/15 task; P02-09 kiểm lại local ngày 30/10/2026.
 
 **Bằng chứng chung:** local connected 11/10/2026 (checkout dirty) bằng `p02.py smoke`, `p02_faults.py`, `p02_transport_test.py`, `p02_import_ack_test.py`, `p02_privacy_test.py`. CI `connected` PASS run 39540804333 (21/10/2026, 8m35s): 11 nhóm E2E không AI, 8 nhóm resilience, import ack/retry, frontend qua Gateway thật, 8 case browser, monitor `alarms=[]`. Task có phần AI chỉ có bằng chứng local.
@@ -298,6 +304,11 @@ Yêu cầu: `plan/phases/P02-service-integration.md` · Trạng thái phase: **`
 - Kiểm CI bàn giao — **CI_VERIFIED** trong phạm vi 11 check của PR #23, revision `2f2e702e3b57eaec29879ebd35682265573f0e33`: P00 `41336264353`, P01 `41336264348`, P02 `41336264376`, P03 tooling `41336264372` đều SUCCESS (11/11). CI Linux/Java 21/Node 24, DB/broker/container thật theo workflow; không suy rộng sang các gate hoặc toàn bộ task. P02 run trước `41334918573` FAIL tại smoke chờ NEEDS_REVIEW; `fc370e8` bổ sung candidate PUBLISHED độc lập và chẩn đoán, giữ assertion; local sau refresh stack/Gateway PASS (1 lượt), DB xác nhận NEEDS_REVIEW → CANCELLED. Gateway unit/security local Java 21 22/0/0/0. Đã merge PR #23 bằng `Truong102006`, merge `4223631bc955ca47475fe2bb630a7a48576a3681`; giữ nguyên trạng thái gate/chữ ký.
 
 ## 7. P03 — Kiểm thử hệ thống
+
+Kiểm lại nhánh PR `feature/trip-timeline-planner`, commit `a055a20`, checkout tracked sạch: `python backend/services/trip-service/test-local.py --transport` 61/0/0/0, Java21.0.11, PostgreSQL16/RabbitMQ Docker thật, Catalog/routing stub; BUILD SUCCESS. Đây là baseline khác workspace tích hợp54 test bên dưới; không cộng số test hai lượt.
+
+- [x] P03-TR-TIMELINE: Đồng bộ Trip Planner vào workspace hiện tại và sửa contract test — **LOCAL_VERIFIED** (dirty) · Codex; source `91f15aa` dirty, phần sửa fixture lưu tại `a055a20` trên nhánh `feature/trip-timeline-planner`. `python backend/services/trip-service/test-local.py --transport`: 54 run / 0 failed / 0 errors / 0 skipped, Java 21.0.11, Docker PostgreSQL 16/RabbitMQ thật, Catalog/routing stub. Lượt trước 54/0/1/0 do stub snapshot thiếu các trường của contract mở rộng; đã dùng `placeSnapshot` canonical fixture, giữ nguyên contract. `validate_contracts.py`: 184 HTTP/23 event + 1 extension PASS; chỉ thêm hash extension vào manifest của workspace. Gateway timeline 5 nhóm PASS; FE timeline 11 nhóm PASS. Không nâng gate; còn CI/review.
+- [ ] P03-TR-PUBLISH: Push nhánh và tạo/merge PR — **BLOCKED** · F-41; GitHub TCP timeout trước xác thực. Chủ xử lý: người dùng/quản trị mạng cùng Codex; code và kiểm thử local vẫn làm được.
 
 Yêu cầu: `plan/phases/P03-system-verification.md` và `plan/phases/P03-non-ai-execution.md` · Trạng thái phase: **`PARTIAL`**.
 
@@ -342,7 +353,7 @@ Cần chuẩn bị trước P04: target triển khai và domain; credential prov
 
 ## 9. Kết nối BE ↔ FE
 
-Bảng dưới đối chiếu 172 operation public/admin trong OpenAPI (không tính 12 `/internal`) và 4 operation media mở rộng đã triển khai: **176 API**. Nguồn quan sát: `integration-coverage.mjs` đọc phản hồi Gateway của các suite PASS, không suy coverage từ source. Extension media và giới hạn contract: [catalog-media.md](docs/contracts/catalog-media.md).
+Bảng dưới đối chiếu 172 operation public/admin trong OpenAPI (không tính 12 `/internal`), 4 operation media và 2 operation timeline mở rộng: **178 API**. Nguồn quan sát: `integration-coverage.mjs` và suite timeline Gateway/browser, không suy coverage từ source. Extension media: [catalog-media.md](docs/contracts/catalog-media.md); timeline: [trip-planner.openapi.json](backend/contracts/extensions/trip-planner.openapi.json).
 
 **Kiểm lại 30/10/2026:** 160 API không AI đã được gọi qua Gateway; 158 có phản hồi 2xx. Membership DELETE đã kiểm nhánh bảo vệ chủ sở hữu (422, bản ghi giữ nguyên). GET ảnh cách ly trả 404 đúng; review REJECT 202 đúng, nhưng APPROVE 503 vì chưa có scanner thật. Vì vậy hai API media vẫn 🟡, chưa xác nhận nhánh thành công đầy đủ. JWKS chỉ dành cho Gateway (➖); 14 API AI hoãn theo quyết định trước đó.
 
@@ -369,22 +380,24 @@ Bảng dưới đối chiếu 172 operation public/admin trong OpenAPI (không t
 
 **Revision:** các lượt J/K/M và lượt đầu chạy trên `d04c13a` dirty; L và browser cuối trên `101912f` dirty. Source kiểm thử đã lưu không đổi ở backend `66e6586`, FE `4e020e1`, scripts `edb10cb`; tài liệu contract `40590cf`. Chưa có CI run cho revision mới; chỉ `LOCAL_VERIFIED`, không cấp gate. ScannerBoundary từng có 2 lượt fail503 lúc JDK khởi động lạnh; sửa handshake fixture (không tăng timeout production), sau đó full37 và full38 PASS; không dùng retry che lỗi.
 
+**T — Timeline, 05/11/2026:** workspace `91f15aa` dirty, Node 24.21.0/Chromium, Gateway/Catalog/PostgreSQL thật. `test:browser:trip:timeline` 11 nhóm/0 failure/0 page error, gồm draft không hợp lệ ở một item trong khi item khác lưu, lỗi503 có điều khiển và xung đột phiên bản; `test:gateway:trip:timeline` 5 nhóm/0 failure, có cleanup synthetic fixture. Build FE PASS 4639 modules, `test:contracts` 15/0/0/0; platform checksum/policy 12/0/0/0. Bundle collection vẫn FAIL (F-42); chưa CI/gate.
+
 | Service | ✅ Hoàn thiện | 🟡 Đã nối, chưa kiểm đủ | ❌ Lỗi | ⚪ Chưa thực hiện | ⏸️ Hoãn | ➖ Không áp dụng | Tổng |
 |---|---|---|---|---|---|---|---|
-| Identity | 22 | 0 | 0 | 0 | 0 | 1 | 23 |
+| Identity | 19 | 3 | 0 | 0 | 0 | 1 | 23 |
 | Catalog | 64 | 2 | 0 | 0 | 0 | 0 | 66 |
 | Community | 30 | 0 | 0 | 0 | 0 | 0 | 30 |
-| Trip | 29 | 0 | 0 | 0 | 0 | 0 | 29 |
+| Trip | 28 | 0 | 0 | 0 | 0 | 3 | 31 |
 | Ingestion | 14 | 0 | 0 | 0 | 0 | 0 | 14 |
 | Intelligence | 0 | 0 | 0 | 0 | 14 | 0 | 14 |
-| **Tổng** | **159** | **2** | **0** | **0** | **14** | **1** | **176** |
+| **Tổng** | **155** | **5** | **0** | **0** | **14** | **4** | **178** |
 
 #### Identity
 
 | API | Trạng thái kết nối | Màn hình FE / ghi chú |
 |---|---|---|
-| `POST /auth/register` | ✅ Hoàn thiện | `test:browser:auth-recovery`: 13/0/0/0; FE → Gateway → Identity/PostgreSQL/Mailpit thật, gồm gửi lại sau cooldown và mã cũ bị từ chối. Source `2f21c75`, chạy dirty; SMTP Gmail thật chờ F-34 |
-| `POST /auth/login` | ✅ Hoàn thiện | `test:browser:auth-recovery`: 13/0/0/0; FE → Gateway → Identity/PostgreSQL/Mailpit thật, gồm gửi lại sau cooldown và mã cũ bị từ chối. Source `2f21c75`, chạy dirty; SMTP Gmail thật chờ F-34 |
+| `POST /auth/register` | 🟡 Đã nối, chưa kiểm | Chính sách mới 05/11/2026: ACTIVE ngay, không gửi email; browser-registration PASS với API stub, chưa kiểm Gateway/DB thật (F-35) |
+| `POST /auth/login` | 🟡 Đã nối, chưa kiểm | Đăng ký xong chuyển form login, giữ email, mật khẩu trống; browser-registration PASS với API stub, chưa kiểm Gateway/DB thật (F-35) |
 | `POST /auth/refresh` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
 | `POST /auth/logout` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
 | `POST /auth/verify-email` | ✅ Hoàn thiện | `test:browser:auth-recovery`: 13/0/0/0; FE → Gateway → Identity/PostgreSQL/Mailpit thật, gồm gửi lại sau cooldown và mã cũ bị từ chối. Source `2f21c75`, chạy dirty; SMTP Gmail thật chờ F-34 |
@@ -403,7 +416,7 @@ Bảng dưới đối chiếu 172 operation public/admin trong OpenAPI (không t
 | `PATCH /me/notifications/{notification_id}/read` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
 | `POST /me/deletion-requests` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
 | `GET /admin/users` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
-| `PATCH /admin/users/{user_id}/status` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
+| `PATCH /admin/users/{user_id}/status` | 🟡 Đã nối, chưa kiểm | Mở khóa theo cùng cấu hình xác minh email; chưa kiểm Gateway/DB thật (F-35) |
 | `PUT /admin/users/{user_id}/roles` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
 | `GET /.well-known/jwks.json` | ➖ Không áp dụng | Gateway dùng nội bộ, FE không gọi |
 
@@ -535,17 +548,19 @@ Bảng dưới đối chiếu 172 operation public/admin trong OpenAPI (không t
 | `DELETE /trips/{trip_id}/days/{day_id}` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
 | `GET /trips/{trip_id}/days/{day_id}/items` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
 | `POST /trips/{trip_id}/days/{day_id}/items` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
-| `GET /trips/{trip_id}/days/{day_id}/items/{item_id}` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
+| `GET /trips/{trip_id}/days/{day_id}/items/{item_id}` | ➖ Không áp dụng | Timeline đọc danh sách item; API vẫn giữ tương thích |
 | `PATCH /trips/{trip_id}/days/{day_id}/items/{item_id}` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
 | `DELETE /trips/{trip_id}/days/{day_id}/items/{item_id}` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
 | `PUT /trips/{trip_id}/days/{day_id}/items/order` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
 | `GET /trips/{trip_id}/transfers` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
 | `POST /trips/{trip_id}/transfers` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
-| `GET /trips/{trip_id}/transfers/{transfer_id}` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
+| `GET /trips/{trip_id}/transfers/{transfer_id}` | ➖ Không áp dụng | Timeline dùng danh sách chặng; API vẫn giữ tương thích |
 | `PATCH /trips/{trip_id}/transfers/{transfer_id}` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
 | `DELETE /trips/{trip_id}/transfers/{transfer_id}` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
-| `POST /trips/{trip_id}/route-estimates` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
+| `POST /trips/{trip_id}/route-estimates` | ➖ Không áp dụng | Timeline tính tuyến nền qua chặng tự động; API vẫn giữ tương thích |
 | `POST /trips/{trip_id}/snapshots/refresh` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
+| `GET /trips/{trip_id}/days/{day_id}/travel-legs` | ✅ Hoàn thiện | Timeline và bản đồ theo dõi chặng tự động · Bằng chứng T |
+| `PATCH /trips/{trip_id}/days/{day_id}/travel-legs/{leg_id}` | ✅ Hoàn thiện | Đổi phương tiện và thử tính lại ngay trên timeline · Bằng chứng T |
 
 #### Ingestion
 
@@ -589,6 +604,10 @@ Bảng dưới đối chiếu 172 operation public/admin trong OpenAPI (không t
 
 ## 10. Vấn đề đang mở
 
+F-41 — Trung bình, P03, **OPEN** · Push/PR bị chặn bởi kết nối TCP tới GitHub/API GitHub; HTTPS Google và raw.githubusercontent.com vẫn 200. DNS hệ thống và DoH trùng nhau; HTTPS GitHub qua nhiều địa chỉ chính thức và SSH22 đều timeout. Có route Radmin VPN trạng thái Dead; thử ép socket qua Wi-Fi vẫn timeout nên chưa kết luận VPN là nguyên nhân. Thử thêm route tạm bị Windows từ chối quyền Administrator; không thay đổi route/firewall/DNS. Người xử lý: người dùng/quản trị mạng + Codex; cần kiểm tra trên mạng khác hoặc phiên quản trị.
+
+F-42 — Trung bình, P02, **OPEN** · Suite collection trong workspace hiện tại: lượt đầu FAIL selector tiêu đề Tài khoản, đã cập nhật sang `.account-panel-container`; lượt sau FAIL `POST /collections/{id}/items` 503. Log Community: workload token request tới Catalog thất bại; health container vẫn healthy. Timeline browser/Gateway riêng PASS; không coi bundle Trip/collection PASS. Người xử lý: N1/N2 + Codex (đồng bộ token issuer runtime).
+
 | ID | Mức | Phase | Vấn đề | Người xử lý | Trạng thái |
 |---|---|---|---|---|---|
 | F-01 | Cao | P01/P02 | Identity chưa nhận `catalog.contribution.applied/rejected.v1` và `intelligence.model.deployed.v1` dù registry khai báo; message bị bỏ trong môi trường kết nối | N1 + N2 | OPEN |
@@ -613,6 +632,7 @@ Bảng dưới đối chiếu 172 operation public/admin trong OpenAPI (không t
 | F-32 | Trung bình | P02 | Sandbox import job có 4 item (`APPLIED`×2, `NEEDS_REVIEW`, `FAILED`), chưa có item trùng riêng. Ngoài ra `PipelineService.publicItemStatus` đổi nội bộ `DUPLICATE` thành `APPLIED` và `SKIPPED` thành `APPLIED` (trừ `REVIEW_REJECTED`), nên API/UI không phân biệt trùng với ghi thành công; chưa thể kiểm scenario trùng qua màn hiện tại | N1 | OPEN |
 | F-33 | Cao | P00/P01 | Schema event đang sửa trên checkout dirty yêu cầu thêm `name_en`, `address`, `description`, `price_min`, `price_max`, `rating_avg`, `review_count` nhưng `CatalogRepository.emit` vẫn phát whitelist cũ. `python backend/services/catalog-service/test-local.py` ngày 03/11/2026, HEAD `ca83db7`, dirty, Java 21/PostGIS Docker: toàn suite 39/1/0/5 (run/failed/errors/skipped), FAIL tại `CatalogProviderTests.allSixtySixFrozenOperationsReturnValidatedProviderResponses`; riêng `CatalogDatabaseTests` 20/0/0/0. Hạ P01-CA-09; chưa sửa contract/event ngoài phạm vi bản đồ. Cần thống nhất schema/producer/consumer và chạy lại provider/broker trên cùng revision | N1 + N2 review consumer | OPEN |
 | F-34 | Cao | P01/P02 | Đã sửa khôi phục xác minh/email hết hạn, chống gửi dồn và chuyển bước FE (`2f21c75`), kiểm local BE/Gateway/browser/SMTP Mailpit PASS (mục 9/O/P). Người dùng chọn Gmail thật 03/11/2026; máy chưa có SMTP credential, chờ nhập cục bộ qua `python backend/infra/configure_mail.py --apply` và xác nhận thư thực nhận. Candidate contract mới chưa CI/review; không nâng gate | Người dùng cấu hình Gmail; Codex kiểm; N1/N2 review | PARTIAL |
+| F-35 | Trung bình | P01/P02 | Chính sách đăng ký mới bỏ xác minh email theo người dùng 05/11/2026; chưa kiểm Gateway/DB thật. Suite smoke/recovery/seed cũ cần bật IDENTITY_EMAIL_VERIFICATION_REQUIRED=true hoặc thích nghi với chính sách mới; không dùng bằng chứng cũ để nâng gate | Codex + N1/N2 review | PARTIAL |
 
 
 Đã đóng: F-31 (Trung bình, P03, Codex: smoke phụ thuộc candidate của suite trước; fixture độc lập `fc370e8`, CI cũ `41334918573` FAIL, CI mới `41336264376` PASS trên `2f2e702`; PR #23), F-30 (Trung bình, P03, Codex: header cố định che nút quay lại chi tiết; `7b04167`, filters lần đầu FAIL, sau sửa 22/0/0/0), F-18 (khôi phục màn và nối đủ API không AI, còn hai nhánh media tách F-14; `4e020e1`/`edb10cb`, A–G), F-22 (sửa body/path/form thật; `4e020e1`, A/B/C/E/G), F-23 (bỏ bản ghi giả, chỉ cập nhật sau API thành công; `4e020e1`, F/H và negative assertions các suite).
@@ -669,3 +689,5 @@ Mới nhất ở trên. Mỗi dòng: ngày giờ · thay đổi · PR/commit.
 | 10/10/2026 | P01 M1 storage/runtime; Identity xác thực, preferences, admin | PR #5–#7 |
 | 10/10/2026 | Cấu hình database cloud | PR #4, `5319942` |
 | 08/10/2026 | P00 nền tảng; quy tắc Git; landing frontend | PR #1–#3 |
+
+- [ ] Chu?n b? PR t?ch h?p ? **IN_PROGRESS** ? Codex, nh?nh `feature/travel-timeline-account-integration`, baseline `91f15aa`, dirty. GitHub ch?a k?t n?i ???c; ch?a push/PR/CI, kh?ng ??ng gate.
