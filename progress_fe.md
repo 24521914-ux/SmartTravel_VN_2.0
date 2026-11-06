@@ -1,6 +1,6 @@
 # Tiến độ Frontend (FE) — SmartTravel VN
 
-Cập nhật: **06/11/2026 14:55** (GMT+7)
+Cập nhật: **06/11/2026 19:44** (GMT+7)
 
 Progress gồm **hai file**: file này (`progress_fe.md`) cho frontend web; [`progress_be.md`](progress_be.md) cho backend và **trạng thái kết nối BE ↔ FE từng API** (mục 9 của file đó). Quy ước trạng thái, tiêu chuẩn PASS và cách cập nhật dùng chung: `progress_be.md` mục 2.
 
@@ -211,6 +211,7 @@ Chạy từ thư mục gốc repo; Node 24.
 
 | Thời điểm | Thay đổi | PR / commit |
 |---|---|---|
+| 06/11/2026 19:44 | Merge cấu hình mặc định dùng cloud; 11 checks PASS trên head `0b14e46`: P00 run 42190791704, P01 42190791670, P02 42190791665, P03 42190791684. Giữ trạng thái task/gate; F-41 OPEN vì chưa chứng minh nguyên nhân gốc | [PR #3](https://github.com/24521914-ux/SmartTravel_VN_2.0/pull/3), merge `32e14e902795740828269605fd70838665a75c56` |
 | 02/11/2026 01:33 | Merge tích hợp BE–FE, seed mẫu, path/bộ lọc/giao diện; 11 check CI PASS trên revision PR `2f2e702`; sửa F-30/F-31, không đóng gate | [PR #23](https://github.com/24521914-ux/SmartTravel_VN/pull/23), merge `4223631bc955ca47475fe2bb630a7a48576a3681` |
 | 30/10/2026 22:48 | Rà soát tiến độ FE, đối chiếu report tích hợp với bảng API tại BE mục 9; số liệu khớp, giữ hai nhánh scanner chưa xác nhận. Chỉ kiểm tra tài liệu/report cũ, không chạy lại browser/build hoặc nâng trạng thái | Baseline `5015912`; nhánh `fix/frontend-backend-integration`, checkout có `.ai-memory/` untracked |
 | 30/10/2026 22:03 | Hoàn thành tích hợp local với P02, khôi phục nghiệp vụ, bỏ ghi giả, kiểm Gateway/browser; hai nhánh scanner chưa xác nhận, chưa CI/gate | `66e6586`, `4e020e1`, `edb10cb` |
