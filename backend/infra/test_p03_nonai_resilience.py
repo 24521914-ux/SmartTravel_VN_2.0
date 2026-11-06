@@ -52,7 +52,7 @@ class OutageCleanupTests(unittest.TestCase):
             if action == 'up':
                 containers['identity'] = 'replacement-identity'
             self.assertEqual(arguments[-1], 'community')
-            self.assertIn('--wait', arguments)
+            self.assertEqual(arguments, ('community',))
         resume_existing('community', compose=compose)
         self.assertEqual(containers, original)
 

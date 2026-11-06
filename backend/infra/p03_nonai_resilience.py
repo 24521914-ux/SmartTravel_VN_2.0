@@ -59,8 +59,8 @@ def paused(service, compose=p02.compose):
 
 
 def resume_existing(service, compose=p02.compose):
-    """Recover the stopped container without reapplying its dependency configuration."""
-    compose('start', '--wait', '--wait-timeout', '120', service)
+    """Keep the container; disrupted() separately waits for application readiness."""
+    compose('start', service)
 
 
 def mongo(expression):
