@@ -41,23 +41,25 @@ jobs:
           python backend/platform/test_contract_policy.py
           python backend/platform/test_contract_stubs.py
           python backend/platform/test_event_harness.py
+          python -m unittest discover -s backend/platform -p test_p00_ci_ports.py
       - name: Build six independent service skeletons
         run: bash backend/mvnw -B -f backend/services/pom.xml verify
       - name: Start real local database dependencies
         run: |
-          docker compose -f backend/platform/compose.p00.yaml config --quiet
-          docker compose -f backend/platform/compose.p00.yaml up -d --wait catalog-db template-db identity-db trip-db ingestion-db intelligence-db community-db
-          docker compose -f backend/platform/compose.p00.yaml run --rm community-init
+          docker compose -f backend/platform/compose.p00.yaml -f backend/platform/compose.p00.ci.yaml config --quiet
+          docker compose -f backend/platform/compose.p00.yaml -f backend/platform/compose.p00.ci.yaml up -d --wait catalog-db template-db identity-db trip-db ingestion-db intelligence-db community-db
+          template_address="$(docker compose -f backend/platform/compose.p00.yaml -f backend/platform/compose.p00.ci.yaml port template-db 5432)"
+          echo "DB_URL=jdbc:postgresql://${template_address}/platform_template" >> "$GITHUB_ENV"
+          docker compose -f backend/platform/compose.p00.yaml -f backend/platform/compose.p00.ci.yaml run --rm community-init
           for i in $(seq 1 30); do
             if docker compose -f backend/platform/compose.p00.yaml exec -T community-db mongosh --quiet --eval 'if (!db.hello().isWritablePrimary) quit(1)'; then break; fi
             sleep 2
           done
-          docker compose -f backend/platform/compose.p00.yaml --profile cache up -d
+          docker compose -f backend/platform/compose.p00.yaml -f backend/platform/compose.p00.ci.yaml --profile cache up -d
           python backend/platform/check_runtime.py
       - name: Verify standalone platform template against PostgreSQL
         env:
           P00_DB_TEST: 'true'
-          DB_URL: jdbc:postgresql://localhost:55433/platform_template
           DB_USER: template_local
           DB_PASSWORD: ci-placeholder-not-a-secret
           JWT_JWKS_URI: http://127.0.0.1:18082/jwks
@@ -70,7 +72,7 @@ jobs:
         run: docker build -t smarttravel-p00-template:ci backend/platform/p00-template
       - name: Stop local containers without deleting volumes
         if: always()
-        run: docker compose -f backend/platform/compose.p00.yaml --profile cache down
+        run: docker compose -f backend/platform/compose.p00.yaml -f backend/platform/compose.p00.ci.yaml --profile cache down
   frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 10

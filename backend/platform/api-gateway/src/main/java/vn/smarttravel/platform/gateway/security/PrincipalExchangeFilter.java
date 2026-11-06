@@ -16,6 +16,7 @@ import reactor.core.publisher.Mono;
 /** Exchange once per request; no cache can keep a revoked session alive. */
 @Component
 public class PrincipalExchangeFilter implements GlobalFilter, Ordered {
+    private static final org.slf4j.Logger log=org.slf4j.LoggerFactory.getLogger(PrincipalExchangeFilter.class);
     private final String uri;
     private final String credential;
     private final WebClient client=WebClient.builder().build();
@@ -38,21 +39,28 @@ public class PrincipalExchangeFilter implements GlobalFilter, Ordered {
                         .bodyValue(Map.of("audience",destination)).exchangeToMono(response -> {
                             if (!response.statusCode().is2xxSuccessful()) {
                                 int status=response.statusCode().value();
-                                return response.releaseBody().then(Mono.error(new ExchangeFailure(status==401||status==403?status:503)));
+                                return response.releaseBody().then(Mono.error(new ExchangeFailure(status==401||status==403?status:503,"HTTP_STATUS",status)));
                             }
                             // Decode bytes locally: DEBUG codec logging must never print access_token.
                             return response.bodyToMono(byte[].class).map(bytes -> {
                                 try { return new com.fasterxml.jackson.databind.ObjectMapper().readTree(bytes); }
-                                catch (java.io.IOException error) { throw new ExchangeFailure(503); }
+                                catch (java.io.IOException error) { throw new ExchangeFailure(503,"INVALID_JSON",0); }
                             });
-                        }).switchIfEmpty(Mono.error(new ExchangeFailure(503))).timeout(Duration.ofSeconds(3))
+                        }).switchIfEmpty(Mono.error(new ExchangeFailure(503,"EMPTY_RESPONSE",0))).timeout(Duration.ofSeconds(3))
                         .map(body -> {
                             String token=body.path("access_token").asText();
-                            if(token.isBlank()||token.length()>1024) throw new ExchangeFailure(503);
+                            if(token.isBlank()||token.length()>1024) throw new ExchangeFailure(503,"INVALID_TOKEN",0);
                             return token;
-                        }).onErrorResume(error -> GatewayErrors.write(exchange,error instanceof ExchangeFailure failure?failure.status:503,
+                        }).onErrorResume(error -> {
+                            // Only fixed classifications/status codes: never log tokens, headers, URI or exception text.
+                            String reason=error instanceof ExchangeFailure failure?failure.reason:
+                                    (error.getCause()==null?error:error.getCause()).getClass().getSimpleName();
+                            log.warn("identity_exchange_failed reason={} upstream_status={}",reason,
+                                    error instanceof ExchangeFailure failure?failure.upstreamStatus:0);
+                            return GatewayErrors.write(exchange,error instanceof ExchangeFailure failure?failure.status:503,
                                 error instanceof ExchangeFailure failure && failure.status<500 ? "UNAUTHORIZED":"IDENTITY_UNAVAILABLE",
-                                "Identity authorization failed").thenReturn(""))
+                                "Identity authorization failed").thenReturn("");
+                        })
                         .flatMap(token -> {
                             if(token.isEmpty()) return Mono.just(true);
                             var request=exchange.getRequest().mutate().headers(headers -> {
@@ -64,6 +72,10 @@ public class PrincipalExchangeFilter implements GlobalFilter, Ordered {
     }
     private static final class ExchangeFailure extends RuntimeException {
         final int status;
-        ExchangeFailure(int status) { this.status=status; }
+        final String reason;
+        final int upstreamStatus;
+        ExchangeFailure(int status,String reason,int upstreamStatus) {
+            this.status=status; this.reason=reason; this.upstreamStatus=upstreamStatus;
+        }
     }
 }

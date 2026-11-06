@@ -75,6 +75,14 @@ Client nền tảng này chưa phải màn nghiệp vụ hoặc bằng chứng k
 
 ## Ứng dụng tích hợp P02
 
+Backend mặc định dùng database cloud Neon/Atlas: `.env` ở gốc repo là file riêng tư,
+theo mẫu `.env.example`; xem [hướng dẫn cloud](../backend/platform/cloud/README.md).
+Chạy `python backend/platform/cloud/manage.py check`, rồi
+`docker compose up -d --build --wait`. Máy chạy backend phải được cho phép IP trong
+Atlas Network Access. Ảnh/tệp vẫn nằm trong volume của từng máy chạy backend.
+Trạng thái kết nối API xem [`progress_be.md`](../progress_be.md), màn hình xem
+[`progress_fe.md`](../progress_fe.md).
+
 Mở `http://127.0.0.1:5173/kham-pha` sau khi khởi động stack P02 và `npm run dev`.
 Vite chuyển `/api` tới Gateway thật `http://127.0.0.1:58080`; thay bằng biến
 `P02_GATEWAY_TARGET` khi Gateway dùng địa chỉ khác. Landing dùng `/kham-pha`; `/` chuyển về landing.
@@ -87,7 +95,7 @@ Job nhập có thao tác khởi chạy và tải lại trạng thái; quyền qu
 kiểm tra. Gợi ý giữ `request_id` cho mục lịch trình. Mọi mutation gửi idempotency key;
 update gửi phiên bản hiện tại và hiển thị conflict/error để người dùng tải lại.
 Phiên ứng dụng được lưu ở browserTokenStore; nút gia hạn gọi refresh token rotation.
-Các provider email/nguồn ngoài vẫn theo cấu hình sandbox của stack tích hợp.
+Provider email/nguồn ngoài phụ thuộc cấu hình backend; sandbox chỉ có khi chọn local rõ ràng.
 
 ```text
 npm run build
@@ -97,9 +105,13 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-Hai smoke cuối gọi Gateway thật; cần user fixture đã được khởi tạo và mật khẩu từ
-file ignored `.env` ở gốc repo do `python backend/platform/init_env.py` tạo (xem `scripts/p02-secrets.mjs`). Có thể override bằng
-`P02_SECRETS_FILE`, `P02_USER_EMAIL`, `P02_USER_PASSWORD`, `P02_GATEWAY_TARGET`
+Hai smoke cuối gọi Gateway thật và ghi dữ liệu; chạy trên môi trường kiểm thử riêng,
+không dùng database cloud chung. Khởi tạo bằng `python backend/platform/init_env.py --mode local`,
+rồi `docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml up -d --build --wait`.
+Cần user fixture đã được khởi tạo và mật khẩu từ file ignored `.env.local` ở gốc repo;
+đặt `P02_ENV_FILE=.env.local` khi chạy smoke (PowerShell: `$env:P02_ENV_FILE = '.env.local'`;
+xem `scripts/p02-secrets.mjs`). `P02_SECRETS_FILE` chỉ dành cho file credential **JSON**,
+không dùng cho file dotenv. Có thể override bằng `P02_USER_EMAIL`, `P02_USER_PASSWORD`, `P02_GATEWAY_TARGET`
 và `P02_FRONTEND_URL`. Không in token/password. Browser smoke tạo tài nguyên được
 đặt tên `Browser smoke`/`Browser journey` trên dữ liệu kiểm thử, lưu ảnh trong
 `backend/infra/.local/p02/frontend-browser/`. Các smoke không kiểm production provider.

@@ -1,6 +1,6 @@
 """Integration test and operations harness for the running local stack. Never starts or builds it.
 
-The stack is the repository docker-compose.yml (+ docker-compose.override.yml for local databases):
+The default stack is docker-compose.yml with Neon/Atlas settings from the repository .env:
     python backend/platform/init_env.py && docker compose up -d --build --wait
 This harness then verifies and operates it: smoke, monitor, manifest, renew, replay-catalog-dlq.
 It reads credentials from the repository .env and signs test-only workload tokens with the
@@ -33,9 +33,11 @@ import identity_keys  # noqa: E402
 
 LOCAL = INFRA / '.local/p02'
 DEFAULT_LOCAL = LOCAL
-COMPOSE_FILES = [ROOT / 'docker-compose.yml', ROOT / 'docker-compose.override.yml']
+COMPOSE_FILES = [ROOT / 'docker-compose.yml']
 DB_PORTS_FILE = ROOT / 'docker-compose.db-ports.yml'
-ENV_FILE = ROOT / '.env'
+ENV_FILE = Path(os.environ.get('P02_ENV_FILE', str(ROOT / '.env')))
+if not ENV_FILE.is_absolute():
+    ENV_FILE = ROOT / ENV_FILE
 SERVICES = ['identity', 'catalog', 'community', 'trip', 'ingestion', 'intelligence']
 PORTS = dict(identity=58101, catalog=58102, community=58103, trip=58104,
              ingestion=58105, intelligence=58106)
@@ -77,7 +79,7 @@ def prepare():
     LOCAL.mkdir(parents=True, exist_ok=True)
     if LOCAL == DEFAULT_LOCAL:
         if not ENV_FILE.exists():
-            raise SystemExit('Missing .env: run `python backend/platform/init_env.py` and start the stack first.')
+            raise SystemExit('Missing environment file: run init_env.py for the selected cloud/local-test mode first.')
         return read_env(ENV_FILE)
     secret_file = LOCAL / 'secrets.json'
     if not secret_file.exists():
@@ -120,9 +122,16 @@ def compose(*arguments, check=True):
     if LOCAL != DEFAULT_LOCAL:
         return run(['docker', 'compose', '-p', 'smarttravel-p02', '-f',
                     str(LOCAL / 'compose.yaml'), *arguments], values, check)
-    files = []
+    selected = list(COMPOSE_FILES)
+    if os.environ.get('COMPOSE_FILE'):
+        separator = os.environ.get('COMPOSE_PATH_SEPARATOR', os.pathsep)
+        selected = [Path(p) if Path(p).is_absolute() else ROOT / p
+                    for p in os.environ['COMPOSE_FILE'].split(separator) if p]
     if os.environ.get('P02_DB_PORTS') == '1':
-        files = [arg for path in [*COMPOSE_FILES, DB_PORTS_FILE] for arg in ('-f', str(path))]
+        if ROOT / 'docker-compose.local.yml' not in selected:
+            raise ValueError('P02_DB_PORTS requires explicitly selected docker-compose.local.yml and .env.local')
+        selected.append(DB_PORTS_FILE)
+    files = [arg for path in selected for arg in ('-f', str(path))]
     # Values are passed only to redact command output; Compose itself reads .env.
     return run(['docker', 'compose', '--env-file', str(ENV_FILE), *files, *arguments], values, check)
 

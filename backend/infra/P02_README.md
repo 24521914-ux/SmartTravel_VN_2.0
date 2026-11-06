@@ -11,12 +11,13 @@ The stack uses the standard Compose layout at the repository root:
 | File | Contents |
 |---|---|
 | [`docker-compose.yml`](../../docker-compose.yml) | Application only: Gateway, six services, RabbitMQ, init jobs `key-init`, `rabbit-init`, `community-migrate`. Databases come from `.env`; only the Gateway publishes a port. |
-| [`docker-compose.override.yml`](../../docker-compose.override.yml) | Local dependencies, loaded automatically: five PostgreSQL, MongoDB replica set (`community-keygen`, `mongo-init`), Mailpit, source sandbox (`sandbox-init`) and loopback debug ports for services/RabbitMQ. |
+| [`docker-compose.local.yml`](../../docker-compose.local.yml) | Explicit CI/test dependencies: five PostgreSQL, MongoDB replica set (`community-keygen`, `mongo-init`), Mailpit, source sandbox (`sandbox-init`) and loopback debug ports for services/RabbitMQ. Never loaded automatically. |
 | [`docker-compose.db-ports.yml`](../../docker-compose.db-ports.yml) | Opt-in database host ports (Windows excluded port ranges, F-37). |
-| `.env.example` / `.env.cloud.example` | Templates for local mode and for Neon + Atlas ([cloud README](../platform/cloud/README.md)). |
+| `.env.example` / `.env.local.example` | Cloud-default template (Neon + Atlas) and explicit local CI/test template ([cloud README](../platform/cloud/README.md)). |
 
 ```text
-python backend/platform/init_env.py         # .env from .env.example: random secrets, local DB URLs
+python backend/platform/init_env.py         # .env from .env.example: random internal secrets; fill cloud DB credentials
+python backend/platform/cloud/manage.py check
 docker compose up -d --build --wait         # images compile from source inside Docker
 ```
 
@@ -27,19 +28,29 @@ healthy. Gateway AI routes stay off unless `AI_ENABLED=true` in `.env`; the back
 needs `true`. Stop with `docker compose down` (volumes kept); never add `-v`.
 
 `p02.py` is only the **test and operations harness** for the running stack: `smoke`,
-`monitor`, `manifest`, `renew`, `replay-catalog-dlq`. It reads `.env`, never builds or
+`monitor`, `manifest`, `renew`, `replay-catalog-dlq`. It reads `.env` by default (`P02_ENV_FILE` selects another file), never builds or
 starts containers, and its helpers (`compose`, `request`, `workload`) are shared by the
 `p02_*`/`p03_*` suites. `P02_DB_PORTS=1` makes its `compose` helper include the db-ports file.
 
-Verified flow, requirements: Java 21, Docker, Python with `requirements-validation.txt` and
+The default project is `smarttravel-cloud`; its shared databases are Neon and Atlas.
+Share the ignored root `.env` privately with authorized teammates and allow each backend
+machine's IP in Atlas Network Access. Media files remain in local Docker volumes;
+shared database access does not copy them. Current verification status belongs in
+[`progress_be.md`](../../progress_be.md) and [`progress_fe.md`](../../progress_fe.md).
+
+Run fault, transport, load, deletion and restore exercises only against isolated test
+data, using the explicit local stack below. Requirements: Java 21, Docker, Python with `requirements-validation.txt` and
 PyYAML, Node dependencies via `npm --prefix frontend ci`:
 
 ```text
 python backend/platform/validate_contracts.py
 backend/mvnw.cmd -B -f backend/services/pom.xml verify
 backend/mvnw.cmd -B -f backend/platform/api-gateway/pom.xml verify
-python backend/platform/init_env.py
-docker compose up -d --build --wait         # SERVICE_BUILD_TARGET=runtime packages the verified JARs
+python backend/platform/init_env.py --mode local
+docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml up -d --build --wait
+# PowerShell; Unix COMPOSE_FILE uses : instead of ;
+$env:P02_ENV_FILE = '.env.local'
+$env:COMPOSE_FILE = 'docker-compose.yml;docker-compose.local.yml'
 python backend/infra/p02.py smoke
 npm --prefix frontend run test:gateway
 npm --prefix frontend run dev
@@ -53,22 +64,26 @@ python backend/infra/p02.py monitor
 ```
 
 Open `http://127.0.0.1:5173/app`. Gateway is `http://127.0.0.1:58080`;
-service ports are 58101–58106 (local override only). The frontend dev proxy targets this
+service ports are 58101–58106 (explicit local configuration only). The frontend dev proxy targets this
 Gateway; `P02_GATEWAY_TARGET` overrides it. Mailpit is on port 59025. RabbitMQ management
 is on port 56673. All host bindings are loopback. This environment is local
 integration, not production.
 
-Credentials are in the ignored root `.env`; reports in ignored `backend/infra/.local/p02/`.
+Local test credentials are in the ignored root `.env.local`; reports in ignored `backend/infra/.local/p02/`.
 The generated `.local/p03/.../compose.yaml` is only used by P03 isolated environments;
 `test_p02_compose.py` keeps it equivalent to the local stack. The four opt-in synthetic
 accounts are `fixture-u1@example.invalid`, `fixture-u2@example.invalid`,
 `fixture-admin@example.invalid`, `fixture-business@example.invalid`;
-their random password is `IDENTITY_FIXTURE_PASSWORD` in `.env`.
+their random password is `IDENTITY_FIXTURE_PASSWORD` in `.env.local`.
 Only this isolated synthetic environment enables account seed; it never resets
 an existing account or re-enables a deleted account at startup.
 
-The `smarttravel-p02` Compose project owns its volumes, networks and containers;
+The explicit local template selects `smarttravel-p02`; the cloud template selects
+`smarttravel-cloud`. Each project owns its volumes, networks and containers;
 P00/P01 are retained. Running `up` again retains migration history and checkpoints.
+Stop local with the same `--env-file .env.local` and both `-f` arguments followed by
+`down`, without `-v`. Remove `P02_ENV_FILE` and `COMPOSE_FILE`
+from the shell before returning to cloud commands.
 
 ## Credentials and routes
 
@@ -132,7 +147,7 @@ python backend/infra/p02.py replay-catalog-dlq
 ```
 
 P02 provisions `catalog_operator` separately with a random password held only in
-the ignored root `.env` (`CATALOG_BROKER_OPERATOR_PASSWORD`). Its broker ACL permits reading `catalog.dlq`, writing
+the selected ignored env file (`CATALOG_BROKER_OPERATOR_PASSWORD`). Its broker ACL permits reading `catalog.dlq`, writing
 `catalog.inbound` on registered Catalog-consumer topics, and no resource
 configuration. The command launches the implemented Catalog replay operator in
 a temporary container with normal workers/transport disabled. Replay preserves

@@ -1,5 +1,11 @@
 # Nền tảng P00 — hướng dẫn chạy độc lập
 
+Stack hiện hành mặc định dùng database Neon/Atlas qua `.env` ở gốc repo; xem
+[`cloud/README.md`](cloud/README.md). Chạy `python backend/platform/init_env.py`,
+điền credential cloud, kiểm tra bằng `python backend/platform/cloud/manage.py check`,
+rồi `docker compose up -d --build --wait`. Local cho CI/kiểm thử phải chọn
+`--mode local`, `.env.local` và `docker-compose.local.yml` rõ ràng theo hướng dẫn cloud.
+
 > **P01 đã bắt đầu M1:** source service hiện có domain migrations và runtime roles riêng, không còn boot trên bootstrap credentials P00 theo mục 3 dưới đây. Chạy service hiện hành theo [`backend/infra/README.md`](../infra/README.md), `python backend/infra/p01.py up/smoke/verify`; P00 hướng dẫn dưới đây giữ làm lịch sử template/contract và dependencies cũ. Không áp domain migration vào volume P00 để chữa boot.
 
 Triển khai kỹ thuật đã kiểm chứng; gate/bàn giao N1/N2 còn READY_FOR_REVIEW. Xem [manifest](P00_HANDOFF.md), `plan/P00-DECISIONS.md`, `plan/P00-POLICIES.md` và `backend/contracts/README.md` từ root repo. Chưa có chức năng nghiệp vụ hoàn thành hoặc kết nối runtime sáu service.
@@ -137,7 +143,7 @@ Container init cho stack compose nằm ở `backend/platform/init` (image `platf
 | `mongo-init` (chỉ local) | image `mongo:8.0`, `mongosh` chạy `infra/mongo/bootstrap.js` | Replica set, user migrator/runtime (trên cloud do Atlas đảm nhận) |
 | `sandbox-init` (chỉ local) | image PostGIS, `psql -f sandbox_geography.sql` | Ranh giới giả lập cho source sandbox; chỉ local/dev |
 
-`key-init`, `rabbit-init`, `community-migrate` nằm trong `docker-compose.yml`; `mongo-init`, `sandbox-init` nằm trong `docker-compose.override.yml`. File `.env` do [`init_env.py`](init_env.py) tạo (`--mode cloud` cho `.env.cloud`). P03 isolated (`p03_environment.py`) dùng chung `broker_topology.plan()` và `identity_keys.generate()`, nên topology và khóa giống hệt giữa runner Python và compose.
+`key-init`, `rabbit-init`, `community-migrate` nằm trong `docker-compose.yml`; `mongo-init`, `sandbox-init` nằm trong `docker-compose.local.yml` chỉ nạp khi chọn local. File `.env` cloud do [`init_env.py`](init_env.py) tạo mặc định từ `.env.example`; `--mode local` tạo `.env.local` từ `.env.local.example`. P03 isolated (`p03_environment.py`) dùng chung `broker_topology.plan()` và `identity_keys.generate()`, nên topology và khóa giống hệt giữa runner Python và compose.
 
 Dockerfiles UID/GID10001, không root. Mỗi gói có image độc lập, DBpassword chỉ truyền environment, không bake vào image. Rebuild sau source changes.
 

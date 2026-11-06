@@ -26,7 +26,8 @@ export class ApiClient {
     this.baseUrl = (options.baseUrl ?? '/api').replace(/\/$/, '');
     this.tokenStore = options.tokenStore;
     this.fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
-    this.timeoutMs = options.timeoutMs ?? 10_000;
+    // Let the cloud Gateway's 15-second deadline return its error before aborting locally.
+    this.timeoutMs = options.timeoutMs ?? 20_000;
     this.correlationId = options.correlationId ?? (() => crypto.randomUUID());
     this.refreshSession = options.refreshSession;
   }

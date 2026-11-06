@@ -2,7 +2,7 @@ name: P02 real service integration
 on:
   workflow_dispatch:
   pull_request:
-    paths: ['backend/**', 'frontend/**', 'docker-compose*.yml', '.env.example', '.github/workflows/p02-integration.yml']
+    paths: ['backend/**', 'frontend/**', 'docker-compose*.yml', '.env.example', '.env.local.example', '.github/workflows/p02-integration.yml']
 permissions:
   contents: read
 jobs:
@@ -10,6 +10,13 @@ jobs:
     # MongoDB 8 rejects kernels >=6.19 (SERVER-121912); Ubuntu22.04 uses6.8.
     runs-on: ubuntu-22.04
     timeout-minutes: 45
+    # CI must never use the shared cloud databases or credentials.
+    env:
+      COMPOSE_FILE: docker-compose.yml:docker-compose.local.yml
+      COMPOSE_ENV_FILES: .env.local
+      P02_ENV_FILE: .env.local
+      # Keep every Compose call on the same build configuration, including fault recovery.
+      SERVICE_BUILD_TARGET: runtime
     steps:
       - name: Record database host kernel
         run: uname -sr
@@ -44,13 +51,11 @@ jobs:
           npm --prefix frontend run build
       - name: Build and connect all real service images
         # Images package the JARs verified above (runtime target); the stack is docker-compose.yml
-        # plus the automatically loaded docker-compose.override.yml (local databases).
-        env:
-          SERVICE_BUILD_TARGET: runtime
+        # plus explicitly selected docker-compose.local.yml (isolated databases).
         run: |
-          python backend/platform/init_env.py
+          python backend/platform/init_env.py --mode local
           # The backend integration suites exercise the deferred AI routes too (F-36).
-          sed -i 's/^AI_ENABLED=.*/AI_ENABLED=true/' .env
+          sed -i 's/^AI_ENABLED=.*/AI_ENABLED=true/' .env.local
           docker compose up -d --build --wait --wait-timeout 600
       - name: Real gateway domain transport and deletion flows
         run: |
@@ -67,6 +72,10 @@ jobs:
         run: |
           python backend/infra/p02.py manifest
           python backend/infra/p02.py monitor
+      - name: Explain Identity exchange failures without logging credentials
+        if: failure()
+        run: |
+          docker compose logs --no-color --tail=2000 gateway | python -c 'import re,sys; [print(m.group(0)) for line in sys.stdin for m in re.finditer(r"identity_exchange_failed reason=[A-Za-z0-9_.$]+ upstream_status=[0-9]+", line)]'
       - name: Archive sanitized integration evidence
         if: always()
         uses: actions/upload-artifact@v4

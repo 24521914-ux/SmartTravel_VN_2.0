@@ -3,7 +3,7 @@ import json
 from unittest.mock import Mock, call
 from jsonschema import Draft202012Validator, FormatChecker
 
-from p03_nonai_resilience import ROOT, disrupted, paused, wait_for_catalog_read, recovery_item_body
+from p03_nonai_resilience import ROOT, disrupted, paused, wait_for_catalog_read, recovery_item_body, resume_existing
 
 
 class CatalogRecoveryTests(unittest.TestCase):
@@ -44,6 +44,18 @@ class CatalogRecoveryTests(unittest.TestCase):
 
 
 class OutageCleanupTests(unittest.TestCase):
+    def test_recovery_does_not_reapply_dependencies_or_create_a_replacement(self):
+        # `up` can reapply a changed configuration; `start` must retain the existing containers.
+        containers = {'community': 'existing-consumer', 'identity': 'existing-identity'}
+        original = dict(containers)
+        def compose(action, *arguments):
+            if action == 'up':
+                containers['identity'] = 'replacement-identity'
+            self.assertEqual(arguments[-1], 'community')
+            self.assertEqual(arguments, ('community',))
+        resume_existing('community', compose=compose)
+        self.assertEqual(containers, original)
+
     def test_pause_failure_and_body_failure_both_attempt_unpause(self):
         for partial_failure in (True, False):
             operation = Mock(side_effect=[RuntimeError('partial pause'), None]) if partial_failure else Mock()

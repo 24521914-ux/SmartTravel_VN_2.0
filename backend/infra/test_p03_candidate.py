@@ -47,8 +47,8 @@ class CandidateManifestTests(unittest.TestCase):
                  'frontend/index.html', 'frontend/package.json', 'frontend/package-lock.json',
                  'frontend/tsconfig.app.json', 'frontend/vite.config.ts',
                  '.github/workflows/p03-tooling.yml', 'plan/P00-DECISIONS.md',
-                 'docker-compose.yml', 'docker-compose.override.yml', 'docker-compose.db-ports.yml',
-                 '.env.example', '.env.cloud.example', 'backend/platform/init_env.py']
+                 'docker-compose.yml', 'docker-compose.local.yml', 'docker-compose.db-ports.yml',
+                 '.env.example', '.env.local.example', 'backend/platform/init_env.py']
         for name in paths:
             self.write(name)
         self.assertEqual(set(candidate_manifest(self.root)['files']), set(paths))

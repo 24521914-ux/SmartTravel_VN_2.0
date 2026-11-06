@@ -12,7 +12,7 @@ on:
       - 'backend/platform/cloud/**'
       - 'backend/infra/mongo/**'
       - '.env.example'
-      - '.env.cloud.example'
+      - '.env.local.example'
       - 'backend/platform/init_env.py'
       - 'backend/contracts/**'
       - 'frontend/**'
@@ -44,7 +44,7 @@ jobs:
           python -m unittest discover -s backend/platform/init -p "test_*.py"
           python -m unittest discover -s backend/infra -p test_p02_compose.py
           docker compose --env-file .env.example config --quiet
-          docker compose --env-file .env.cloud.example -f docker-compose.yml config --quiet
+          docker compose --env-file .env.local.example -f docker-compose.yml -f docker-compose.local.yml config --quiet
           python -m unittest discover -s backend/platform/cloud -p "test_*.py"
           python backend/platform/validate_contracts.py
       - name: Validate frontend

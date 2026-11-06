@@ -1,6 +1,6 @@
 # Tiến độ Frontend (FE) — SmartTravel VN
 
-Cập nhật: **06/11/2026 14:08** (GMT+7)
+Cập nhật: **06/11/2026 14:55** (GMT+7)
 
 Progress gồm **hai file**: file này (`progress_fe.md`) cho frontend web; [`progress_be.md`](progress_be.md) cho backend và **trạng thái kết nối BE ↔ FE từng API** (mục 9 của file đó). Quy ước trạng thái, tiêu chuẩn PASS và cách cập nhật dùng chung: `progress_be.md` mục 2.
 
@@ -94,6 +94,8 @@ Bằng chứng theo màn: các suite A–I và revision tại [progress_be.md m�
 ## 6. P02 — Gọi Gateway thật
 
 Ngày 06/11/2026, bộ backend phục vụ Gateway local đã chuyển sang Neon/Atlas; sáu kiểm tra API đọc/đăng nhập PASS sau cấu hình timeout cho runtime cloud. Chưa chạy kiểm thử trình duyệt FE với cloud, vì vậy giữ nguyên trạng thái màn hình và số lượng kết nối đã có. Bằng chứng chuyển dữ liệu, giới hạn revision/runtime và việc cần kiểm tiếp: [progress_be.md mục P02](progress_be.md#6-p02--kết-nối-các-service), F-39; tệp đính kèm vẫn dùng volume local (F-06).
+
+- [x] Cấu hình client cho cloud mặc định — **LOCAL_VERIFIED** (dirty) · Codex · Nhánh `refactor/platform-cloud-default`, baseline `aa85543` · Client chờ 20 s để nhận kết quả hoặc lỗi từ Gateway 15 s; script kiểm thử chọn dotenv bằng `P02_ENV_FILE`, vẫn giữ tùy chọn JSON riêng. Node 24.21.0/npm 11.19.0: `test:contracts` 17/0/0/0 (run/failed/errors/skipped, API giả lập; có phản hồi sau 10,05 s và timeout tùy chỉnh), TypeScript/Vite build PASS; lựa chọn nguồn secret 2/0/0/0. Chưa kiểm browser FE cloud; giữ nguyên số lượng/ký hiệu API, xem [P04-CS-10 và F-39](progress_be.md#8-p04--phát-hành).
 
 - [x] FE-P02-01: Màn nghiệp vụ gọi Gateway thật, lỗi/pending rõ — **LOCAL_VERIFIED** (dirty) · suite F 9 nhóm +36 responsive, H login/me503 không báo giả; business/admin/trip suite PASS; `4e020e1`/`edb10cb`, môi trường và request count tại BE mục9. Tương ứng P02-09.
 - [x] FE-P02-02: Pending ack khác thành công cuối — **LOCAL_VERIFIED** (dirty) · B verification/claim pending, C contribution → APPLIED/import decision → SUCCEEDED qua broker, G retry/cancel đọc lại CANCELLED; `4e020e1`/`edb10cb`.
