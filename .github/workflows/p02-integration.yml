@@ -72,6 +72,10 @@ jobs:
         run: |
           python backend/infra/p02.py manifest
           python backend/infra/p02.py monitor
+      - name: Explain Identity exchange failures without logging credentials
+        if: failure()
+        run: |
+          docker compose logs --no-color --tail=2000 gateway | python -c 'import re,sys; [print(m.group(0)) for line in sys.stdin for m in re.finditer(r"identity_exchange_failed reason=[A-Za-z0-9_.$]+ upstream_status=[0-9]+", line)]'
       - name: Archive sanitized integration evidence
         if: always()
         uses: actions/upload-artifact@v4

@@ -49,6 +49,27 @@ class PrincipalExchangeFilterTests {
             } finally { server.stop(0); }
         }
     }
+    @Test void reportsOnlySafeFailureClassificationWithoutRetryingExchange() throws Exception {
+        var logger=(ch.qos.logback.classic.Logger)org.slf4j.LoggerFactory.getLogger(PrincipalExchangeFilter.class);
+        var events=new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        events.start(); logger.addAppender(events);
+        var calls=new AtomicInteger();
+        var server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
+        server.createContext("/exchange",request -> {
+            calls.incrementAndGet();
+            byte[] body="private-response-must-not-appear".getBytes();
+            request.sendResponseHeaders(429,body.length); request.getResponseBody().write(body); request.close();
+        }); server.start();
+        try {
+            var filter=new PrincipalExchangeFilter("http://127.0.0.1:"+server.getAddress().getPort()+"/exchange","gateway-private-credential-32-bytes");
+            var exchange=authenticated(); var forwarded=new AtomicInteger();
+            filter.filter(exchange,next -> { forwarded.incrementAndGet(); return Mono.empty(); }).block();
+            assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+            assertThat(forwarded.get()).isZero(); assertThat(calls.get()).isEqualTo(1);
+            assertThat(events.list).extracting(ch.qos.logback.classic.spi.ILoggingEvent::getFormattedMessage)
+                    .containsExactly("identity_exchange_failed reason=HTTP_STATUS upstream_status=429");
+        } finally { server.stop(0); logger.detachAppender(events); events.stop(); }
+    }
     private static org.springframework.web.server.ServerWebExchange authenticated() {
         var jwt=Jwt.withTokenValue("original").header("alg","RS256").subject("user")
                 .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(60)).build();
