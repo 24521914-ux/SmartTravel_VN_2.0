@@ -1,15 +1,17 @@
 """Offline tests; Docker Compose CLI needed, daemon/cloud credentials not needed."""
 import copy
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 
 from manage import (COMPOSE_FILE, ENV_FILE, INTERNAL_SECRETS, LOCAL_ONLY_SERVICES, PLACEHOLDER, POSTGRES_SERVICES,
                     ROOT, SERVICES, TOOLS_FILE, prepare, validate_configuration)
 
-EXAMPLE = ROOT / '.env.cloud.example'
+EXAMPLE = ROOT / '.env.example'
 
 
 def render(env_file):
@@ -130,6 +132,26 @@ class CloudSetupTests(unittest.TestCase):
 
 
 class PrepareTests(unittest.TestCase):
+    def test_plain_compose_discovery_defaults_to_cloud_without_local_databases(self):
+        with tempfile.TemporaryDirectory() as folder:
+            env_file = Path(folder) / '.env'
+            prepare(env_file)
+            # No -f: exercise Compose's automatic file discovery. The explicit temporary
+            # environment ensures this never reads a developer's real credentials.
+            template_keys = {line.split('=', 1)[0] for line in EXAMPLE.read_text(encoding='utf-8').splitlines()
+                             if '=' in line and not line.startswith('#')}
+            clean_environment = {key: value for key, value in os.environ.items()
+                                 if not key.startswith('COMPOSE_') and key not in template_keys}
+            with mock.patch.dict(os.environ, clean_environment, clear=True):
+                result = subprocess.run([
+                    'docker', 'compose', '--env-file', str(env_file), 'config', '--format', 'json',
+                ], check=True, capture_output=True, text=True, encoding='utf-8', cwd=ROOT)
+            config = json.loads(result.stdout)
+            self.assertFalse(set(config['services']) & LOCAL_ONLY_SERVICES)
+            for service in POSTGRES_SERVICES:
+                self.assertIn('.neon.tech', config['services'][service]['environment']['DB_URL'])
+            self.assertTrue(config['services']['community']['environment']['MONGODB_URI'].startswith('mongodb+srv://'))
+
     def test_generates_internal_secrets_only_and_never_overwrites(self):
         with tempfile.TemporaryDirectory() as folder:
             env_file = Path(folder) / '.env'
@@ -165,7 +187,7 @@ class PrepareTests(unittest.TestCase):
 
     def test_prepared_file_renders_a_complete_compose_configuration(self):
         with tempfile.TemporaryDirectory() as folder:
-            env_file = Path(folder) / '.env.cloud'
+            env_file = Path(folder) / '.env'
             prepare(env_file, 'cloud')
             config = render(env_file)
             self.assertEqual(config['services']['gateway']['environment']['GATEWAY_EXCHANGE_SECRET'],

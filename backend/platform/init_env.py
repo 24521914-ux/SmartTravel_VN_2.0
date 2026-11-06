@@ -1,7 +1,7 @@
 """Create or complete the Docker Compose environment file. Run from anywhere:
 
-    python backend/platform/init_env.py                 # local stack  -> .env       (from .env.example)
-    python backend/platform/init_env.py --mode cloud    # Neon + Atlas -> .env.cloud (from .env.cloud.example)
+    python backend/platform/init_env.py                 # Neon + Atlas -> .env (from .env.example)
+    python backend/platform/init_env.py --mode local    # isolated CI/tests -> .env.local
 
 Only values that are missing, empty or still GENERATED_BY_INIT_ENV are filled; an existing value
 is never overwritten (database and broker volumes keep the password they were created with).
@@ -22,8 +22,8 @@ SERVICES = ('identity', 'catalog', 'community', 'trip', 'ingestion', 'intelligen
 POSTGRES_SERVICES = tuple(s for s in SERVICES if s != 'community')
 PLACEHOLDER = 'GENERATED_BY_INIT_ENV'
 MODES = {
-    'local': (ROOT / '.env', ROOT / '.env.example'),
-    'cloud': (ROOT / '.env.cloud', ROOT / '.env.cloud.example'),
+    'local': (ROOT / '.env.local', ROOT / '.env.local.example'),
+    'cloud': (ROOT / '.env', ROOT / '.env.example'),
 }
 
 
@@ -52,8 +52,9 @@ DATABASE_SETTINGS = ({f'{s.upper()}_DB_URL' for s in POSTGRES_SERVICES}
 
 
 def local_connections(values):
-    """Connection settings pointing at the containers of docker-compose.override.yml."""
-    derived = {f'{s.upper()}_DB_URL': f'jdbc:postgresql://{s}-db:5432/{s}_db' for s in POSTGRES_SERVICES}
+    """Connection settings for explicitly selected docker-compose.local.yml containers."""
+    derived = {'COMPOSE_PROJECT_NAME': 'smarttravel-p02',
+               **{f'{s.upper()}_DB_URL': f'jdbc:postgresql://{s}-db:5432/{s}_db' for s in POSTGRES_SERVICES}}
     for name, user in (('COMMUNITY_MONGODB_URI', 'runtime'), ('COMMUNITY_MONGODB_MIGRATION_URI', 'migrator')):
         password = quote(values['COMMUNITY_' + ('RUNTIME' if user == 'runtime' else 'MIGRATION') + '_PASSWORD'], safe='')
         derived[name] = (f'mongodb://community_{user}:{password}@community-db:27017/community_db'
@@ -78,7 +79,7 @@ def read_env(path):
     return values
 
 
-def prepare(env_file, mode='local', template=None):
+def prepare(env_file, mode='cloud', template=None):
     """Fill missing values in env_file; returns the variable names (never values) it wrote."""
     template = template or MODES[mode][1]
     if not env_file.exists():
@@ -109,8 +110,8 @@ def prepare(env_file, mode='local', template=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--mode', choices=sorted(MODES), default='local')
-    parser.add_argument('--env-file', type=Path, help='default: .env (local) or .env.cloud (cloud) at the repository root')
+    parser.add_argument('--mode', choices=sorted(MODES), default='cloud')
+    parser.add_argument('--env-file', type=Path, help='default: .env (cloud) or .env.local (isolated tests) at the repository root')
     args = parser.parse_args()
     env_file = (args.env_file or MODES[args.mode][0]).resolve()
     written = prepare(env_file, args.mode)

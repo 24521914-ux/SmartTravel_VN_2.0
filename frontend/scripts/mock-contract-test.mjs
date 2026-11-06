@@ -23,6 +23,40 @@ const pair = (suffix = 'old') => ({ access_token: `access-${suffix}`, refresh_to
 const response = value => new Response(JSON.stringify(value), { status: 200, headers: { 'Content-Type': 'application/json' } });
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
 
+test('cloud response after the former ten-second deadline still completes', async context => {
+  context.mock.timers.enable({ apis: ['setTimeout'] });
+  const gate = deferred();
+  let signal;
+  const api = new ApiClient({ fetchImpl: async (_url, options) => {
+    signal = options.signal;
+    return gate.promise;
+  } });
+  const pending = api.request('catalog', '/api/v1/places');
+  context.mock.timers.tick(10_050);
+  assert.equal(signal.aborted, false);
+  gate.resolve(response({ items: [] }));
+  assert.deepEqual(await pending, { items: [] });
+  // Completion must release its deadline timer.
+  context.mock.timers.tick(20_000);
+  assert.equal(signal.aborted, false);
+});
+
+test('explicit timeout override still aborts and preserves the timeout error contract', async context => {
+  context.mock.timers.enable({ apis: ['setTimeout'] });
+  let signal;
+  const api = new ApiClient({ timeoutMs: 37, fetchImpl: (_url, options) => new Promise((_resolve, reject) => {
+    signal = options.signal;
+    signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true });
+  }) });
+  const pending = api.request('catalog', '/api/v1/places');
+  const rejected = assert.rejects(pending, error => error.status === 408 && error.body.code === 'CLIENT_TIMEOUT');
+  context.mock.timers.tick(36);
+  assert.equal(signal.aborted, false);
+  context.mock.timers.tick(1);
+  await rejected;
+  assert.equal(signal.aborted, true);
+});
+
 test('multipart media upload preserves bearer and lets fetch set the boundary', async () => {
   let sent;
   const tokens = memoryTokenStore(); tokens.set(pair());

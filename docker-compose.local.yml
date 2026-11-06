@@ -1,13 +1,13 @@
-# Local development databases and sandboxes. Docker Compose loads this file automatically with
-# docker-compose.yml when no -f is given, so `docker compose up -d --build --wait` runs everything
-# offline. The cloud stack passes `-f docker-compose.yml` explicitly and never loads this file.
+# Isolated local databases for CI/tests. This file is never loaded automatically.
+# The default `docker compose up` uses cloud databases from .env.
+# Opt in explicitly with --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml.
 #
 # Adds: five PostgreSQL databases, MongoDB replica set (+ key and bootstrap jobs), Mailpit,
 # the ingestion source sandbox and its demo geography, and loopback debug ports for the
 # services and RabbitMQ (used by the integration harness backend/infra/p02.py).
 # Mailpit UI: http://127.0.0.1:59025  ·  RabbitMQ UI: http://127.0.0.1:56673
 # Database host ports stay opt-in (Windows excluded port ranges, F-37):
-#   docker compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.db-ports.yml up -d
+#   docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml -f docker-compose.db-ports.yml up -d
 
 x-postgres: &postgres
   healthcheck:

@@ -2,7 +2,7 @@ name: P02 real service integration
 on:
   workflow_dispatch:
   pull_request:
-    paths: ['backend/**', 'frontend/**', 'docker-compose*.yml', '.env.example', '.github/workflows/p02-integration.yml']
+    paths: ['backend/**', 'frontend/**', 'docker-compose*.yml', '.env.example', '.env.local.example', '.github/workflows/p02-integration.yml']
 permissions:
   contents: read
 jobs:
@@ -10,6 +10,11 @@ jobs:
     # MongoDB 8 rejects kernels >=6.19 (SERVER-121912); Ubuntu22.04 uses6.8.
     runs-on: ubuntu-22.04
     timeout-minutes: 45
+    # CI must never use the shared cloud databases or credentials.
+    env:
+      COMPOSE_FILE: docker-compose.yml:docker-compose.local.yml
+      COMPOSE_ENV_FILES: .env.local
+      P02_ENV_FILE: .env.local
     steps:
       - name: Record database host kernel
         run: uname -sr
@@ -44,13 +49,13 @@ jobs:
           npm --prefix frontend run build
       - name: Build and connect all real service images
         # Images package the JARs verified above (runtime target); the stack is docker-compose.yml
-        # plus the automatically loaded docker-compose.override.yml (local databases).
+        # plus explicitly selected docker-compose.local.yml (isolated databases).
         env:
           SERVICE_BUILD_TARGET: runtime
         run: |
-          python backend/platform/init_env.py
+          python backend/platform/init_env.py --mode local
           # The backend integration suites exercise the deferred AI routes too (F-36).
-          sed -i 's/^AI_ENABLED=.*/AI_ENABLED=true/' .env
+          sed -i 's/^AI_ENABLED=.*/AI_ENABLED=true/' .env.local
           docker compose up -d --build --wait --wait-timeout 600
       - name: Real gateway domain transport and deletion flows
         run: |

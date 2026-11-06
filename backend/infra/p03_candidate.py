@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 # Static integration stack at the repository root (the real .env stays excluded).
-ROOT_STACK_FILES = {'docker-compose.yml', 'docker-compose.override.yml', 'docker-compose.db-ports.yml', '.env.example', '.env.cloud.example'}
+ROOT_STACK_FILES = {'docker-compose.yml', 'docker-compose.local.yml', 'docker-compose.db-ports.yml', '.env.example', '.env.local.example'}
 _IGNORED_DIRS = {'.git', '.local', '__pycache__', 'target', 'node_modules',
                  'dist', 'build', '.vite', 'coverage', '.pytest_cache'}
 _SECRET_SUFFIXES = {'.pem', '.key', '.p12', '.pfx', '.jks', '.keystore'}

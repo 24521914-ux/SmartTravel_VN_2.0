@@ -1,6 +1,6 @@
 """Cloud stack (Neon + Atlas) helper. Run from anywhere: python backend/platform/cloud/manage.py init|check|up|status|down.
 
-Uses the root docker-compose.yml alone (never docker-compose.override.yml) with .env.cloud.
+Uses the root docker-compose.yml alone (never docker-compose.local.yml) with .env.
 """
 import argparse
 import json
@@ -16,8 +16,8 @@ from init_env import INTERNAL_SECRETS, PLACEHOLDER, POSTGRES_SERVICES, SERVICES,
 
 COMPOSE_FILE = ROOT / 'docker-compose.yml'
 TOOLS_FILE = HERE / 'compose.tools.yaml'
-ENV_FILE = ROOT / '.env.cloud'
-# Containers that belong to docker-compose.override.yml (local mode) only.
+ENV_FILE = ROOT / '.env'
+# Containers that belong to docker-compose.local.yml (local mode) only.
 LOCAL_ONLY_SERVICES = ({f'{s}-db' for s in SERVICES}
                        | {'mongo-init', 'identity-mail', 'community-keygen', 'source-sandbox', 'sandbox-init'})
 
@@ -30,16 +30,16 @@ def _check_jdbc(service, value):
     if not url.hostname or not url.path.strip('/') or url.username or url.password:
         raise ValueError(f'{service}: use host/database URL and separate credentials')
     if 'YOUR_' in value:
-        raise ValueError(f'{service}: fill {service.upper()}_DB_URL in .env.cloud')
+        raise ValueError(f'{service}: fill {service.upper()}_DB_URL in .env')
     if '-pooler.' in url.hostname:
         raise ValueError(f'{service}: use the direct Neon endpoint, not -pooler')
     if options.get('sslmode') != ['verify-full'] or options.get('sslrootcert') != ['/etc/ssl/certs/ca-certificates.crt']:
-        raise ValueError(f'{service}: preserve verify-full and container sslrootcert from .env.cloud.example')
+        raise ValueError(f'{service}: preserve verify-full and container sslrootcert from .env.example')
 
 
 def _check_atlas(label, value):
     if not value or 'YOUR_' in value:
-        raise ValueError(f'{label}: fill the Atlas URI in .env.cloud')
+        raise ValueError(f'{label}: fill the Atlas URI in .env')
     url = urlsplit(value)
     if url.scheme != 'mongodb+srv' or not url.path.strip('/'):
         raise ValueError(f'{label}: use Atlas SRV URI with a database name')
@@ -68,7 +68,7 @@ def validate_configuration(config):
         _check_jdbc(service, env.get('DB_URL', ''))
         for key in ('DB_PASSWORD', 'DB_MIGRATION_PASSWORD'):
             if not env.get(key) or 'YOUR_' in env[key]:
-                raise ValueError(f'{service}: fill the Neon {key.replace("DB_", "").lower()} in .env.cloud')
+                raise ValueError(f'{service}: fill the Neon {key.replace("DB_", "").lower()} in .env')
         if env.get('DB_USER') != service + '_runtime' or env.get('DB_MIGRATION_USER') != service + '_migrator':
             raise ValueError(f'{service}: Neon roles must be {service}_runtime and {service}_migrator')
     _check_atlas('community-migrate', services['community-migrate']['environment'].get('COMMUNITY_MONGODB_MIGRATION_URI', ''))
