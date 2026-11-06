@@ -23,13 +23,28 @@ không tự chứng nhận bất kỳ bài kiểm tra nào đã chạy thành c�
 
 ## Nhận diện môi trường
 
+Stack chạy mặc định dùng project `smarttravel-cloud` và database Neon/Atlas qua `.env`.
+Các bài kiểm thử ghi/xóa dữ liệu, fault và restore trong runbook này cần local riêng;
+không chạy trên database cloud dùng chung. Từ PowerShell tại gốc repo:
+
+```powershell
+python backend/platform/init_env.py --mode local
+docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml up -d --build --wait
+$env:P02_ENV_FILE = '.env.local'
+$env:COMPOSE_FILE = 'docker-compose.yml;docker-compose.local.yml'
+```
+
+Trên shell Unix, `COMPOSE_FILE` dùng dấu `:`. Bỏ hai biến shell trên khi quay lại cloud.
+Trạng thái và bằng chứng hiện hành chỉ ghi trong [`progress_be.md`](../../progress_be.md)
+và [`progress_fe.md`](../../progress_fe.md).
+
 P02 dùng project `smarttravel-p02`, Gateway `58080`, Mailpit `59025`. Môi trường
 P03 riêng dùng tên `smarttravel-p03-load-<8..16 ký tự hex>`, Gateway `59080`,
 Mailpit `59925`, RabbitMQ management `59673`. Các project P03 dùng chung bộ cổng
 host này nên chỉ chạy một project P03 tại một thời điểm. P02 có thể tiếp tục chạy.
 
 ```powershell
-docker compose ps
+docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml ps
 python backend/infra/p03_environment.py status --project smarttravel-p03-load-a03e2026
 ```
 

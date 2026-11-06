@@ -1,11 +1,11 @@
 # Cloud stack: Docker + Neon + MongoDB Atlas
 
-Stack cloud dùng **cùng file [`docker-compose.yml`](../../../docker-compose.yml) ở gốc repo** với stack local. Khác biệt duy nhất nằm ở file môi trường: `.env.cloud` trỏ DB tới **Neon** (5 PostgreSQL) và **MongoDB Atlas** (Community), và không nạp `docker-compose.override.yml`, nên không có container DB, Mongo bootstrap, Mailpit hay sandbox.
+Stack mặc định dùng [`docker-compose.yml`](../../../docker-compose.yml) và **`.env` ở gốc repo**, kết nối **Neon** (5 PostgreSQL) và **MongoDB Atlas** (Community). Không có override tự nạp: container DB, Mongo bootstrap, Mailpit và sandbox chỉ có trong cấu hình local chọn riêng cho CI/kiểm thử.
 
 | Chế độ | Lệnh | File môi trường | Compose project |
 |---|---|---|---|
-| Local | `docker compose up -d --build --wait` (tự nạp override) | `.env` | `smarttravel-p02` |
-| Cloud | `python backend/platform/cloud/manage.py up` | `.env.cloud` | `smarttravel-cloud` |
+| Cloud (mặc định) | `docker compose up -d --build --wait` hoặc `python backend/platform/cloud/manage.py up` | `.env` | `smarttravel-cloud` |
+| Local (CI/kiểm thử) | `docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml up -d --build --wait` | `.env.local` | `smarttravel-p02` |
 
 Hai project tách biệt: volume và container local không bị đụng khi chạy cloud.
 
@@ -56,15 +56,15 @@ Neon compute ngủ có thể cần vài giây để thức; healthcheck có `sta
 
 ### Dữ liệu
 
-DB cloud ban đầu trống. Flyway và `community-migrate` tạo schema khi khởi động; tài khoản fixture chỉ được tạo khi `IDENTITY_FIXTURES_ENABLED=true`. Dữ liệu địa điểm demo của stack local nằm trong volume local và không tự chuyển sang cloud.
+Flyway và `community-migrate` áp dụng migration khi khởi động; tài khoản fixture chỉ được tạo khi `IDENTITY_FIXTURES_ENABLED=true`. Dữ liệu trong cùng database cloud được dùng chung giữa các máy. Ảnh/tệp vẫn nằm trong volume của máy chạy backend; dùng chung database không đồng bộ các volume này. Trạng thái dữ liệu và kiểm chứng xem tại [`progress_be.md`](../../../progress_be.md).
 
-## 2. Tạo và điền `.env.cloud`
+## 2. Tạo và điền `.env`
 
 ```bash
 python backend/platform/cloud/manage.py init
 ```
 
-`init` (gọi `init_env.py --mode cloud`) tạo `.env.cloud` ở gốc repo từ [`.env.cloud.example`](../../../.env.cloud.example) nếu chưa có, rồi sinh giá trị ngẫu nhiên cho **nhóm 1 – secret nội bộ** (password RabbitMQ theo service, `GATEWAY_EXCHANGE_SECRET`, `*_WORKLOAD_SECRET`, cursor key, mail key, fixture password) ở những dòng còn `GENERATED_BY_INIT_ENV` hoặc rỗng. Chạy lại không ghi đè giá trị đã có và **không bao giờ** ghi vào **nhóm 2 – DB** (`*_DB_URL`, `*_RUNTIME_PASSWORD`, `*_MIGRATION_PASSWORD`, `COMMUNITY_MONGODB_*`). File thật được Git ignore; không gửi qua chat, không commit, không chụp màn hình.
+`init` (gọi `init_env.py --mode cloud`, cũng là chế độ mặc định) tạo `.env` ở gốc repo từ [`.env.example`](../../../.env.example) nếu chưa có, rồi sinh giá trị ngẫu nhiên cho **nhóm 1 – secret nội bộ** (password RabbitMQ theo service, `GATEWAY_EXCHANGE_SECRET`, `*_WORKLOAD_SECRET`, cursor key, mail key, fixture password) ở những dòng còn `GENERATED_BY_INIT_ENV` hoặc rỗng. Chạy lại không ghi đè giá trị đã có và **không bao giờ** ghi vào **nhóm 2 – DB** (`*_DB_URL`, `*_RUNTIME_PASSWORD`, `*_MIGRATION_PASSWORD`, `COMMUNITY_MONGODB_*`). File thật được Git ignore; chỉ chia sẻ riêng cho thành viên được cấp quyền, không commit hoặc đưa vào log/ảnh chụp công khai. Máy mới cần được thêm IP vào Atlas Network Access. Không cần `.env.cloud` để chạy stack mặc định.
 
 Điền nhóm 2 theo mẫu. Neon cho `postgresql://USER:PASSWORD@HOST/DB`; tách thành URL JDBC không credential + password từng role:
 
@@ -79,24 +79,24 @@ Giữ `sslmode=verify-full` (TLS kèm kiểm chứng chỉ và hostname, chặt 
 ## 3. Kiểm tra, build và chạy
 
 ```bash
-python backend/platform/cloud/manage.py check   # validate .env.cloud + preflight DB chỉ đọc
+python backend/platform/cloud/manage.py check   # validate .env + preflight DB chỉ đọc
 python backend/platform/cloud/manage.py up      # check + build từ source + up --wait
 python backend/platform/cloud/manage.py status
 python backend/platform/cloud/manage.py down    # không xóa dữ liệu cloud
 ```
 
-`up` validate cấu hình mà không in credential (URL JDBC, `verify-full`, không pooler, đúng tên role, SRV Atlas có database và không tắt TLS, không còn placeholder, chỉ Gateway publish port, không có container DB local), chạy preflight, rồi `docker compose --env-file .env.cloud -f docker-compose.yml up -d --build --wait`. Image build từ source trong Docker (target `source`), không cần Java trên máy. **Khi khởi động, Flyway ghi migration vào Neon và `community-migrate` ghi schema vào Atlas.**
+`up` validate cấu hình mà không in credential (URL JDBC, `verify-full`, không pooler, đúng tên role, SRV Atlas có database và không tắt TLS, không còn placeholder, chỉ Gateway publish port, không có container DB local), chạy preflight, rồi `docker compose --env-file .env -f docker-compose.yml up -d --build --wait`. Có thể chạy trực tiếp `docker compose up -d --build --wait` sau bước `check`. Image build từ source trong Docker (target `source`), không cần Java trên máy. **Khi khởi động, Flyway ghi migration vào Neon và `community-migrate` ghi schema vào Atlas.**
 
 Kiểm tra cú pháp không cần credential thật:
 
 ```bash
-docker compose --env-file .env.cloud.example -f docker-compose.yml config --quiet
+docker compose --env-file .env.example -f docker-compose.yml config --quiet
 ```
 
 Xem log local khi lỗi (không chia sẻ log chưa che secret):
 
 ```bash
-docker compose --env-file .env.cloud -f docker-compose.yml logs --tail=100 catalog
+docker compose logs --tail=100 catalog
 ```
 
 Lỗi thường gặp: sai role/password/database, sai tên role (phải `<service>_runtime`/`<service>_migrator`), Neon endpoint pooler, Atlas IP allowlist, thiếu extension, thiếu quyền CREATE cho migrator.
@@ -111,4 +111,17 @@ Credential chỉ truyền qua environment runtime, không bake vào image; ngư�
 python -m unittest discover -s backend/platform/cloud -p "test_*.py" -v
 ```
 
-Cần Compose CLI, không cần Docker daemon hay credential cloud. Kết nối Neon/Atlas thật chỉ xác nhận được sau khi điền `.env.cloud`.
+Cần Compose CLI, không cần Docker daemon hay credential cloud. Kết nối Neon/Atlas thật chỉ xác nhận được sau khi điền `.env`.
+
+## Local dành cho CI/kiểm thử
+
+Không chạy fault/load/restore trên database cloud dùng chung. Chọn local rõ ràng:
+
+```powershell
+python backend/platform/init_env.py --mode local
+docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml up -d --build --wait
+$env:P02_ENV_FILE = '.env.local'
+$env:COMPOSE_FILE = 'docker-compose.yml;docker-compose.local.yml'
+```
+
+`.env.local` lấy mẫu từ [`.env.local.example`](../../../.env.local.example). Trên shell Unix, `COMPOSE_FILE` dùng dấu `:` thay cho `;`. Khi trở lại cloud, bỏ hai biến shell trên. Khi dừng local, dùng cùng `--env-file` và hai `-f`, không thêm `-v`.
