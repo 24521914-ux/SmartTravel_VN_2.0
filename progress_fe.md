@@ -1,6 +1,6 @@
 # Tiến độ Frontend (FE) — SmartTravel VN
 
-Cập nhật: **05/11/2026 16:21** (GMT+7)
+Cập nhật: **06/11/2026 14:08** (GMT+7)
 
 Progress gồm **hai file**: file này (`progress_fe.md`) cho frontend web; [`progress_be.md`](progress_be.md) cho backend và **trạng thái kết nối BE ↔ FE từng API** (mục 9 của file đó). Quy ước trạng thái, tiêu chuẩn PASS và cách cập nhật dùng chung: `progress_be.md` mục 2.
 
@@ -92,6 +92,8 @@ Bằng chứng theo màn: các suite A–I và revision tại [progress_be.md m�
 - [ ] Review FE P01 (N1) — **NOT_STARTED**.
 
 ## 6. P02 — Gọi Gateway thật
+
+Ngày 06/11/2026, bộ backend phục vụ Gateway local đã chuyển sang Neon/Atlas; sáu kiểm tra API đọc/đăng nhập PASS sau cấu hình timeout cho runtime cloud. Chưa chạy kiểm thử trình duyệt FE với cloud, vì vậy giữ nguyên trạng thái màn hình và số lượng kết nối đã có. Bằng chứng chuyển dữ liệu, giới hạn revision/runtime và việc cần kiểm tiếp: [progress_be.md mục P02](progress_be.md#6-p02--kết-nối-các-service), F-39; tệp đính kèm vẫn dùng volume local (F-06).
 
 - [x] FE-P02-01: Màn nghiệp vụ gọi Gateway thật, lỗi/pending rõ — **LOCAL_VERIFIED** (dirty) · suite F 9 nhóm +36 responsive, H login/me503 không báo giả; business/admin/trip suite PASS; `4e020e1`/`edb10cb`, môi trường và request count tại BE mục9. Tương ứng P02-09.
 - [x] FE-P02-02: Pending ack khác thành công cuối — **LOCAL_VERIFIED** (dirty) · B verification/claim pending, C contribution → APPLIED/import decision → SUCCEEDED qua broker, G retry/cancel đọc lại CANCELLED; `4e020e1`/`edb10cb`.
