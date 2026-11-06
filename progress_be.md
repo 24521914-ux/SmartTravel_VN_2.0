@@ -1,6 +1,6 @@
 # Tiến độ Backend (BE) — SmartTravel VN
 
-Cập nhật: **06/11/2026 14:08** (GMT+7)
+Cập nhật: **06/11/2026 14:28** (GMT+7)
 
 Progress gồm **hai file**: file này (`progress_be.md`) cho backend, Gateway, hạ tầng và **trạng thái kết nối BE ↔ FE**; [`progress_fe.md`](progress_fe.md) cho frontend web. Mỗi file sắp theo phase P00 → P04. Yêu cầu chi tiết của từng phase vẫn nằm trong `plan/phases/`; file này chỉ ghi **đã làm tới đâu, kiểm bằng gì, làm gì tiếp**.
 
@@ -669,6 +669,7 @@ Mới nhất ở trên. Mỗi dòng: ngày giờ · thay đổi · PR/commit.
 
 | Thời điểm | Thay đổi | PR / commit |
 |---|---|---|
+| 06/11/2026 14:26 | Merge tài liệu chuyển dữ liệu local sang Neon/Atlas; giữ LOCAL_VERIFIED (dirty), F-39 PARTIAL và trạng thái FE hiện có. Kiểm diff, secret và link PASS; CI không chạy do bộ lọc đường dẫn tài liệu, chưa có N1/N2 xác nhận/gate | [PR #1](https://github.com/24521914-ux/SmartTravel_VN_2.0/pull/1), merge `ef90aa9e111445e5a59fe81d1ae86ea80d5a2a20` |
 | 05/11/2026 17:21 | Push thẳng P04-CS-09 (compose chuẩn app + override DB local) lên `main` (fast-forward, không qua PR) theo yêu cầu người dùng; **chưa có CI và chưa có N1/N2 review** (lệch AGENTS.md mục 7). Trạng thái task giữ nguyên; F-38 vẫn OPEN | `70ae3a8`…`d86e39b` trên `main` |
 | 05/11/2026 16:21 | P04-CS-09 LOCAL_VERIFIED trên nhánh (chưa merge): compose chuẩn app + override DB local, gộp cloud, `init_env.py`, `p02.py` chỉ còn kiểm thử; mở F-38 (504 lần đầu sau `up --wait`); F-34 cập nhật | `70ae3a8` (nhánh `refactor/platform-compose-standard`) |
 | 04/11/2026 07:14 | Push thẳng P04-CS-08 (compose cloud Neon/Atlas) lên `main` (fast-forward, không qua PR) theo yêu cầu người dùng; **chưa có CI, chưa có N1/N2 review và chưa chạy với Neon/Atlas thật** (lệch AGENTS.md mục 7). Trạng thái task giữ nguyên | `50f801d`…`cb45655` trên `main` |
