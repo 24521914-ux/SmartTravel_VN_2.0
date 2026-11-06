@@ -1,0 +1,21 @@
+# CI probes domain databases inside Docker; only the standalone template needs a host port.
+# Let Docker reserve that port atomically instead of racing for a fixed runner port.
+services:
+  catalog-db:
+    ports: !reset []
+  identity-db:
+    ports: !reset []
+  trip-db:
+    ports: !reset []
+  ingestion-db:
+    ports: !reset []
+  intelligence-db:
+    ports: !reset []
+  community-db:
+    ports: !reset []
+  template-db:
+    ports: !override
+      - target: 5432
+        published: '0'
+        host_ip: 127.0.0.1
+        protocol: tcp
