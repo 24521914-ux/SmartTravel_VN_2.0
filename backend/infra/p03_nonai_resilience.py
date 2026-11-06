@@ -58,6 +58,11 @@ def paused(service, compose=p02.compose):
         compose('unpause', service)
 
 
+def resume_existing(service, compose=p02.compose):
+    """Recover the stopped container without reapplying its dependency configuration."""
+    compose('start', '--wait', '--wait-timeout', '120', service)
+
+
 def mongo(expression):
     """Read-only operator diagnostics, authentication stays inside container env."""
     script = ("assert(db.getSiblingDB('admin').auth('community_admin',process.env.MONGO_INITDB_ROOT_PASSWORD));"
@@ -93,7 +98,9 @@ def run(release_id, output=OUTPUT):
         if action == 'kill':
             p02.compose('kill', '-s', 'SIGKILL', service)
         elif action == 'start':
-            p02.compose('up', '-d', '--wait', service)
+            resume_existing(service)
+            assert p02.compose('ps', '-q', 'identity').stdout.strip() == identity_container, \
+                'Fault recovery unexpectedly replaced Identity outside the disruption scope'
         else:
             p02.compose(action, service)
 
@@ -106,6 +113,8 @@ def run(release_id, output=OUTPUT):
             key = str(uuid.uuid4())
         return http.call(service, path, method, body, token, expected, version, key)
     try:
+        identity_container = p02.compose('ps', '-q', 'identity').stdout.strip()
+        assert identity_container, 'Identity container must exist before recovery exercises'
         admin, user = http.login('admin'), http.login('u1')
         category = call('catalog', '/api/v1/categories')['items'][0]['id']
         place = call('catalog', '/api/v1/admin/places', 'POST', {'name': 'P03 recovery ' + run_id,
