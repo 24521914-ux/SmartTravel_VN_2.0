@@ -2,7 +2,7 @@
 
 - [ ] Tích hợp source hiện tại vào cloud `main` — **PARTIAL** · Codex, nhánh `feature/travel-workspace-integration-20261113`, nguồn `f635d79`, base `08718ac`, checkout dirty · TypeScript/Vite build PASS; `npm --prefix frontend run test:contracts` 17/0/0/0 (Node, API giả lập). Giữ UI tài khoản, bộ sưu tập theo tỉnh và timeline chuyến đi; giữ client timeout/cloud dotenv của main. Chưa chạy lại browser với cloud; trạng thái API và các vấn đề tích hợp xem [progress_be.md](progress_be.md).
 
-Cập nhật: **13/11/2026 14:23** (GMT+7)
+Cập nhật: **13/11/2026 14:29** (GMT+7)
 
 
 Kiểm lại 05/11/2026: backend local đã cập nhật image Identity và kiểm API đăng ký/đăng nhập thật; chi tiết bằng chứng tại [progress_be.md](progress_be.md). FE end-to-end thật chưa chạy lại; giữ PARTIAL.
