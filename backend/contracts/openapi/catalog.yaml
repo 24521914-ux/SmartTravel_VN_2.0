@@ -69,6 +69,24 @@
                             "minLength": 1,
                             "maxLength": 1024
                           },
+                          "name_en": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "maxLength": 240
+                          },
+                          "address": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024
+                          },
+                          "description": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "status": {
                             "type": "string",
                             "enum": [
@@ -135,6 +153,35 @@
                             ],
                             "minimum": 0
                           },
+                          "price_min": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "price_max": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "rating_avg": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 5
+                          },
+                          "review_count": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
                           "currency": {
                             "type": "string",
                             "enum": [
@@ -190,6 +237,9 @@
                         "required": [
                           "place_id",
                           "name",
+                          "name_en",
+                          "address",
+                          "description",
                           "status",
                           "version",
                           "latitude",
@@ -200,6 +250,10 @@
                           "geographic_unit_id",
                           "destination_ids",
                           "price",
+                          "price_min",
+                          "price_max",
+                          "rating_avg",
+                          "review_count",
                           "currency",
                           "opening_hours",
                           "media_keys",
@@ -805,6 +859,24 @@
                       "minLength": 1,
                       "maxLength": 1024
                     },
+                    "name_en": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "maxLength": 240
+                    },
+                    "address": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 1024
+                    },
+                    "description": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -871,6 +943,35 @@
                       ],
                       "minimum": 0
                     },
+                    "price_min": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "price_max": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "rating_avg": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0,
+                      "maximum": 5
+                    },
+                    "review_count": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
                     "currency": {
                       "type": "string",
                       "enum": [
@@ -926,6 +1027,9 @@
                   "required": [
                     "place_id",
                     "name",
+                    "name_en",
+                    "address",
+                    "description",
                     "status",
                     "version",
                     "latitude",
@@ -936,6 +1040,10 @@
                     "geographic_unit_id",
                     "destination_ids",
                     "price",
+                    "price_min",
+                    "price_max",
+                    "rating_avg",
+                    "review_count",
                     "currency",
                     "opening_hours",
                     "media_keys",
@@ -1481,6 +1589,17 @@
                     "minLength": 1,
                     "maxLength": 1024
                   },
+                  "address": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024
+                  },
+                  "description": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "latitude": {
                     "type": "number",
                     "minimum": -90,
@@ -1637,6 +1756,24 @@
                       "minLength": 1,
                       "maxLength": 1024
                     },
+                    "name_en": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "maxLength": 240
+                    },
+                    "address": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 1024
+                    },
+                    "description": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -1703,6 +1840,35 @@
                       ],
                       "minimum": 0
                     },
+                    "price_min": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "price_max": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "rating_avg": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0,
+                      "maximum": 5
+                    },
+                    "review_count": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
                     "currency": {
                       "type": "string",
                       "enum": [
@@ -1758,6 +1924,9 @@
                   "required": [
                     "place_id",
                     "name",
+                    "name_en",
+                    "address",
+                    "description",
                     "status",
                     "version",
                     "latitude",
@@ -1768,6 +1937,10 @@
                     "geographic_unit_id",
                     "destination_ids",
                     "price",
+                    "price_min",
+                    "price_max",
+                    "rating_avg",
+                    "review_count",
                     "currency",
                     "opening_hours",
                     "media_keys",
@@ -2367,6 +2540,24 @@
                       "minLength": 1,
                       "maxLength": 1024
                     },
+                    "name_en": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "maxLength": 240
+                    },
+                    "address": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 1024
+                    },
+                    "description": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -2433,6 +2624,35 @@
                       ],
                       "minimum": 0
                     },
+                    "price_min": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "price_max": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "rating_avg": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0,
+                      "maximum": 5
+                    },
+                    "review_count": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
                     "currency": {
                       "type": "string",
                       "enum": [
@@ -2488,6 +2708,9 @@
                   "required": [
                     "place_id",
                     "name",
+                    "name_en",
+                    "address",
+                    "description",
                     "status",
                     "version",
                     "latitude",
@@ -2498,6 +2721,10 @@
                     "geographic_unit_id",
                     "destination_ids",
                     "price",
+                    "price_min",
+                    "price_max",
+                    "rating_avg",
+                    "review_count",
                     "currency",
                     "opening_hours",
                     "media_keys",
@@ -3042,6 +3269,17 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 1024
+                  },
+                  "address": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024
+                  },
+                  "description": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
                   },
                   "latitude": {
                     "type": "number",
@@ -3892,6 +4130,24 @@
                             "minLength": 1,
                             "maxLength": 1024
                           },
+                          "name_en": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "maxLength": 240
+                          },
+                          "address": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024
+                          },
+                          "description": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "status": {
                             "type": "string",
                             "enum": [
@@ -3955,6 +4211,35 @@
                             ],
                             "minimum": 0
                           },
+                          "price_min": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "price_max": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "rating_avg": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 5
+                          },
+                          "review_count": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
                           "currency": {
                             "type": "string",
                             "enum": [
@@ -4010,6 +4295,9 @@
                         "required": [
                           "place_id",
                           "name",
+                          "name_en",
+                          "address",
+                          "description",
                           "status",
                           "version",
                           "latitude",
@@ -4020,6 +4308,10 @@
                           "geographic_unit_id",
                           "destination_ids",
                           "price",
+                          "price_min",
+                          "price_max",
+                          "rating_avg",
+                          "review_count",
                           "currency",
                           "opening_hours",
                           "media_keys",
@@ -4622,6 +4914,24 @@
                       "minLength": 1,
                       "maxLength": 1024
                     },
+                    "name_en": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "maxLength": 240
+                    },
+                    "address": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 1024
+                    },
+                    "description": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -4685,6 +4995,35 @@
                       ],
                       "minimum": 0
                     },
+                    "price_min": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "price_max": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "rating_avg": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0,
+                      "maximum": 5
+                    },
+                    "review_count": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
                     "currency": {
                       "type": "string",
                       "enum": [
@@ -4740,6 +5079,9 @@
                   "required": [
                     "place_id",
                     "name",
+                    "name_en",
+                    "address",
+                    "description",
                     "status",
                     "version",
                     "latitude",
@@ -4750,6 +5092,10 @@
                     "geographic_unit_id",
                     "destination_ids",
                     "price",
+                    "price_min",
+                    "price_max",
+                    "rating_avg",
+                    "review_count",
                     "currency",
                     "opening_hours",
                     "media_keys",
@@ -5341,6 +5687,24 @@
                       "minLength": 1,
                       "maxLength": 1024
                     },
+                    "name_en": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "maxLength": 240
+                    },
+                    "address": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 1024
+                    },
+                    "description": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -5407,6 +5771,35 @@
                       ],
                       "minimum": 0
                     },
+                    "price_min": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "price_max": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "rating_avg": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0,
+                      "maximum": 5
+                    },
+                    "review_count": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
                     "currency": {
                       "type": "string",
                       "enum": [
@@ -5462,6 +5855,9 @@
                   "required": [
                     "place_id",
                     "name",
+                    "name_en",
+                    "address",
+                    "description",
                     "status",
                     "version",
                     "latitude",
@@ -5472,6 +5868,10 @@
                     "geographic_unit_id",
                     "destination_ids",
                     "price",
+                    "price_min",
+                    "price_max",
+                    "rating_avg",
+                    "review_count",
                     "currency",
                     "opening_hours",
                     "media_keys",
@@ -39947,6 +40347,24 @@
                             "minLength": 1,
                             "maxLength": 1024
                           },
+                          "name_en": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "maxLength": 240
+                          },
+                          "address": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024
+                          },
+                          "description": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "status": {
                             "type": "string",
                             "enum": [
@@ -40010,6 +40428,35 @@
                             ],
                             "minimum": 0
                           },
+                          "price_min": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "price_max": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "rating_avg": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 5
+                          },
+                          "review_count": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
                           "currency": {
                             "type": "string",
                             "enum": [
@@ -40065,6 +40512,9 @@
                         "required": [
                           "place_id",
                           "name",
+                          "name_en",
+                          "address",
+                          "description",
                           "status",
                           "version",
                           "latitude",
@@ -40075,6 +40525,10 @@
                           "geographic_unit_id",
                           "destination_ids",
                           "price",
+                          "price_min",
+                          "price_max",
+                          "rating_avg",
+                          "review_count",
                           "currency",
                           "opening_hours",
                           "media_keys",
@@ -41339,6 +41793,24 @@
                             "minLength": 1,
                             "maxLength": 1024
                           },
+                          "name_en": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "maxLength": 240
+                          },
+                          "address": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024
+                          },
+                          "description": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "status": {
                             "type": "string",
                             "enum": [
@@ -41405,6 +41877,35 @@
                             ],
                             "minimum": 0
                           },
+                          "price_min": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "price_max": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "rating_avg": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 5
+                          },
+                          "review_count": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
                           "currency": {
                             "type": "string",
                             "enum": [
@@ -41460,6 +41961,9 @@
                         "required": [
                           "place_id",
                           "name",
+                          "name_en",
+                          "address",
+                          "description",
                           "status",
                           "version",
                           "latitude",
@@ -41470,6 +41974,10 @@
                           "geographic_unit_id",
                           "destination_ids",
                           "price",
+                          "price_min",
+                          "price_max",
+                          "rating_avg",
+                          "review_count",
                           "currency",
                           "opening_hours",
                           "media_keys",
@@ -42072,6 +42580,24 @@
                             "minLength": 1,
                             "maxLength": 1024
                           },
+                          "name_en": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "maxLength": 240
+                          },
+                          "address": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024
+                          },
+                          "description": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "status": {
                             "type": "string",
                             "enum": [
@@ -42138,6 +42664,35 @@
                             ],
                             "minimum": 0
                           },
+                          "price_min": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "price_max": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "rating_avg": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 5
+                          },
+                          "review_count": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
                           "currency": {
                             "type": "string",
                             "enum": [
@@ -42193,6 +42748,9 @@
                         "required": [
                           "place_id",
                           "name",
+                          "name_en",
+                          "address",
+                          "description",
                           "status",
                           "version",
                           "latitude",
@@ -42203,6 +42761,10 @@
                           "geographic_unit_id",
                           "destination_ids",
                           "price",
+                          "price_min",
+                          "price_max",
+                          "rating_avg",
+                          "review_count",
                           "currency",
                           "opening_hours",
                           "media_keys",

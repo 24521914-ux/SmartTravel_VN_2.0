@@ -51,6 +51,14 @@ public class AuthController {
         return ResponseEntity.accepted().body(service.consumeAccountToken(body.token(), "VERIFY_EMAIL", null));
     }
 
+    @PostMapping("/api/v1/auth/resend-verification")
+    ResponseEntity<?> resend(@Valid @RequestBody ForgotPasswordRequest body, HttpServletRequest request) {
+        limit("resend-verification", AuthService.canonical(body.email()), request);
+        service.resendVerification(body.email());
+        // Identical response for unknown, active, pending and cooldown accounts.
+        return ResponseEntity.accepted().body(ApiResponses.accepted());
+    }
+
     @PostMapping("/api/v1/auth/forgot-password")
     ResponseEntity<?> forgot(@Valid @RequestBody ForgotPasswordRequest body, HttpServletRequest request) {
         limit("forgot", AuthService.canonical(body.email()), request); service.forgot(body.email());

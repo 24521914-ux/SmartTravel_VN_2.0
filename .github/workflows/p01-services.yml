@@ -12,6 +12,9 @@ jobs:
   service:
     env:
       P01_CATALOG_DB_PORT: '0'
+      # Only Identity uses host broker probes; other services use the Docker network.
+      P01_BROKER_AMQP_PORT: ${{ matrix.service == 'identity' && '55672' || '0' }}
+      P01_BROKER_MANAGEMENT_PORT: ${{ matrix.service == 'identity' && '55673' || '0' }}
     # MongoDB 8 rejects kernels >=6.19 (SERVER-121912); Ubuntu22.04 uses6.8.
     runs-on: ubuntu-22.04
     timeout-minutes: 30

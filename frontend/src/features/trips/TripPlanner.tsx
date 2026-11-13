@@ -1,662 +1,1764 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { Icon, Button, Badge, RatingStars, ErrorState, EmptyState } from '../../shared/ui';
-import type { TravelClient, Resource, Page } from '../../shared/api';
-import { useToast } from '../../app/providers/ToastProvider';
-import { TripDestinations } from './TripDestinations';
-import './integration-layout.css';
-
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Icon } from "../../shared/ui";
+import {
+  ApiError,
+  type TravelClient,
+  type Resource,
+  type Page,
+} from "../../shared/api";
+import { TripDestinations } from "./TripDestinations";
+import { TripMap, rowId, snapshot, placeName, imageUrl } from "./TripMap";
+import "./trip-planner.css";
 export interface TripPlannerProps {
   travel: TravelClient;
   busy?: boolean;
   suggestedPlace?: Resource | null;
 }
-
-const resourceId = (row: Resource) => String(row.id ?? row.trip_id ?? row.day_id ?? row.item_id ?? row.place_id ?? row.segment_id ?? row.transfer_id ?? '');
-
-export function TripPlanner({ travel, busy = false, suggestedPlace }: TripPlannerProps) {
-  const { showToast } = useToast();
-  const [trips, setTrips] = useState<Resource[]>([]);
-  const [selectedTrip, setSelectedTrip] = useState<Resource | null>(null);
-  const [days, setDays] = useState<Resource[]>([]);
-  const [selectedDay, setSelectedDay] = useState<Resource | null>(null);
-  const [dayItems, setDayItems] = useState<Resource[]>([]);
-  const [places, setPlaces] = useState<Resource[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [hasError, setHasError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [tripVersion, setTripVersion] = useState<number>(1);
-
-  // Form states for Create Trip
-  const [tripName, setTripName] = useState('');
-  const [startDate, setStartDate] = useState('2026-12-01');
-  const [endDate, setEndDate] = useState('2026-12-03');
-  const [budget, setBudget] = useState('2000000');
-
-  // Search places within Trip Editor
-  const [placeQuery, setPlaceQuery] = useState('');
-  const [routeEstimate, setRouteEstimate] = useState<Resource | null>(null);
-  const [transfers, setTransfers] = useState<Resource[]>([]);
-  const [editingTransfer, setEditingTransfer] = useState<Resource | null>(null);
-
-  async function loadTrips() {
-    setLoading(true);
-    setHasError(false);
-    try {
-      const data = await travel.readAll('trip', '/me/trips');
-      setTrips(data.items ?? []);
-    } catch (e) {
-      setHasError(true);
-      setErrorMessage((e as Error).message || 'Chưa tải được dữ liệu');
-    } finally {
-      setLoading(false);
-    }
+type Sync = "idle" | "editing" | "saving" | "saved" | "failed" | "conflict";
+type Operation = {
+  key?: string;
+  editorId?: string;
+  confirmed?: boolean;
+  result?: Resource;
+  path: string;
+  body?: unknown;
+  method?: "POST" | "PATCH" | "PUT" | "DELETE";
+  after?: (result: Resource) => Promise<void>;
+};
+const dateLabel = (date: unknown) =>
+  String(date ?? "")
+    .split("-")
+    .reverse()
+    .join("/");
+const states: Record<string, string> = {
+  DRAFT: "Nháp",
+  PLANNED: "Đã lên kế hoạch",
+  COMPLETED: "Hoàn tất",
+  CANCELLED: "Đã hủy",
+};
+const modes: Record<string, string> = {
+  DRIVE: "Ô tô",
+  WALK: "Đi bộ",
+  BICYCLE: "Xe đạp",
+  SELF_MANAGED: "Tự di chuyển",
+};
+const today = () =>
+  new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Ho_Chi_Minh" });
+function errorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 409 || error.status === 412)
+      return "Nội dung đã thay đổi ở nơi khác. Tải phiên bản mới để đối chiếu trước khi lưu.";
+    if (error.status === 401)
+      return "Phiên đăng nhập đã hết hạn. Đăng nhập lại để tiếp tục.";
+    if (error.status === 503 || error.status === 502 || error.status === 504)
+      return "Dịch vụ tạm thời chưa phản hồi. Nội dung bạn nhập vẫn được giữ; hãy thử lại.";
+    if (error.status === 404)
+      return "Không tìm thấy dữ liệu này. Tải lại lịch trình để cập nhật.";
+    if (error.body.message === "ITEM_LOCKED")
+      return "Mở khóa địa điểm trước khi chỉnh sửa hoặc đổi thứ tự.";
+    if (error.status === 422)
+      return "Thay đổi chưa phù hợp với lịch trình. Kiểm tra khoảng ngày và các địa điểm đang khóa.";
+    if (error.status === 400)
+      return "Kiểm tra lại thông tin đã nhập rồi thử lưu lại.";
   }
-
-  async function openTripEditor(trip: Resource) {
-    setSelectedTrip(trip);
-    setSelectedDay(null);
-    setDays([]);
-    setDayItems([]);
-    setRouteEstimate(null);
-    setTripVersion(Number(trip.version));
-    setLoading(true);
-    try {
-      const tripId = resourceId(trip);
-      await refreshTrip(tripId);
-      const daysData = await travel.readAll('trip', `/trips/${tripId}/days`);
-      setDays(daysData.items ?? []);
-      setTransfers((await travel.readAll('trip', `/trips/${tripId}/transfers`)).items);
-
-      // Load catalog places for the 3-column picker
-      const placeData = await travel.places();
-      setPlaces(suggestedPlace && !placeData.items.some(row => resourceId(row) === resourceId(suggestedPlace)) ? [suggestedPlace, ...placeData.items] : placeData.items);
-
-      if (daysData.items?.length) {
-        await selectDay(tripId, daysData.items[0]);
-      } else {
-        setSelectedDay(null);
-        setDayItems([]);
-      }
-    } catch (e) {
-      showToast('Không thể tải chi tiết lịch trình', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function selectDay(tripId: string, day: Resource) {
-    setSelectedDay(day);
-    setDayItems([]);
-    setLoading(true);
-    try {
-      setSelectedDay(await travel.read<Resource>('trip', `/trips/${tripId}/days/${resourceId(day)}`));
-      const itemsData = await travel.readAll('trip', `/trips/${tripId}/days/${resourceId(day)}/items`);
-      setDayItems(itemsData.items ?? []);
-      await refreshTrip(tripId);
-    } catch (error) {
-      showToast((error as Error).message || 'Không thể tải địa điểm trong ngày.', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function refreshTrip(tripId: string) {
-    const current = await travel.read<Resource>('trip', `/trips/${tripId}`);
-    setSelectedTrip(current);
-    setTripVersion(Number(current.version));
-    setTrips(previous => previous.map(row => resourceId(row) === tripId ? current : row));
-    return current;
-  }
-
-  async function changeItem(item: Resource, remove = false) {
-    if (!selectedTrip || !selectedDay) return;
-    setLoading(true);
-    try {
-      await travel.mutate('trip', `/trips/${resourceId(selectedTrip)}/days/${resourceId(selectedDay)}/items/${resourceId(item)}`,
-        remove ? undefined : { locked: !item.locked }, remove ? 'DELETE' : 'PATCH', tripVersion);
-      await selectDay(resourceId(selectedTrip), selectedDay);
-      showToast(remove ? 'Đã xóa địa điểm khỏi ngày.' : 'Đã cập nhật khóa địa điểm.', 'success');
-    } catch (error) {
-      showToast((error as Error).message, 'error');
-    } finally { setLoading(false); }
-  }
-
-  async function moveItem(index: number, offset: number) {
-    if (!selectedTrip || !selectedDay) return;
-    const reordered = [...dayItems];
-    [reordered[index], reordered[index + offset]] = [reordered[index + offset], reordered[index]];
-    setLoading(true);
-    try {
-      await travel.mutate('trip', `/trips/${resourceId(selectedTrip)}/days/${resourceId(selectedDay)}/items/order`,
-        { item_ids: reordered.map(resourceId) }, 'PUT', tripVersion);
-      await selectDay(resourceId(selectedTrip), selectedDay);
-    } catch (error) { showToast((error as Error).message, 'error'); }
-    finally { setLoading(false); }
-  }
-
-  async function route(event: FormEvent<HTMLFormElement>, save: boolean) {
-    event.preventDefault();
-    if (!selectedTrip) return;
-    const form = new FormData(event.currentTarget);
-    setLoading(true);
-    setRouteEstimate(null);
-    try {
-      const tripId = resourceId(selectedTrip);
-      const result = await travel.mutate<Resource>('trip', `/trips/${tripId}/${save ? `transfers${editingTransfer ? `/${resourceId(editingTransfer)}` : ''}` : 'route-estimates'}`, {
-        from_item_id: form.get('from'), to_item_id: form.get('to'), mode: form.get('mode')
-      }, save && editingTransfer ? 'PATCH' : 'POST', tripVersion);
-      setRouteEstimate(result);
-      if (save) {
-        setEditingTransfer(null);
-        setTransfers((await travel.readAll('trip', `/trips/${tripId}/transfers`)).items);
-        await refreshTrip(tripId);
-      }
-    } catch (error) { showToast((error as Error).message, 'error'); }
-    finally { setLoading(false); }
-  }
-
-  async function openTransfer(transfer: Resource) {
-    if (!selectedTrip) return;
-    try { setEditingTransfer(await travel.read('trip', `/trips/${resourceId(selectedTrip)}/transfers/${resourceId(transfer)}`)); }
-    catch (error) { showToast((error as Error).message, 'error'); }
-  }
-
-  async function openItem(item: Resource) {
-    if (!selectedTrip || !selectedDay) return;
-    try {
-      const detail = await travel.read<Resource>('trip', `/trips/${resourceId(selectedTrip)}/days/${resourceId(selectedDay)}/items/${resourceId(item)}`);
-      setDayItems(previous => previous.map(row => resourceId(row) === resourceId(detail) ? detail : row));
-      showToast('Đã tải chi tiết địa điểm mới nhất.', 'info');
-    } catch (error) { showToast((error as Error).message, 'error'); }
-  }
-
-  async function deleteTransfer(transfer: Resource) {
-    if (!selectedTrip) return;
-    setLoading(true);
-    try {
-      const tripId = resourceId(selectedTrip);
-      await travel.mutate('trip', `/trips/${tripId}/transfers/${resourceId(transfer)}`, undefined, 'DELETE', tripVersion);
-      setTransfers((await travel.readAll('trip', `/trips/${tripId}/transfers`)).items);
-      await refreshTrip(tripId);
-    } catch (error) { showToast((error as Error).message, 'error'); }
-    finally { setLoading(false); }
-  }
-
-  async function editTrip(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!selectedTrip) return;
-    const form = new FormData(event.currentTarget);
-    setLoading(true);
-    try {
-      await travel.mutate('trip', `/trips/${resourceId(selectedTrip)}`, {
-        name: form.get('name'), start_date: form.get('start_date'), end_date: form.get('end_date'), budget: Number(form.get('budget'))
-      }, 'PATCH', tripVersion);
-      await refreshTrip(resourceId(selectedTrip));
-      showToast('Đã lưu chuyến đi.', 'success');
-    } catch (error) { showToast((error as Error).message, 'error'); }
-    finally { setLoading(false); }
-  }
-
-  async function changeTripState(state: string) {
-    if (!selectedTrip) return;
-    setLoading(true);
-    try {
-      await travel.mutate('trip', `/trips/${resourceId(selectedTrip)}/state`, { state }, 'PUT', tripVersion);
-      await refreshTrip(resourceId(selectedTrip));
-    } catch (error) { showToast((error as Error).message, 'error'); }
-    finally { setLoading(false); }
-  }
-
-  async function deleteTrip(trip: Resource) {
-    setLoading(true);
-    try {
-      await travel.mutate('trip', `/trips/${resourceId(trip)}`, undefined, 'DELETE', Number(trip.version));
-      if (selectedTrip && resourceId(selectedTrip) === resourceId(trip)) setSelectedTrip(null);
-      await loadTrips();
-      showToast('Đã xóa chuyến đi.', 'success');
-    } catch (error) { showToast((error as Error).message, 'error'); }
-    finally { setLoading(false); }
-  }
-
-  async function editDay(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!selectedTrip || !selectedDay) return;
-    const date = new FormData(event.currentTarget).get('date');
-    setLoading(true);
-    try {
-      const updated = await travel.mutate<Resource>('trip', `/trips/${resourceId(selectedTrip)}/days/${resourceId(selectedDay)}`, { date }, 'PATCH', tripVersion);
-      await openTripEditor(selectedTrip);
-      await selectDay(resourceId(selectedTrip), updated);
-    } catch (error) { showToast((error as Error).message, 'error'); }
-    finally { setLoading(false); }
-  }
-
-  async function deleteDay() {
-    if (!selectedTrip || !selectedDay) return;
-    setLoading(true);
-    try {
-      await travel.mutate('trip', `/trips/${resourceId(selectedTrip)}/days/${resourceId(selectedDay)}`, undefined, 'DELETE', tripVersion);
-      await openTripEditor(selectedTrip);
-    } catch (error) { showToast((error as Error).message, 'error'); }
-    finally { setLoading(false); }
-  }
-
-  async function editItem(event: FormEvent<HTMLFormElement>, item: Resource) {
-    event.preventDefault();
-    if (!selectedTrip || !selectedDay) return;
-    const form = new FormData(event.currentTarget);
-    setLoading(true);
-    try {
-      await travel.mutate('trip', `/trips/${resourceId(selectedTrip)}/days/${resourceId(selectedDay)}/items/${resourceId(item)}`, {
-        note: form.get('note'), duration_minutes: Number(form.get('duration'))
-      }, 'PATCH', tripVersion);
-      await selectDay(resourceId(selectedTrip), selectedDay);
-    } catch (error) { showToast((error as Error).message, 'error'); }
-    finally { setLoading(false); }
-  }
-
-  async function refreshSnapshots() {
-    if (!selectedTrip || !selectedDay) return;
-    setLoading(true);
-    try {
-      await travel.mutate('trip', `/trips/${resourceId(selectedTrip)}/snapshots/refresh`, { item_ids: dayItems.filter(item => !item.locked).map(resourceId) }, 'POST', tripVersion);
-      await selectDay(resourceId(selectedTrip), selectedDay);
-      showToast('Đã cập nhật thông tin địa điểm từ Catalog.', 'success');
-    } catch (error) { showToast((error as Error).message, 'error'); }
-    finally { setLoading(false); }
-  }
-
+  return "Chưa kết nối được với hệ thống. Kiểm tra mạng rồi thử lại; nội dung đang nhập vẫn được giữ.";
+}
+function ItemEditor({
+  item,
+  onSave,
+  onDirty,
+  disabled,
+}: {
+  item: Resource;
+  onSave: (body: Resource) => void;
+  onDirty: () => void;
+  disabled: boolean;
+}) {
+  const [note, setNote] = useState(String(item.note ?? "")),
+    [duration, setDuration] = useState(String(item.duration_minutes ?? 120));
+  const touched = useRef<Set<string>>(new Set());
+  const dirty = useRef(false),
+    timer = useRef<ReturnType<typeof setTimeout> | null>(null),
+    latest = useRef({ note, duration }),
+    callback = useRef(onSave);
+  latest.current = { note, duration };
+  callback.current = onSave;
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
   useEffect(() => {
-    void loadTrips();
-  }, [travel]);
-
-  async function handleCreateTrip(e: FormEvent) {
-    e.preventDefault();
-    if (!tripName.trim()) return;
-    setLoading(true);
+    if (!dirty.current) {
+      setNote(String(item.note ?? ""));
+      setDuration(String(item.duration_minutes ?? 120));
+    }
+  }, [item]);
+  function save() {
+    if (timer.current) clearTimeout(timer.current);
+    if (!dirty.current) return;
+    const value = Number(latest.current.duration);
+    if (
+      latest.current.duration === "" ||
+      !Number.isInteger(value) ||
+      value < 0 ||
+      !latest.current.note.trim()
+    )
+      return;
+    const body: Resource = {};
+    if (touched.current.has("note")) body.note = latest.current.note;
+    if (touched.current.has("duration")) body.duration_minutes = value;
+    dirty.current = false;
+    touched.current.clear();
+    callback.current(body);
+  }
+  function edited(field: string) {
+    touched.current.add(field);
+    dirty.current = true;
+    onDirty();
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(save, 900);
+  }
+  return (
+    <div className="tp-item-fields">
+      <label>
+        Thời gian ghé thăm
+        <span className="tp-duration">
+          <input
+            aria-label={`Thời lượng ${placeName(item)}`}
+            type="number"
+            min="0"
+            step="1"
+            value={duration}
+            disabled={disabled || Boolean(item.locked)}
+            onChange={(e) => {
+              setDuration(e.target.value);
+              latest.current.duration = e.target.value;
+              edited("duration");
+            }}
+            onBlur={save}
+          />{" "}
+          phút
+        </span>
+      </label>
+      <label>
+        Ghi chú
+        <textarea
+          aria-label={`Ghi chú ${placeName(item)}`}
+          maxLength={1024}
+          rows={2}
+          value={note}
+          disabled={disabled || Boolean(item.locked)}
+          placeholder="Bạn muốn làm gì ở đây?"
+          onChange={(e) => {
+            setNote(e.target.value);
+            latest.current.note = e.target.value;
+            edited("note");
+          }}
+          onBlur={save}
+        />
+      </label>
+      {duration !== "" &&
+      Number.isInteger(Number(duration)) &&
+      Number(duration) >= 0 ? null : (
+        <small role="alert">Nhập số phút nguyên từ 0 trở lên.</small>
+      )}
+      {!note.trim() && (
+        <small role="alert">Thêm ghi chú ngắn trước khi lưu.</small>
+      )}
+    </div>
+  );
+}
+export function TripPlanner({
+  travel,
+  busy = false,
+  suggestedPlace,
+}: TripPlannerProps) {
+  const [trips, setTrips] = useState<Resource[]>([]),
+    [trip, setTrip] = useState<Resource | null>(null),
+    [days, setDays] = useState<Resource[]>([]),
+    [day, setDay] = useState<Resource | null>(null);
+  const [items, setItems] = useState<Resource[]>([]),
+    [legs, setLegs] = useState<Resource[]>([]),
+    [places, setPlaces] = useState<Resource[]>([]),
+    [categories, setCategories] = useState<Resource[]>([]),
+    [destinations, setDestinations] = useState<Resource[]>([]);
+  const [tripDestinations, setTripDestinations] = useState<Resource[]>([]);
+  const [query, setQuery] = useState(""),
+    [category, setCategory] = useState(""),
+    [destination, setDestination] = useState(""),
+    [cursor, setCursor] = useState<string | null>(null),
+    [finding, setFinding] = useState(false),
+    [placeError, setPlaceError] = useState("");
+  const [loading, setLoading] = useState(true),
+    [error, setError] = useState(""),
+    [sync, setSync] = useState<Sync>("idle"),
+    [newTrip, setNewTrip] = useState(false),
+    [settings, setSettings] = useState(false),
+    [addingDay, setAddingDay] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(""),
+    [mobileView, setMobileView] = useState("timeline"),
+    [dragged, setDragged] = useState(-1),
+    [notice, setNotice] = useState(""),
+    [editorGeneration, setEditorGeneration] = useState(0);
+  const tripRef = useRef<Resource | null>(null),
+    dayRef = useRef(""),
+    request = useRef(0),
+    searchRequest = useRef(0),
+    failed = useRef<Operation | null>(null),
+    mutationLock = useRef(false),
+    queued = useRef<Operation[]>([]);
+  const dirtyEditors = useRef(new Set<string>());
+  const disabled =
+      busy ||
+      loading ||
+      ["editing", "saving", "failed", "conflict"].includes(sync),
+    tripId = trip ? rowId(trip) : "",
+    dayId = day ? rowId(day) : "",
+    base = `/trips/${tripId}`,
+    dayBase = `${base}/days/${dayId}`;
+  function remember(id: string, selectedDay = "") {
     try {
-      const created = await travel.mutate<Resource>('trip', '/me/trips', {
-        name: tripName.trim(),
-        start_date: startDate,
-        end_date: endDate,
-        budget: Number(budget),
-        timezone: 'Asia/Ho_Chi_Minh',
-        currency: 'VND'
-      });
-      setTrips(prev => [created, ...prev]);
-      setTripName('');
-      showToast(`Đã tạo chuyến đi "${tripName.trim()}"!`, 'success');
-    } catch (error) {
-      showToast((error as Error).message || 'Không thể tạo chuyến đi.', 'error');
-    } finally {
-      setLoading(false);
+      sessionStorage.setItem(
+        "smarttravel-planner-selection",
+        JSON.stringify({ tripId: id, dayId: selectedDay }),
+      );
+    } catch {
+      /* Storage unavailable. */
     }
   }
-
-  async function handleAddPlaceToDay(place: Resource) {
-    if (!selectedTrip || !selectedDay) return;
-    setLoading(true);
-    const tripId = resourceId(selectedTrip);
-    const dayId = resourceId(selectedDay);
-    try {
-      await travel.mutate('trip', `/trips/${tripId}/days/${dayId}/items`, {
-        place_id: resourceId(place),
-        locked: false,
-        recommendation_request_id: null,
-        duration_minutes: 120,
-        note: `Ghé thăm ${String(place.name)}`
-      }, 'POST', tripVersion);
-      await selectDay(tripId, selectedDay);
-      showToast(`Đã thêm ${String(place.name)} vào ngày ${String(selectedDay.date)}`, 'success');
-    } catch (error) {
-      showToast((error as Error).message || 'Không thể thêm địa điểm.', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleAddDay(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!selectedTrip) return;
-    const data = new FormData(e.currentTarget);
-    const date = String(data.get('date'));
-    const tripId = resourceId(selectedTrip);
-    setLoading(true);
-    try {
-      await travel.mutate('trip', `/trips/${tripId}/days`, { date }, 'POST', tripVersion);
-      const daysData = await travel.readAll('trip', `/trips/${tripId}/days`);
-      setDays(daysData.items ?? []);
-      await refreshTrip(tripId);
-      const newDay = (daysData.items ?? []).find(d => String(d.date) === date) ?? daysData.items?.[0];
-      if (newDay) await selectDay(tripId, newDay);
-      showToast(`Đã thêm ngày ${date} vào chuyến đi!`, 'success');
-    } catch (error) {
-      showToast((error as Error).message || 'Không thể thêm ngày.', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // If there's an error loading trips (tested by clay-ui-check)
-  if (hasError) {
-    return (
-      <ErrorState
-        title="Chưa tải được dữ liệu"
-        message={errorMessage || 'Không thể đồng bộ danh sách chuyến đi từ hệ thống.'}
-        onRetry={loadTrips}
-      />
+  function applyTrip(value: Resource) {
+    tripRef.current = value;
+    setTrip(value);
+    setTrips((old) =>
+      old.map((row) => (rowId(row) === rowId(value) ? value : row)),
     );
   }
-
+  async function refreshTrip(id: string) {
+    const value = await travel.read<Resource>("trip", `/trips/${id}`);
+    if (rowId(tripRef.current ?? {}) === id) applyTrip(value);
+    return value;
+  }
+  async function loadDay(
+    id: string,
+    selected: Resource,
+    generation = request.current,
+  ) {
+    const selectedId = rowId(selected);
+    dayRef.current = selectedId;
+    setDay(selected);
+    setItems([]);
+    setLegs([]);
+    setSelectedItem("");
+    remember(id, selectedId);
+    const [detail, rows, segments] = await Promise.all([
+      travel.read<Resource>("trip", `/trips/${id}/days/${selectedId}`),
+      travel.readAll("trip", `/trips/${id}/days/${selectedId}/items`),
+      travel.readAll("trip", `/trips/${id}/days/${selectedId}/travel-legs`),
+    ]);
+    if (generation !== request.current || dayRef.current !== selectedId) return;
+    setDay(detail);
+    setItems(rows.items);
+    setLegs(segments.items);
+  }
+  async function openTrip(value: Resource, preferredDay = "") {
+    const generation = ++request.current;
+    setLoading(true);
+    setError("");
+    setSync("idle");
+    dirtyEditors.current.clear();
+    failed.current = null;
+    applyTrip(value);
+    setDays([]);
+    setDay(null);
+    dayRef.current = "";
+    setItems([]);
+    setLegs([]);
+    setSettings(false);
+    remember(rowId(value));
+    try {
+      const id = rowId(value);
+      const [detail, rows] = await Promise.all([
+        travel.read<Resource>("trip", `/trips/${id}`),
+        travel.readAll("trip", `/trips/${id}/days`),
+      ]);
+      if (generation !== request.current) return;
+      applyTrip(detail);
+      setDays(rows.items);
+      const selected =
+        rows.items.find((row) => rowId(row) === preferredDay) ?? rows.items[0];
+      if (selected) await loadDay(id, selected, generation);
+    } catch (cause) {
+      if (generation === request.current) setError(errorMessage(cause));
+    } finally {
+      if (generation === request.current) setLoading(false);
+    }
+  }
+  async function chooseDay(value: Resource) {
+    setLoading(true);
+    setError("");
+    try {
+      await loadDay(tripId, value);
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setLoading(false);
+    }
+  }
+  async function loadTrips() {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await travel.readAll("trip", "/me/trips");
+      setTrips(data.items);
+      let remembered: { tripId?: string; dayId?: string } = {};
+      try {
+        remembered = JSON.parse(
+          sessionStorage.getItem("smarttravel-planner-selection") ?? "{}",
+        );
+      } catch {
+        /* No selection. */
+      }
+      const selected = data.items.find(
+        (row) => rowId(row) === remembered.tripId,
+      );
+      if (selected) await openTrip(selected, remembered.dayId);
+      else if (!data.items.length) setNewTrip(true);
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setLoading(false);
+    }
+  }
+  useEffect(() => {
+    void loadTrips();
+    void travel
+      .readAll("catalog", "/categories")
+      .then((data) => setCategories(data.items))
+      .catch(() => {});
+    void travel
+      .readAll("catalog", "/destinations")
+      .then((data) => setDestinations(data.items))
+      .catch(() => {});
+    return () => {
+      request.current++;
+    };
+  }, [travel]);
+  useEffect(() => {
+    let active = true;
+    setTripDestinations([]);
+    if (tripId)
+      void travel
+        .readAll("trip", `${base}/destinations`)
+        .then((data) => {
+          if (active) setTripDestinations(data.items);
+        })
+        .catch(() => {
+          if (active)
+            setNotice(
+              "Chưa tải được điểm đến của chuyến đi. Mở cài đặt để thử lại.",
+            );
+        });
+    return () => {
+      active = false;
+    };
+  }, [travel, tripId, trip?.version]);
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => {
+      if (["editing", "saving", "failed", "conflict"].includes(sync)) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [sync]);
+  async function findPlaces(next?: string) {
+    const generation = ++searchRequest.current;
+    setFinding(true);
+    setPlaceError("");
+    try {
+      const params = new URLSearchParams({ limit: "12" });
+      if (query.trim()) params.set("q", query.trim());
+      if (category) params.set("categoryId", category);
+      if (destination) params.set("destinationId", destination);
+      if (next) params.set("cursor", next);
+      const data = await travel.read<Page>("catalog", `/places?${params}`);
+      if (generation !== searchRequest.current) return;
+      const rows =
+        suggestedPlace &&
+        !next &&
+        !query &&
+        !category &&
+        !destination &&
+        !data.items.some((row) => rowId(row) === rowId(suggestedPlace))
+          ? [suggestedPlace, ...data.items]
+          : data.items;
+      setPlaces((old) => (next ? [...old, ...rows] : rows));
+      setCursor(data.next_cursor ?? null);
+    } catch (cause) {
+      if (generation === searchRequest.current)
+        setPlaceError(errorMessage(cause));
+    } finally {
+      if (generation === searchRequest.current) setFinding(false);
+    }
+  }
+  useEffect(() => {
+    const timer = setTimeout(() => void findPlaces(), 300);
+    return () => {
+      clearTimeout(timer);
+      searchRequest.current++;
+    };
+  }, [query, category, destination, travel, suggestedPlace]);
+  useEffect(() => {
+    if (!tripId || !dayId || !legs.some((leg) => leg.status === "PENDING"))
+      return;
+    let active = true;
+    const timer = setInterval(() => {
+      void travel
+        .readAll("trip", `${dayBase}/travel-legs`)
+        .then((data) => {
+          if (active) setLegs(data.items);
+        })
+        .catch(() => {
+          if (active)
+            setNotice(
+              "Lịch trình đã lưu. Chưa cập nhật được kết quả dẫn đường; kiểm tra kết nối.",
+            );
+        });
+    }, 2000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [tripId, dayId, legs, travel]);
+  async function mutate(operation: Operation) {
+    operation.key ??= crypto.randomUUID();
+    if (mutationLock.current) {
+      queued.current.push(operation);
+      return;
+    }
+    mutationLock.current = true;
+    setSync("saving");
+    setError("");
+    failed.current = null;
+    const current = tripRef.current,
+      id = current ? rowId(current) : "";
+    try {
+      const result = operation.confirmed
+        ? operation.result!
+        : await travel.mutate<Resource>(
+            "trip",
+            operation.path,
+            operation.body,
+            operation.method ?? "PATCH",
+            current ? Number(current.version) : undefined,
+            operation.key,
+          );
+      operation.confirmed = true;
+      operation.result = result;
+      if (
+        id &&
+        !(operation.method === "DELETE" && operation.path === `/trips/${id}`) &&
+        operation.path !== "/me/trips"
+      ) {
+        await refreshTrip(id);
+        const data = await travel.readAll("trip", `/trips/${id}/days`);
+        setDays(data.items);
+        const selected = data.items.find(
+          (row) => rowId(row) === dayRef.current,
+        );
+        if (selected) {
+          const [rows, segments] = await Promise.all([
+            travel.readAll(
+              "trip",
+              `/trips/${id}/days/${rowId(selected)}/items`,
+            ),
+            travel.readAll(
+              "trip",
+              `/trips/${id}/days/${rowId(selected)}/travel-legs`,
+            ),
+          ]);
+          setDay(selected);
+          setItems(rows.items);
+          setLegs(segments.items);
+          remember(id, rowId(selected));
+        } else {
+          setDay(null);
+          dayRef.current = "";
+          setItems([]);
+          setLegs([]);
+        }
+      }
+      if (operation.after) await operation.after(result);
+      if (operation.editorId) dirtyEditors.current.delete(operation.editorId);
+      setSync(dirtyEditors.current.size ? "editing" : "saved");
+    } catch (cause) {
+      failed.current = operation;
+      setSync(
+        cause instanceof ApiError &&
+          (cause.status === 409 || cause.status === 412)
+          ? "conflict"
+          : "failed",
+      );
+      setError(errorMessage(cause));
+    } finally {
+      mutationLock.current = false;
+      if (!failed.current && queued.current.length)
+        void mutate(queued.current.shift()!);
+    }
+  }
+  async function reloadConflict() {
+    if (!tripId) return;
+    setLoading(true);
+    try {
+      await refreshTrip(tripId);
+      if (failed.current) failed.current.key = crypto.randomUUID();
+      setSync("failed");
+      setError(
+        "Đã lấy phiên bản mới. Nội dung bạn nhập được giữ lại. Kiểm tra rồi chọn Thử lưu lại để áp dụng thay đổi của bạn.",
+      );
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setLoading(false);
+    }
+  }
+  function itemChange(item: Resource, body: Resource) {
+    const editorId = rowId(item);
+    void mutate({
+      editorId,
+      path: `${dayBase}/items/${editorId}`,
+      body,
+    });
+  }
+  function reorder(from: number, to: number) {
+    if (from === to || from < 0 || to < 0 || to >= items.length || disabled)
+      return;
+    if (
+      items
+        .slice(Math.min(from, to), Math.max(from, to) + 1)
+        .some((item) => item.locked)
+    ) {
+      setNotice("Mở khóa địa điểm trước khi thay đổi vị trí của đoạn này.");
+      return;
+    }
+    const next = [...items];
+    next.splice(to, 0, next.splice(from, 1)[0]);
+    void mutate({
+      path: `${dayBase}/items/order`,
+      body: { item_ids: next.map(rowId) },
+      method: "PUT",
+    });
+  }
+  function create(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget),
+      start = String(form.get("start_date")),
+      end = String(form.get("end_date")),
+      initialDestination = String(form.get("destination") ?? "");
+    if (end < start) {
+      setError("Ngày kết thúc phải từ ngày bắt đầu trở đi.");
+      return;
+    }
+    void mutate({
+      path: "/me/trips",
+      method: "POST",
+      body: {
+        name: String(form.get("name")).trim(),
+        start_date: start,
+        end_date: end,
+        budget: Number(form.get("budget") || 0),
+        currency: form.get("currency"),
+        timezone: "Asia/Ho_Chi_Minh",
+      },
+      after: async (result) => {
+        setTrips((old) => [
+          result,
+          ...old.filter((row) => rowId(row) !== rowId(result)),
+        ]);
+        setNewTrip(false);
+        await openTrip(result);
+        if (initialDestination) {
+          setSync("saving");
+          const createdId = rowId(result);
+          // Reconcile a previously confirmed destination after a lost response,
+          // rather than creating it again when the user explicitly retries.
+          const existing = await travel.readAll(
+            "trip",
+            `/trips/${createdId}/destinations`,
+          );
+          if (
+            !existing.items.some(
+              (segment) =>
+                String(segment.destination_id) === initialDestination &&
+                segment.start_date === start &&
+                segment.end_date === end,
+            )
+          ) {
+            const latestTrip = await travel.read<Resource>(
+              "trip",
+              `/trips/${createdId}`,
+            );
+            await travel.mutate(
+              "trip",
+              `/trips/${createdId}/destinations`,
+              {
+                destination_id: initialDestination,
+                start_date: start,
+                end_date: end,
+              },
+              "POST",
+              Number(latestTrip.version),
+            );
+          }
+          await refreshTrip(createdId);
+        }
+      },
+    });
+  }
+  function editTrip(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    void mutate({
+      path: base,
+      body: {
+        name: String(form.get("name")).trim(),
+        start_date: form.get("start_date"),
+        end_date: form.get("end_date"),
+        budget: Number(form.get("budget") || 0),
+      },
+      after: async () => {
+        setSettings(false);
+      },
+    });
+  }
+  const status =
+    sync === "editing"
+      ? "Thay đổi đang chờ lưu…"
+      : sync === "saving"
+        ? "Đang lưu…"
+        : sync === "saved"
+          ? "Đã lưu"
+          : sync === "failed"
+            ? "Lưu chưa thành công"
+            : sync === "conflict"
+              ? "Có phiên bản mới"
+              : "Mọi thay đổi được lưu tự động";
   return (
-    <div className="trip-planner-layout" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {/* Create Trip Form Section */}
-      {suggestedPlace && <p role="status">Chọn chuyến đi và ngày để thêm {String(suggestedPlace.name)}.</p>}
-      <section className="travel-panel" aria-label="Tạo chuyến đi mới">
-        <h2 style={{ fontSize: '1.35rem', fontWeight: 700, marginBottom: '14px' }}>
-          Tạo chuyến đi mới
-        </h2>
-        <form onSubmit={handleCreateTrip} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '12px', alignItems: 'flex-end' }}>
-          <div className="form-group" style={{ margin: 0 }}>
-            <label htmlFor="trip-name-input">Tên chuyến đi</label>
-            <input
-              id="trip-name-input"
-              type="text"
-              required
-              placeholder="Ví dụ: Khám phá Miền Trung, Kỳ nghỉ Sa Pa..."
-              value={tripName}
-              onChange={e => setTripName(e.target.value)}
-            />
-          </div>
-
-          <div className="form-group" style={{ margin: 0 }}>
-            <label htmlFor="trip-start-date">Ngày bắt đầu</label>
-            <input
-              id="trip-start-date"
-              type="date"
-              required
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-            />
-          </div>
-
-          <div className="form-group" style={{ margin: 0 }}>
-            <label htmlFor="trip-end-date">Ngày kết thúc</label>
-            <input
-              id="trip-end-date"
-              type="date"
-              required
-              value={endDate}
-              onChange={e => setEndDate(e.target.value)}
-            />
-          </div>
-
-          <div className="form-group" style={{ margin: 0 }}>
-            <label htmlFor="trip-budget-input">Ngân sách (VND)</label>
-            <input
-              id="trip-budget-input"
-              type="number"
-              min="0"
-              step="500000"
-              value={budget}
-              onChange={e => setBudget(e.target.value)}
-            />
-          </div>
-
-          <Button type="submit" disabled={loading || busy} icon="plus">
-            Tạo chuyến đi
-          </Button>
-        </form>
-      </section>
-
-      {/* DETAILED TRIP STUDIO (B16 — MÀN HÌNH TRỌNG TÂM) */}
-      {selectedTrip && (
-        <section className="trip-studio" aria-label="Biên tập lịch trình chi tiết">
-          <div className="trip-studio-header">
+    <div className="tp-planner">
+      <div className="tp-topbar">
+        <div>
+          <span className="tp-eyebrow">HÀNH TRÌNH CỦA BẠN</span>
+          <h2>{trip ? "Không gian lập lịch trình" : "Chuyến đi của bạn"}</h2>
+        </div>
+        <button
+          className="tp-primary"
+          disabled={disabled}
+          onClick={() => {
+            setNewTrip(true);
+            setError("");
+          }}
+        >
+          + Chuyến đi mới
+        </button>
+      </div>
+      {suggestedPlace && (
+        <p className="tp-banner">
+          Chọn chuyến đi và ngày để thêm{" "}
+          <strong>{String(suggestedPlace.name)}</strong>.
+        </p>
+      )}
+      {error && (
+        <div className="tp-alert" role="alert">
+          <strong>
+            {sync === "conflict"
+              ? "Chuyến đi đã được cập nhật ở nơi khác."
+              : "Chưa hoàn tất thao tác."}
+          </strong>
+          <p>{error}</p>
+          {sync === "conflict" ? (
+            <button onClick={() => void reloadConflict()} disabled={loading}>
+              Tải phiên bản mới
+            </button>
+          ) : failed.current ? (
+            <button
+              disabled={loading}
+              onClick={() => {
+                if (failed.current) void mutate(failed.current);
+              }}
+            >
+              Thử lưu lại
+            </button>
+          ) : (
+            <button
+              disabled={loading}
+              onClick={() =>
+                trip ? void openTrip(trip, dayId) : void loadTrips()
+              }
+            >
+              Thử tải lại
+            </button>
+          )}
+          {failed.current && (
+            <button
+              disabled={loading}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    "Bỏ thay đổi chưa lưu và tải lại lịch trình mới nhất?",
+                  )
+                ) {
+                  failed.current = null;
+                  queued.current = [];
+                  setEditorGeneration((value) => value + 1);
+                  if (trip) void openTrip(trip, dayId);
+                  else {
+                    setSync("idle");
+                    setError("");
+                  }
+                }
+              }}
+            >
+              Bỏ thay đổi, tải lại
+            </button>
+          )}
+        </div>
+      )}
+      {notice && (
+        <div className="tp-banner" role="status">
+          {notice}
+          <button aria-label="Đóng thông báo" onClick={() => setNotice("")}>
+            ×
+          </button>
+        </div>
+      )}
+      {newTrip && (
+        <section className="tp-create" aria-label="Tạo chuyến đi mới">
+          <div className="tp-section-heading">
             <div>
-              {/* Exact heading expected by clay-ui-check.mjs */}
-              <h2 style={{ fontSize: '1.6rem', fontWeight: 800, margin: '0 0 6px 0' }}>
-                Lịch trình theo ngày & Chặng di chuyển
-              </h2>
-              <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', margin: 0 }}>
-                Chuyến đi: <strong style={{ color: 'var(--color-primary)' }}>{String(selectedTrip.name)}</strong> · {days.length} ngày tham quan
+              <span className="tp-eyebrow">MỘT KHỞI ĐẦU MỚI</span>
+              <h3>Tạo chuyến đi mới</h3>
+              <p>
+                Đặt tên, chọn khoảng ngày. Bạn sẽ thêm từng ngày tham quan sau.
               </p>
             </div>
-            <button type="button" className="btn-secondary" onClick={() => setSelectedTrip(null)}>
-              Đóng trình biên tập
+            <button
+              onClick={() => setNewTrip(false)}
+              disabled={sync === "saving"}
+              aria-label="Đóng tạo chuyến đi"
+            >
+              ×
             </button>
           </div>
-
-          <form key={`${resourceId(selectedTrip)}-${tripVersion}`} className="form-grid" onSubmit={editTrip}>
-            <label>Tên chuyến đi mới<input name="name" defaultValue={String(selectedTrip.name)} required /></label>
-            <label>Ngày bắt đầu mới<input name="start_date" type="date" defaultValue={String(selectedTrip.start_date)} required /></label>
-            <label>Ngày kết thúc mới<input name="end_date" type="date" defaultValue={String(selectedTrip.end_date)} required /></label>
-            <label>Ngân sách mới<input name="budget" type="number" min="0" defaultValue={Number(selectedTrip.budget ?? 0)} required /></label>
-            <button type="submit" disabled={loading || busy}>Lưu chuyến đi</button>
+          <form onSubmit={create} className="tp-form">
+            <label>
+              Tên chuyến đi
+              <input
+                name="name"
+                required
+                maxLength={200}
+                placeholder="Ví dụ: Một tuần khám phá miền Trung"
+              />
+            </label>
+            <label>
+              Ngày bắt đầu
+              <input
+                name="start_date"
+                type="date"
+                required
+                defaultValue={today()}
+              />
+            </label>
+            <label>
+              Ngày kết thúc
+              <input
+                name="end_date"
+                type="date"
+                required
+                defaultValue={today()}
+              />
+            </label>
+            <label>
+              Ngân sách dự kiến
+              <input
+                name="budget"
+                type="number"
+                min="0"
+                placeholder="Không bắt buộc · mặc định 0"
+              />
+            </label>
+            <label>
+              Điểm đến ban đầu (không bắt buộc)
+              <select
+                name="destination"
+                aria-label="Điểm đến ban đầu (không bắt buộc)"
+                defaultValue=""
+              >
+                <option value="">Chọn sau</option>
+                {destinations.map((destination) => (
+                  <option
+                    key={String(destination.destination_id ?? destination.id)}
+                    value={String(destination.destination_id ?? destination.id)}
+                  >
+                    {String(destination.name)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Tiền tệ
+              <select name="currency" defaultValue="VND">
+                <option value="VND">VND — Việt Nam đồng</option>
+              </select>
+            </label>
+            <button className="tp-primary" disabled={sync === "saving" || busy}>
+              Tạo chuyến đi
+            </button>
           </form>
-          <label>Trạng thái chuyến đi<select value={String(selectedTrip.state)} disabled={loading || busy} onChange={event => void changeTripState(event.target.value)}><option value="DRAFT">Nháp</option><option value="PLANNED">Đã lên kế hoạch</option><option value="COMPLETED">Hoàn tất</option><option value="CANCELLED">Đã hủy</option></select></label>
-          <TripDestinations travel={travel} trip={selectedTrip} busy={loading || busy} onChanged={() => refreshTrip(resourceId(selectedTrip))} />
-          {/* Days bar with form and tabs */}
-          <div className="trip-days-bar">
-            <form className="add-day-form" onSubmit={handleAddDay} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', margin: 0 }}>
-                <span>Ngày tham quan:</span>
+        </section>
+      )}
+      {!!trips.length && (
+        <section className="tp-trip-picker-section" aria-labelledby="created-trips-heading">
+          <h2 id="created-trips-heading">Các chuyến đi đã tạo</h2>
+          <nav className="tp-trip-picker" aria-label="Chọn chuyến đi">
+            <label>
+              Chuyến đi
+              <select
+                aria-label="Chọn chuyến đi"
+                disabled={disabled}
+                value={tripId}
+                onChange={(e) => {
+                  const value = trips.find(
+                    (row) => rowId(row) === e.target.value,
+                  );
+                  if (value) void openTrip(value);
+                }}
+              >
+                <option value="">Chọn chuyến đi của bạn</option>
+                {trips.map((row) => (
+                  <option key={rowId(row)} value={rowId(row)}>
+                    {String(row.name)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {!trip &&
+              trips.slice(0, 4).map((row) => (
+                <button
+                  disabled={disabled}
+                  key={rowId(row)}
+                  onClick={() => void openTrip(row)}
+                >
+                  {String(row.name)} →
+                </button>
+              ))}
+          </nav>
+        </section>
+      )}
+      {loading && (
+        <p role="status" className="tp-loading">
+          Đang tải lịch trình…
+        </p>
+      )}
+      {trip && !newTrip && (
+        <>
+          <header className="tp-overview">
+            <div>
+              <span className="tp-eyebrow">
+                CHUYẾN ĐI · {states[String(trip.state)] ?? String(trip.state)}
+              </span>
+              <h2>{String(trip.name)}</h2>
+              <div className="tp-overview-meta">
+                <span>
+                  {tripDestinations.length
+                    ? tripDestinations
+                        .map((segment) =>
+                          String(
+                            destinations.find(
+                              (destination) =>
+                                String(
+                                  destination.destination_id ?? destination.id,
+                                ) === String(segment.destination_id),
+                            )?.name ?? "Điểm đến đã lưu",
+                          ),
+                        )
+                        .join(" · ")
+                    : "Chưa chọn điểm đến"}
+                </span>
+                <span>
+                  <Icon name="calendar" size={17} />
+                  {dateLabel(trip.start_date)} — {dateLabel(trip.end_date)}
+                </span>
+                <span>
+                  {trip.budget == null
+                    ? "Chưa đặt ngân sách"
+                    : `${Number(trip.budget).toLocaleString("vi-VN")} ${String(trip.currency ?? "VND")}`}
+                </span>
+              </div>
+            </div>
+            <div className="tp-overview-actions">
+              <span
+                data-testid="trip-save-status"
+                className={`tp-sync tp-sync-${sync}`}
+                role="status"
+              >
+                {sync === "saved" ? "✓ " : ""}
+                {status}
+              </span>
+              <button
+                disabled={disabled}
+                onClick={() => setSettings(!settings)}
+                aria-expanded={settings}
+              >
+                <Icon name="settings" size={18} /> Cài đặt chuyến đi
+              </button>
+            </div>
+          </header>
+          {settings && (
+            <section className="tp-settings" aria-label="Cài đặt chuyến đi">
+              <form key={tripId} onSubmit={editTrip} className="tp-form">
+                <label>
+                  Tên chuyến đi
+                  <input
+                    name="name"
+                    defaultValue={String(trip.name)}
+                    required
+                  />
+                </label>
+                <label>
+                  Ngày bắt đầu
+                  <input
+                    type="date"
+                    name="start_date"
+                    defaultValue={String(trip.start_date)}
+                    required
+                  />
+                </label>
+                <label>
+                  Ngày kết thúc
+                  <input
+                    type="date"
+                    name="end_date"
+                    defaultValue={String(trip.end_date)}
+                    required
+                  />
+                </label>
+                <label>
+                  Ngân sách
+                  <input
+                    name="budget"
+                    type="number"
+                    min="0"
+                    defaultValue={Number(trip.budget ?? 0)}
+                  />
+                </label>
+                <button className="tp-primary" disabled={disabled}>
+                  Áp dụng thay đổi
+                </button>
+              </form>
+              <label>
+                Trạng thái chuyến đi
+                <select
+                  value={String(trip.state)}
+                  disabled={disabled}
+                  onChange={(e) =>
+                    void mutate({
+                      path: `${base}/state`,
+                      method: "PUT",
+                      body: { state: e.target.value },
+                    })
+                  }
+                >
+                  {Object.entries(states).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <details>
+                <summary>Điểm đến & di chuyển liên tỉnh</summary>
+                <p className="tp-hint">
+                  Các điểm đến và chặng liên tỉnh được quản lý riêng với tuyến
+                  tham quan trong ngày.
+                </p>
+                <TripDestinations
+                  travel={travel}
+                  trip={trip}
+                  busy={disabled}
+                  onChanged={() => refreshTrip(tripId)}
+                />
+                <IntercityTransfers
+                  travel={travel}
+                  trip={trip}
+                  disabled={disabled}
+                  mutate={mutate}
+                />
+              </details>
+              <button
+                className="tp-danger"
+                disabled={disabled}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      `Xóa toàn bộ chuyến đi “${String(trip.name)}”? Các ngày và lịch trình sẽ bị xóa.`,
+                    )
+                  )
+                    void mutate({
+                      path: base,
+                      method: "DELETE",
+                      after: async () => {
+                        tripRef.current = null;
+                        setTrip(null);
+                        setDays([]);
+                        setItems([]);
+                        remember("");
+                        await loadTrips();
+                      },
+                    });
+                }}
+              >
+                Xóa chuyến đi
+              </button>
+            </section>
+          )}
+          <section className="tp-days" aria-label="Ngày tham quan">
+            <div role="tablist" aria-label="Danh sách ngày trong lịch trình">
+              {days.map((value, index) => (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={rowId(value) === dayId}
+                  key={rowId(value)}
+                  disabled={disabled}
+                  onClick={() => void chooseDay(value)}
+                >
+                  <small>NGÀY {index + 1}</small>
+                  <strong>{dateLabel(value.date)}</strong>
+                </button>
+              ))}
+            </div>
+            <button
+              disabled={disabled}
+              onClick={() => setAddingDay(!addingDay)}
+              aria-expanded={addingDay}
+            >
+              + Thêm ngày
+            </button>
+          </section>
+          {(addingDay || !days.length) && (
+            <form
+              className="tp-add-day"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const date = String(new FormData(e.currentTarget).get("date"));
+                void mutate({
+                  path: `${base}/days`,
+                  method: "POST",
+                  body: { date },
+                  after: async (result) => {
+                    setAddingDay(false);
+                    await loadDay(tripId, result);
+                  },
+                });
+              }}
+            >
+              <div>
+                <strong>
+                  {days.length
+                    ? "Thêm một ngày tham quan"
+                    : "Bắt đầu bằng một ngày tham quan"}
+                </strong>
+                <p>Chỉ những ngày bạn chọn mới có trong lịch trình.</p>
+              </div>
+              <label>
+                Ngày tham quan
                 <input
                   name="date"
                   type="date"
-                  min={String(selectedTrip.start_date)}
-                  max={String(selectedTrip.end_date)}
+                  min={String(trip.start_date)}
+                  max={String(trip.end_date)}
+                  defaultValue={String(trip.start_date)}
                   required
-                  defaultValue={String(selectedTrip.start_date)}
-                  style={{ width: 'auto', padding: '6px 10px' }}
                 />
               </label>
-              <button type="submit" disabled={loading || busy} className="btn-secondary">
-                <Icon name="plus" size={15} /> Thêm ngày
+              <button className="tp-primary" disabled={disabled}>
+                Thêm ngày
               </button>
             </form>
-
-            {/* Exact day tabs with role="tab" and date label */}
-            <div className="days-chip-list" role="tablist" aria-label="Danh sách ngày trong lịch trình">
-              {days.map(d => {
-                const isSelected = selectedDay && resourceId(selectedDay) === resourceId(d);
-                return (
-                  <button
-                    key={resourceId(d)}
-                    type="button"
-                    role="tab"
-                    aria-selected={Boolean(isSelected)}
-                    aria-pressed={Boolean(isSelected)}
-                    className={`day-chip ${isSelected ? 'is-active' : ''}`}
-                    onClick={() => void selectDay(resourceId(selectedTrip), d)}
-                  >
-                    <Icon name="calendar" size={15} />
-                    <span>{String(d.date)}</span>
-                  </button>
-                );
-              })}
-            </div>
+          )}
+          <div className="tp-mobile-tabs" aria-label="Khu vực lập lịch trình">
+            {[
+              ["timeline", "Lịch trình"],
+              ["explore", "Thêm địa điểm"],
+              ["map", "Bản đồ"],
+            ].map(([value, label]) => (
+              <button
+                aria-pressed={mobileView === value}
+                key={value}
+                onClick={() => setMobileView(value)}
+              >
+                {label}
+              </button>
+            ))}
           </div>
-
-          {selectedDay && <form key={resourceId(selectedDay)} onSubmit={editDay} className="form-grid">
-            <label>Đổi ngày tham quan<input name="date" type="date" min={String(selectedTrip.start_date)} max={String(selectedTrip.end_date)} defaultValue={String(selectedDay.date)} required /></label>
-            <button type="submit" disabled={loading || busy}>Lưu ngày tham quan</button>
-            <button type="button" disabled={loading || busy} onClick={() => void deleteDay()}>Xóa ngày tham quan</button>
-            <button type="button" disabled={loading || busy || !dayItems.some(item => !item.locked) || selectedTrip.state === 'COMPLETED'} onClick={() => void refreshSnapshots()}>Cập nhật thông tin địa điểm</button>
-          </form>}
-
-          {/* 3-Column Desktop Grid */}
-          <div className="trip-editor-3col">
-            {/* Column 1: Tìm địa điểm (Place Picker) */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', background: 'var(--color-surface-subtle)', padding: '16px', borderRadius: 'var(--radius-card)', border: '1px solid var(--color-border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h3 style={{ fontSize: '1.1rem', margin: 0 }}>Tìm địa điểm</h3>
-                <Badge variant="primary">{places.length} điểm</Badge>
+          <div className={`tp-workspace tp-view-${mobileView}`}>
+            <aside className="tp-explore tp-panel">
+              <div className="tp-section-heading">
+                <div>
+                  <span className="tp-eyebrow">KHÁM PHÁ</span>
+                  <h3>Đi đâu hôm nay?</h3>
+                </div>
+                <Icon name="compass" size={23} />
               </div>
-              <input
-                type="search"
-                placeholder="Lọc địa điểm..."
-                value={placeQuery}
-                onChange={e => setPlaceQuery(e.target.value)}
-                style={{ padding: '8px 12px', fontSize: '0.875rem' }}
-              />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '420px', overflowY: 'auto' }}>
-                {places
-                  .filter(p => !placeQuery.trim() || String(p.name).toLowerCase().includes(placeQuery.toLowerCase()))
-                  .map(p => (
-                    <div
-                      key={resourceId(p)}
-                      style={{
-                        padding: '12px',
-                        background: '#ffffff',
-                        border: '1px solid var(--color-border-subtle)',
-                        borderRadius: 'var(--radius-md)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '6px'
-                      }}
-                    >
-                      <strong style={{ fontSize: '0.9375rem' }}>{String(p.name)}</strong>
-                      <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>{String(p.address ?? '')}</span>
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+              <label>
+                Tìm địa điểm
+                <input
+                  type="search"
+                  value={query}
+                  placeholder="Tên địa điểm, thành phố…"
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </label>
+              <div className="tp-filters">
+                <label>
+                  Danh mục
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                  >
+                    <option value="">Tất cả danh mục</option>
+                    {categories.map((row) => (
+                      <option
+                        key={String(row.category_id ?? row.id)}
+                        value={String(row.category_id ?? row.id)}
+                      >
+                        {String(row.name)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Điểm đến
+                  <select
+                    value={destination}
+                    onChange={(e) => setDestination(e.target.value)}
+                  >
+                    <option value="">Tất cả điểm đến</option>
+                    {destinations.map((row) => (
+                      <option
+                        key={String(row.destination_id ?? row.id)}
+                        value={String(row.destination_id ?? row.id)}
+                      >
+                        {String(row.name)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              {placeError && (
+                <p role="alert">
+                  {placeError}
+                  <button onClick={() => void findPlaces()}>
+                    Thử tải địa điểm lại
+                  </button>
+                </p>
+              )}
+              {finding && <p role="status">Đang tìm địa điểm…</p>}
+              <div className="tp-place-list">
+                {places.map((place) => {
+                  const picture = imageUrl(place),
+                    added = items.some(
+                      (item) => String(item.place_id) === rowId(place),
+                    );
+                  return (
+                    <article className="tp-place" key={rowId(place)}>
+                      {picture && <img src={picture} alt="" loading="lazy" />}
+                      <div>
+                        <h4>{String(place.name)}</h4>
+                        <p>
+                          {String(
+                            place.address ?? place.destination_name ?? "",
+                          )}
+                        </p>
                         <button
-                          type="button"
-                          className="btn-outline"
-                          style={{ padding: '4px 12px', fontSize: '0.8125rem' }}
-                          disabled={loading || busy || !selectedDay}
-                          onClick={() => void handleAddPlaceToDay(p)}
+                          disabled={disabled || !day || added}
+                          onClick={() =>
+                            void mutate({
+                              path: `${dayBase}/items`,
+                              method: "POST",
+                              body: {
+                                place_id: rowId(place),
+                                locked: false,
+                                recommendation_request_id: null,
+                                duration_minutes: 120,
+                                note: `Ghé thăm ${String(place.name)}`,
+                              },
+                              after: async () => {
+                                setNotice(
+                                  `Đã thêm ${String(place.name)}. Tuyến di chuyển được cập nhật tự động.`,
+                                );
+                              },
+                            })
+                          }
                         >
-                          + Thêm vào ngày
+                          {added ? "✓ Đã có trong ngày" : "+ Thêm vào ngày"}
                         </button>
                       </div>
-                    </div>
-                  ))}
+                    </article>
+                  );
+                })}
               </div>
-            </div>
-
-            {/* Column 2: Timeline Lịch trình */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', padding: '16px', background: '#ffffff', borderRadius: 'var(--radius-card)', border: '1px solid var(--color-border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h3 style={{ fontSize: '1.1rem', margin: 0 }}>
-                  Lịch trình ngày: {selectedDay ? String(selectedDay.date) : 'Chưa chọn'}
-                </h3>
-                <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>
-                  {dayItems.length} chặng dừng
-                </span>
+              {!finding && !places.length && !placeError && (
+                <p className="tp-empty">
+                  Chưa tìm thấy địa điểm. Thử tên khác hoặc bỏ bộ lọc.
+                </p>
+              )}
+              {cursor && (
+                <button
+                  disabled={finding}
+                  onClick={() => void findPlaces(cursor)}
+                >
+                  Xem thêm địa điểm
+                </button>
+              )}
+              {!day && (
+                <p className="tp-hint">
+                  Thêm hoặc chọn ngày trước khi thêm địa điểm.
+                </p>
+              )}
+            </aside>
+            <section
+              className="tp-timeline tp-panel"
+              aria-label="Lịch trình theo ngày"
+            >
+              <div className="tp-section-heading">
+                <div>
+                  <span className="tp-eyebrow">LỊCH TRÌNH CỦA BẠN</span>
+                  <h3>
+                    {day
+                      ? `Ngày ${dateLabel(day.date)}`
+                      : "Chọn một ngày để bắt đầu"}
+                  </h3>
+                  <p>
+                    {items.length} điểm dừng ·{" "}
+                    {items.reduce(
+                      (total, item) =>
+                        total + Number(item.duration_minutes ?? 0),
+                      0,
+                    )}{" "}
+                    phút tham quan
+                  </p>
+                </div>
+                {day && (
+                  <details className="tp-day-menu">
+                    <summary aria-label="Tùy chọn ngày">•••</summary>
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        void mutate({
+                          path: dayBase,
+                          body: {
+                            date: new FormData(e.currentTarget).get("date"),
+                          },
+                        });
+                      }}
+                    >
+                      <label>
+                        Đổi ngày tham quan
+                        <input
+                          name="date"
+                          type="date"
+                          required
+                          min={String(trip.start_date)}
+                          max={String(trip.end_date)}
+                          defaultValue={String(day.date)}
+                        />
+                      </label>
+                      <button disabled={disabled}>Áp dụng ngày</button>
+                    </form>
+                    <button
+                      disabled={disabled}
+                      className="tp-danger"
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            items.length
+                              ? `Xóa ngày này và ${items.length} địa điểm đã thêm?`
+                              : "Xóa ngày tham quan này?",
+                          )
+                        )
+                          void mutate({ path: dayBase, method: "DELETE" });
+                      }}
+                    >
+                      Xóa ngày tham quan
+                    </button>
+                  </details>
+                )}
               </div>
-
-              {dayItems.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {dayItems.map((item, idx) => (
-                    <div key={resourceId(item) || idx} className="timeline-item">
-                      <div className="timeline-time-badge">
-                        {idx + 1}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <h4 style={{ fontSize: '0.9375rem', margin: 0 }}>
-                          {String(item.place_name ?? (item.snapshot as Resource | undefined)?.name ?? item.place_id)}
-                        </h4>
-                        <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', margin: '4px 0 0 0' }}>
-                          Thời lượng: {Number(item.duration_minutes ?? 0)} phút · {String(item.note ?? '')}
-                        </p>
-                        <form key={`${resourceId(item)}-${tripVersion}`} onSubmit={event => void editItem(event, item)}>
-                          <label>Ghi chú địa điểm<input name="note" defaultValue={String(item.note ?? '')} required disabled={Boolean(item.locked)} /></label>
-                          <label>Thời lượng (phút)<input name="duration" type="number" min="0" defaultValue={Number(item.duration_minutes)} required disabled={Boolean(item.locked)} /></label>
-                          <button type="submit" disabled={loading || busy || Boolean(item.locked)}>Lưu địa điểm</button>
-                        </form>
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                          <button type="button" disabled={loading || busy} onClick={() => void changeItem(item)}>{item.locked ? 'Mở khóa địa điểm' : 'Khóa địa điểm'}</button>
-                          <button type="button" disabled={loading || busy} onClick={() => void openItem(item)}>Tải chi tiết địa điểm</button>
-                          <button type="button" disabled={loading || busy || Boolean(item.locked)} onClick={() => void changeItem(item, true)}>Xóa địa điểm</button>
-                          <button type="button" disabled={loading || busy || idx === 0 || Boolean(item.locked) || Boolean(dayItems[idx - 1]?.locked)} onClick={() => void moveItem(idx, -1)}>Lên</button>
-                          <button type="button" disabled={loading || busy || idx === dayItems.length - 1 || Boolean(item.locked) || Boolean(dayItems[idx + 1]?.locked)} onClick={() => void moveItem(idx, 1)}>Xuống</button>
+              {!items.length && (
+                <div className="tp-timeline-empty">
+                  <Icon name="route" size={38} />
+                  <h4>
+                    {day
+                      ? "Một ngày, những điểm đến mới."
+                      : "Bạn muốn bắt đầu từ ngày nào?"}
+                  </h4>
+                  <p>
+                    {day
+                      ? "Tìm một địa điểm và thêm vào ngày. Chúng tôi sẽ kết nối các điểm dừng cho bạn."
+                      : "Thêm ngày trong khoảng thời gian của chuyến đi để bắt đầu lên lịch trình."}
+                  </p>
+                  {day && (
+                    <button
+                      className="tp-primary"
+                      onClick={() => setMobileView("explore")}
+                    >
+                      + Khám phá địa điểm
+                    </button>
+                  )}
+                </div>
+              )}
+              {items.map((item, index) => {
+                const name = placeName(item),
+                  picture = imageUrl(snapshot(item)),
+                  leg = legs.find(
+                    (row) =>
+                      String(row.from_item_id) === rowId(item) &&
+                      String(row.to_item_id) === rowId(items[index + 1] ?? {}),
+                  );
+                return (
+                  <div key={rowId(item)}>
+                    <article
+                      data-testid="trip-timeline-item"
+                      data-item-id={rowId(item)}
+                      className={`tp-item ${selectedItem === rowId(item) ? "is-selected" : ""}`}
+                      draggable={!disabled && !item.locked}
+                      onDragStart={(e) => {
+                        if (
+                          (e.target as HTMLElement).closest(
+                            "input,textarea,button,select",
+                          )
+                        ) {
+                          e.preventDefault();
+                          return;
+                        }
+                        setDragged(index);
+                      }}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        reorder(dragged, index);
+                        setDragged(-1);
+                      }}
+                    >
+                      <button
+                        className="tp-number"
+                        aria-label={`Xem ${name} trên bản đồ`}
+                        onClick={() => setSelectedItem(rowId(item))}
+                      >
+                        {index + 1}
+                      </button>
+                      <div className="tp-item-content">
+                        <div className="tp-item-title">
+                          {picture && (
+                            <img src={picture} alt="" loading="lazy" />
+                          )}
+                          <div>
+                            <button
+                              className="tp-place-name"
+                              onClick={() => setSelectedItem(rowId(item))}
+                            >
+                              {name}
+                            </button>
+                            <p>{String(snapshot(item).address ?? "")}</p>
+                            {item.locked ? (
+                              <span className="tp-locked">
+                                Đã khóa · mở khóa để chỉnh sửa
+                              </span>
+                            ) : null}
+                            {snapshot(item).status === "ARCHIVED" && (
+                              <span className="tp-warning">
+                                Địa điểm không còn khả dụng. Thông tin đã lưu
+                                vẫn được giữ.
+                              </span>
+                            )}
+                          </div>
+                          <details className="tp-item-menu">
+                            <summary aria-label={`Thao tác ${name}`}>
+                              •••
+                            </summary>
+                            <button
+                              disabled={disabled}
+                              onClick={() =>
+                                itemChange(item, { locked: !item.locked })
+                              }
+                            >
+                              {item.locked
+                                ? "Mở khóa địa điểm"
+                                : "Khóa địa điểm"}
+                            </button>
+                            <button
+                              disabled={
+                                disabled ||
+                                Boolean(item.locked) ||
+                                trip.state === "COMPLETED"
+                              }
+                              onClick={() =>
+                                void mutate({
+                                  path: `${base}/snapshots/refresh`,
+                                  method: "POST",
+                                  body: { item_ids: [rowId(item)] },
+                                })
+                              }
+                            >
+                              Cập nhật thông tin địa điểm
+                            </button>
+                            <button
+                              disabled={disabled || Boolean(item.locked)}
+                              className="tp-danger"
+                              onClick={() => {
+                                if (
+                                  window.confirm(
+                                    `Bỏ ${name} khỏi ngày tham quan?`,
+                                  )
+                                )
+                                  void mutate({
+                                    path: `${dayBase}/items/${rowId(item)}`,
+                                    method: "DELETE",
+                                  });
+                              }}
+                            >
+                              Bỏ khỏi lịch trình
+                            </button>
+                          </details>
+                        </div>
+                        <ItemEditor
+                          key={`${rowId(item)}-${editorGeneration}`}
+                          item={item}
+                          disabled={
+                            busy ||
+                            loading ||
+                            ["saving", "failed", "conflict"].includes(sync)
+                          }
+                          onDirty={() => {
+                            dirtyEditors.current.add(rowId(item));
+                            setSync("editing");
+                          }}
+                          onSave={(body) => itemChange(item, body)}
+                        />
+                        <div className="tp-reorder">
+                          <span>
+                            {item.locked
+                              ? "Giữ nguyên vị trí"
+                              : "Kéo để sắp xếp hoặc"}
+                          </span>
+                          <button
+                            aria-label={`Đưa ${name} lên`}
+                            disabled={
+                              disabled ||
+                              index === 0 ||
+                              Boolean(item.locked) ||
+                              Boolean(items[index - 1]?.locked)
+                            }
+                            onClick={() => reorder(index, index - 1)}
+                          >
+                            ↑ Lên
+                          </button>
+                          <button
+                            aria-label={`Đưa ${name} xuống`}
+                            disabled={
+                              disabled ||
+                              index === items.length - 1 ||
+                              Boolean(item.locked) ||
+                              Boolean(items[index + 1]?.locked)
+                            }
+                            onClick={() => reorder(index, index + 1)}
+                          >
+                            ↓ Xuống
+                          </button>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="empty-subtle" style={{ margin: 'auto' }}>
-                  <Icon name="clock" size={32} />
-                  <p>Ngày này chưa có lịch trình. Chọn địa điểm ở cột bên trái để thêm!</p>
-                </div>
-              )}
-            </div>
-
-            {/* Column 3: Bản đồ lộ trình & chặng di chuyển */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', background: 'var(--color-surface-subtle)', padding: '16px', borderRadius: 'var(--radius-card)', border: '1px solid var(--color-border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h3 style={{ fontSize: '1.1rem', margin: 0 }}>Bản đồ & Chặng di chuyển</h3>
-                <Icon name="map" size={18} />
-              </div>
-              <form key={editingTransfer ? resourceId(editingTransfer) : 'new'} onSubmit={event => void route(event, (event.nativeEvent as SubmitEvent).submitter?.getAttribute('name') === 'save')}>
-                <label>Điểm xuất phát<select name="from" defaultValue={String(editingTransfer?.from_item_id ?? '')} required><option value="">Chọn điểm</option>{dayItems.map(item => <option key={resourceId(item)} value={resourceId(item)}>{String((item.snapshot as Resource | undefined)?.name ?? item.place_id)}</option>)}</select></label>
-                <label>Điểm đến<select name="to" defaultValue={String(editingTransfer?.to_item_id ?? '')} required><option value="">Chọn điểm</option>{dayItems.map(item => <option key={resourceId(item)} value={resourceId(item)}>{String((item.snapshot as Resource | undefined)?.name ?? item.place_id)}</option>)}</select></label>
-                <label>Phương tiện<select name="mode" defaultValue={String(editingTransfer?.mode ?? 'DRIVE')}><option value="DRIVE">Ô tô</option><option value="WALK">Đi bộ</option><option value="BICYCLE">Xe đạp</option></select></label>
-                <button type="submit" disabled={loading || busy || dayItems.length < 2}>Ước tính tuyến</button>
-                <button type="submit" name="save" disabled={loading || busy || dayItems.length < 2}>Lưu chặng di chuyển</button>
-                {editingTransfer && <button type="button" onClick={() => setEditingTransfer(null)}>Hủy sửa chặng di chuyển</button>}
-              </form>
-              {routeEstimate && <p role="status">{Number(routeEstimate.distance_m).toLocaleString('vi-VN')} m · {routeEstimate.duration_seconds == null ? 'Chưa có thời gian di chuyển' : `${Number(routeEstimate.duration_seconds)} giây`} {routeEstimate.fallback ? '· Fallback: khoảng cách đường chim bay' : ''}</p>}
-              {transfers.map(transfer => <article key={resourceId(transfer)}><p>{String(transfer.mode)} · {Number(transfer.distance_m).toLocaleString('vi-VN')} m {transfer.fallback ? '· Fallback đường chim bay' : ''}</p><button type="button" disabled={loading || busy} onClick={() => void openTransfer(transfer)}>Sửa chặng di chuyển</button><button type="button" disabled={loading || busy} onClick={() => void deleteTransfer(transfer)}>Xóa chặng di chuyển</button></article>)}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Trips Cards Grid */}
-      <div className="travel-grid">
-        {trips.map(trip => {
-          const tId = resourceId(trip);
-          const tName = String(trip.name ?? trip.title ?? 'Chuyến đi');
-          const tStart = String(trip.start_date ?? '');
-          const tEnd = String(trip.end_date ?? '');
-          return (
-            <article key={tId} className="travel-card trip-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                <span style={{ width: 40, height: 40, borderRadius: 'var(--radius-button)', background: 'var(--color-primary-light)', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon name="route" size={22} />
-                </span>
-                <Badge variant="primary">{String(trip.state ?? 'Kế hoạch')}</Badge>
-              </div>
-
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '6px 0' }}>
-                {tName}
-              </h2>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '14px' }}>
-                <Icon name="calendar" size={16} />
-                <span>{tStart} — {tEnd}</span>
-              </div>
-
-              {trip.budget != null && (
-                <div style={{ fontSize: '0.875rem', color: 'var(--color-primary)', fontWeight: 600, marginBottom: '16px' }}>
-                  Ngân sách: {Number(trip.budget).toLocaleString('vi-VN')} VND
-                </div>
-              )}
-
-              <div className="card-actions">
+                    </article>
+                    {index < items.length - 1 && (
+                      <div
+                        data-testid="travel-leg"
+                        data-leg-id={leg?.leg_id}
+                        className="tp-leg"
+                      >
+                        <span className="tp-leg-line">↓</span>
+                        <div>
+                          <label>
+                            Di chuyển đến điểm tiếp theo
+                            <select
+                              aria-label={`Phương tiện từ ${name}`}
+                              value={String(leg?.mode ?? "DRIVE")}
+                              disabled={disabled || !leg}
+                              onChange={(e) =>
+                                void mutate({
+                                  path: `${dayBase}/travel-legs/${String(leg?.leg_id)}`,
+                                  body: { mode: e.target.value },
+                                })
+                              }
+                            >
+                              {Object.entries(modes).map(([value, label]) => (
+                                <option key={value} value={value}>
+                                  {label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <p role="status">
+                            {!leg || leg.status === "PENDING"
+                              ? "Đang tính tuyến… Lịch trình vẫn được lưu."
+                              : leg.status === "SELF_MANAGED"
+                                ? "Bạn tự sắp xếp đoạn này · không tính tuyến"
+                                : leg.status === "FAILED"
+                                  ? "Chưa tính được tuyến. Bạn vẫn có thể tiếp tục lập lịch trình."
+                                  : `${leg.distance_m == null ? "Chưa có khoảng cách" : `${(Number(leg.distance_m) / 1000).toLocaleString("vi-VN", { maximumFractionDigits: 1 })} km`}${leg.fallback ? " đường chim bay" : ""} · ${leg.duration_seconds == null ? "Chưa có thời gian di chuyển" : `khoảng ${Math.ceil(Number(leg.duration_seconds) / 60)} phút`}`}
+                          </p>
+                          {(leg?.status === "FAILED" ||
+                            leg?.status === "FALLBACK") && (
+                            <button
+                              disabled={disabled}
+                              onClick={() =>
+                                void mutate({
+                                  path: `${dayBase}/travel-legs/${String(leg.leg_id)}`,
+                                  body: { mode: leg.mode },
+                                })
+                              }
+                            >
+                              Thử tính tuyến lại
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {!!items.length && (
                 <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => void openTripEditor(trip)}
+                  className="tp-add-place"
+                  onClick={() => {
+                    setMobileView("explore");
+                    document
+                      .querySelector<HTMLInputElement>(
+                        ".tp-explore input[type=search]",
+                      )
+                      ?.focus();
+                  }}
                 >
-                  Xem chi tiết
+                  + Thêm địa điểm vào ngày
                 </button>
-                <button type="button" disabled={loading || busy} onClick={() => void deleteTrip(trip)}>Xóa chuyến đi</button>
+              )}
+            </section>
+            <aside className="tp-map tp-panel">
+              <div className="tp-section-heading">
+                <div>
+                  <span className="tp-eyebrow">THEO DẤU HÀNH TRÌNH</span>
+                  <h3>Bản đồ trong ngày</h3>
+                </div>
+                <Icon name="map" size={23} />
               </div>
-            </article>
-          );
-        })}
-      </div>
-
-      {!loading && trips.length === 0 && (
-        <EmptyState
-          title="Bạn chưa có chuyến đi nào"
-          description="Hãy tạo kế hoạch hành trình đầu tiên bằng form ở trên để bắt đầu sắp xếp các điểm đến yêu thích!"
-          icon="route"
-        />
+              <TripMap
+                items={items}
+                legs={legs}
+                selected={selectedItem}
+                onSelect={setSelectedItem}
+              />
+              <div className="tp-map-key">
+                <span className="tp-key-dot" />
+                Điểm dừng theo thứ tự của bạn
+              </div>
+              <p className="tp-hint">
+                Thời gian di chuyển là ước tính, chưa bao gồm thời gian tham
+                quan.
+              </p>
+            </aside>
+          </div>
+        </>
+      )}
+      {!trip && !loading && !newTrip && (
+        <div className="tp-timeline-empty">
+          <Icon name="route" size={44} />
+          <h3>
+            {trips.length
+              ? "Mở một chuyến đi để tiếp tục."
+              : "Chưa có chuyến đi nào."}
+          </h3>
+          <p>Chọn chuyến đi ở trên hoặc tạo một hành trình mới.</p>
+          <button className="tp-primary" onClick={() => setNewTrip(true)}>
+            + Chuyến đi mới
+          </button>
+        </div>
       )}
     </div>
+  );
+}
+function IntercityTransfers({
+  travel,
+  trip,
+  disabled,
+  mutate,
+}: {
+  travel: TravelClient;
+  trip: Resource;
+  disabled: boolean;
+  mutate: (operation: Operation) => Promise<void>;
+}) {
+  const [items, setItems] = useState<Resource[]>([]),
+    [transfers, setTransfers] = useState<Resource[]>([]),
+    [error, setError] = useState(""),
+    [editing, setEditing] = useState<Resource | null>(null);
+  const base = `/trips/${rowId(trip)}/transfers`;
+  useEffect(() => {
+    let active = true;
+    void Promise.all([
+      travel.readAll("trip", base),
+      travel
+        .readAll("trip", `/trips/${rowId(trip)}/days`)
+        .then(async (data) => {
+          const pages = await Promise.all(
+            data.items.map((day) =>
+              travel.readAll(
+                "trip",
+                `/trips/${rowId(trip)}/days/${rowId(day)}/items`,
+              ),
+            ),
+          );
+          return pages.flatMap((page) => page.items);
+        }),
+    ])
+      .then(([rows, endpoints]) => {
+        if (active) {
+          setTransfers(rows.items);
+          setItems(endpoints);
+          setError("");
+        }
+      })
+      .catch((cause) => {
+        if (active) setError(errorMessage(cause));
+      });
+    return () => {
+      active = false;
+    };
+  }, [travel, trip.version]);
+  return (
+    <section className="tp-intercity">
+      <h4>Chặng di chuyển riêng</h4>
+      <p className="tp-hint">
+        Giữ các chặng đã tạo trước đây hoặc thêm chặng tùy chọn. Các tuyến liền
+        nhau trong ngày được quản lý tự động ở lịch trình. Phương tiện chặng
+        riêng theo khả năng API hiện có.
+      </p>
+      {error && <p role="alert">{error}</p>}
+      <form
+        key={String(editing?.transfer_id ?? "new")}
+        className="tp-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const form = new FormData(e.currentTarget);
+          if (form.get("from") === form.get("to")) {
+            setError("Chọn hai điểm khác nhau.");
+            return;
+          }
+          void mutate({
+            path: `${base}${editing ? `/${String(editing.transfer_id)}` : ""}`,
+            method: editing ? "PATCH" : "POST",
+            body: {
+              from_item_id: form.get("from"),
+              to_item_id: form.get("to"),
+              mode: form.get("mode"),
+            },
+            after: async () => {
+              setEditing(null);
+            },
+          });
+        }}
+      >
+        <label>
+          Điểm đi
+          <select
+            name="from"
+            required
+            defaultValue={String(editing?.from_item_id ?? "")}
+          >
+            <option value="">Chọn điểm</option>
+            {items.map((item) => (
+              <option key={rowId(item)} value={rowId(item)}>
+                {placeName(item)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Điểm đến
+          <select
+            name="to"
+            required
+            defaultValue={String(editing?.to_item_id ?? "")}
+          >
+            <option value="">Chọn điểm</option>
+            {items.map((item) => (
+              <option key={rowId(item)} value={rowId(item)}>
+                {placeName(item)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Phương tiện
+          <select name="mode" defaultValue={String(editing?.mode ?? "DRIVE")}>
+            <option value="DRIVE">Ô tô</option>
+            <option value="WALK">Đi bộ</option>
+            <option value="BICYCLE">Xe đạp</option>
+          </select>
+        </label>
+        <button disabled={disabled || items.length < 2}>
+          {editing ? "Cập nhật chặng riêng" : "Thêm chặng riêng"}
+        </button>
+        {editing && (
+          <button type="button" onClick={() => setEditing(null)}>
+            Hủy chỉnh sửa
+          </button>
+        )}
+      </form>
+      {transfers.map((row) => (
+        <article key={String(row.transfer_id)}>
+          <p>
+            {placeName(
+              items.find((item) => rowId(item) === row.from_item_id) ?? {},
+            )}{" "}
+            →{" "}
+            {placeName(
+              items.find((item) => rowId(item) === row.to_item_id) ?? {},
+            )}{" "}
+            · {modes[String(row.mode)] ?? String(row.mode)} ·{" "}
+            {row.distance_m == null
+              ? "Chưa có khoảng cách"
+              : `${Number(row.distance_m).toLocaleString("vi-VN")} m`}
+            {row.fallback ? " đường chim bay" : ""}
+          </p>
+          <button disabled={disabled} onClick={() => setEditing(row)}>
+            Sửa chặng riêng
+          </button>
+          <button
+            disabled={disabled}
+            onClick={() => {
+              if (window.confirm("Xóa chặng di chuyển riêng này?"))
+                void mutate({
+                  path: `${base}/${String(row.transfer_id)}`,
+                  method: "DELETE",
+                });
+            }}
+          >
+            Xóa chặng riêng
+          </button>
+        </article>
+      ))}
+    </section>
   );
 }

@@ -1,179 +1,91 @@
-import { useEffect, useState } from 'react';
-import { Icon, ErrorState } from '../../shared/ui';
-import type { TravelClient, Resource, Page } from '../../shared/api';
-import '../trips/integration-layout.css';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { ErrorState, Icon } from '../../shared/ui';
+import type { Resource, TravelClient } from '../../shared/api';
+import { InteractiveMap, validCoordinates, type MapPoint } from './InteractiveMap';
+import { searchAddress, type GeocodedPlace } from './geocoding';
+import './map-panel.css';
 
-export interface MapPanelProps {
-  travel: TravelClient;
-  busy?: boolean;
-}
-
-const VIETNAM_CENTER = { lat: 15.88, lon: 108.33 }; // Central Vietnam (Hội An area)
+export interface MapPanelProps { travel: TravelClient; busy?: boolean }
+const idOf = (place: Resource) => String(place.place_id ?? place.id);
+const addressOf = (place: Resource) => !place.address || place.address === place.name ? 'Địa chỉ chi tiết chưa được cập nhật' : String(place.address);
 
 export function MapPanel({ travel, busy = false }: MapPanelProps) {
   const [places, setPlaces] = useState<Resource[]>([]);
-  const [selected, setSelected] = useState<Resource | null>(null);
+  const [selectedId, setSelectedId] = useState('');
   const [query, setQuery] = useState('');
+  const [appliedQuery, setAppliedQuery] = useState('');
+  const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  async function loadPlaces(search = '') {
-    setLoading(true);
-    setError('');
+  const [candidates, setCandidates] = useState<GeocodedPlace[]>([]);
+  const [external, setExternal] = useState<GeocodedPlace | null>(null);
+  const [lookupBusy, setLookupBusy] = useState(false);
+  const [lookupMessage, setLookupMessage] = useState('');
+  const generation = useRef(0), lookupGeneration = useRef(0);
+  async function loadPlaces(search = '', nextCursor?: string) {
+    const request = ++generation.current;
+    setLoading(true); setError('');
+    if (!nextCursor) { lookupGeneration.current++; setLookupBusy(false); setExternal(null); setCandidates([]); setLookupMessage(''); }
     try {
-      const data = await travel.places(search);
-      setPlaces(data.items ?? []);
-      setSelected(data.items?.[0] ?? null);
-    } catch (error) {
-      setError((error as Error).message);
-      setPlaces([]);
-      setSelected(null);
-    } finally {
-      setLoading(false);
-    }
+      const data = await travel.places(search, { cursor: nextCursor, limit: 20 });
+      if (request !== generation.current) return;
+      setPlaces(previous => nextCursor ? [...previous, ...data.items.filter(row => !previous.some(p => idOf(p) === idOf(row)))] : data.items);
+      if (!nextCursor) setSelectedId(data.items[0] ? idOf(data.items[0]) : '');
+      setCursor(data.next_cursor ?? null); setAppliedQuery(search);
+    } catch (error) { if (request === generation.current) setError((error as Error).message); }
+    finally { if (request === generation.current) setLoading(false); }
   }
-
-  useEffect(() => {
-    void loadPlaces();
-  }, [travel]);
-
-  const activePlace = selected ?? places[0] ?? null;
-  const lat = Number(activePlace?.latitude);
-  const lon = Number(activePlace?.longitude);
-  const valid = activePlace?.latitude != null && activePlace?.longitude != null && Number.isFinite(lat) && Number.isFinite(lon);
-
-  const delta = 0.04;
-  const bbox = `${lon - delta},${lat - delta},${lon + delta},${lat + delta}`;
-  const osmEmbedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik&marker=${lat}%2C${lon}`;
-  const osmExternalUrl = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=14/${lat}/${lon}`;
-
-  return (
-    <div className="map-view-layout" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {error && <ErrorState message={error} onRetry={() => void loadPlaces(query)} />}
-      {/* Search and control bar */}
-      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-        <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
-          <input
-            type="search"
-            placeholder="Tìm địa điểm trên bản đồ..."
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') void loadPlaces(query); }}
-            style={{ paddingLeft: '38px' }}
-          />
-          <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }}>
-            <Icon name="search" size={16} />
-          </div>
-        </div>
-        <button
-          type="button"
-          className="btn-primary"
-          onClick={() => void loadPlaces(query)}
-          disabled={loading || busy}
-        >
-          <Icon name="search" size={16} />
-          <span>Tìm</span>
-        </button>
+  useEffect(() => { void loadPlaces(); return () => { generation.current++; lookupGeneration.current++; }; }, [travel]);
+  async function lookup() {
+    const request = ++lookupGeneration.current;
+    setLookupBusy(true); setLookupMessage(''); setCandidates([]);
+    try {
+      const items = await searchAddress(query);
+      if (request !== lookupGeneration.current) return;
+      setCandidates(items);
+      if (!items.length) setLookupMessage('Không tìm thấy địa chỉ tại Việt Nam. Thử thêm tỉnh/thành.');
+    } catch (error) { if (request === lookupGeneration.current) setLookupMessage((error as Error).message); }
+    finally { if (request === lookupGeneration.current) setLookupBusy(false); }
+  }
+  const points = useMemo<MapPoint[]>(() => places.filter(p => validCoordinates(p.latitude, p.longitude)).map(p => ({ id: idOf(p), name: String(p.name ?? 'Địa điểm'), address: addressOf(p), latitude: Number(p.latitude), longitude: Number(p.longitude) })), [places]);
+  const selected = places.find(p => idOf(p) === selectedId);
+  const active = external ?? points.find(p => p.id === selectedId);
+  const mapPoints = useMemo(() => external ? [...points, external] : points, [points, external]);
+  const submit = (event: FormEvent) => { event.preventDefault(); void loadPlaces(query.trim()); };
+  return <div className="map-view-layout" style={{ display: 'grid', gap: 20 }}>
+    <form className="map-search" onSubmit={submit}>
+      <input type="search" aria-label="Tìm tên địa điểm hoặc địa chỉ" placeholder="Tên địa điểm hoặc địa chỉ, ví dụ: Cầu Rồng, Đà Nẵng" value={query} maxLength={1024}
+        onChange={e => { setQuery(e.target.value); lookupGeneration.current++; setLookupBusy(false); setCandidates([]); setLookupMessage(''); }} />
+      <button className="btn-primary" disabled={loading || busy} type="submit"><Icon name="search" size={16} /> Tìm</button>
+      <button className="btn-secondary" disabled={lookupBusy || busy || loading || query.trim().length < 3} type="button" onClick={() => void lookup()}>Tra địa chỉ trên bản đồ</button>
+    </form>
+    {error && <ErrorState message={error} onRetry={() => void loadPlaces(appliedQuery)} />}
+    {lookupBusy && <p role="status">Đang tra địa chỉ…</p>}
+    {lookupMessage && <p role="status">{lookupMessage}</p>}
+    {candidates.length > 0 && <section className="location-editor" aria-label="Kết quả tra cứu địa chỉ">
+      <strong>Kết quả tra cứu trên bản đồ</strong><p>Chọn kết quả để xem ghim. Các kết quả này chưa được lưu vào danh sách địa điểm.</p>
+      <div className="location-candidates">{candidates.map(item => <button type="button" key={item.id} onClick={() => setExternal(item)}><strong>{item.name}</strong><br />{item.address}</button>)}</div>
+      <p>Dữ liệu © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> · Tra cứu bởi <a href="https://photon.komoot.io" target="_blank" rel="noreferrer">Photon</a></p>
+    </section>}
+    <div className="map-columns">
+      <div className="map-results" aria-label="Danh sách địa điểm trên bản đồ" aria-busy={loading}>
+        {!places.length && !loading && !error && <p>Chưa tìm thấy địa điểm trong hệ thống. Bạn có thể tra địa chỉ trên bản đồ.</p>}
+        {places.map(p => <article key={idOf(p)} className={`map-place ${!external && idOf(p) === selectedId ? 'is-selected' : ''}`}>
+          <h3>{String(p.name ?? 'Địa điểm')}</h3><p>{addressOf(p)}</p>
+          <button type="button" className="btn-secondary" onClick={() => { setExternal(null); setSelectedId(idOf(p)); }}>Xem vị trí</button>
+        </article>)}
+        {cursor && <button type="button" className="btn-secondary" disabled={loading || busy} onClick={() => void loadPlaces(appliedQuery, cursor)}>Xem thêm địa điểm</button>}
       </div>
-
-      {/* 2-Column: Destination list & Interactive Map */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 360px) 1fr', gap: '24px' }}>
-        {/* Destination List with "Xem vị trí" buttons */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '680px', overflowY: 'auto' }}>
-          {places.map(p => {
-            const isCurrent = activePlace && String(p.id ?? p.place_id) === String(activePlace.id ?? activePlace.place_id);
-            return (
-              <div
-                key={String(p.id ?? p.place_id ?? p.name)}
-                style={{
-                  padding: '16px',
-                  background: isCurrent ? 'var(--color-primary-light)' : 'var(--color-surface)',
-                  border: `1.5px solid ${isCurrent ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                  borderRadius: 'var(--radius-card)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px',
-                  transition: 'all var(--transition-fast)'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <h3 style={{ fontSize: '1.05rem', margin: 0 }}>{String(p.name ?? 'Điểm đến')}</h3>
-                </div>
-                <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', margin: 0 }}>
-                  {String(p.address ?? 'Chưa có địa chỉ')}
-                </p>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => {
-                      setSelected(p);
-                    }}
-                  >
-                    Xem vị trí
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+      <section className="travel-panel map-preview" aria-label="Vị trí địa điểm">
+        <div className="map-preview-header"><div>
+          <h2>{active || selected ? `Vị trí: ${active?.name ?? String(selected?.name ?? '')}` : 'Bản đồ Việt Nam'}</h2>
+          {active && <><p>{active.address}</p><p>Vĩ độ {active.latitude.toFixed(6)} · Kinh độ {active.longitude.toFixed(6)}</p></>}
+          {!active && selected && <p>Địa điểm chưa có tọa độ hợp lệ. Quản trị viên cần cập nhật vị trí.</p>}
         </div>
-
-        {/* Map Panel Preview */}
-        <div className="travel-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {activePlace ? (
-            <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                <div>
-                  <h2 style={{ fontSize: '1.4rem', fontWeight: 700 }}>
-                    Vị trí: {String(activePlace.name ?? 'Địa điểm')}
-                  </h2>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
-                    <Icon name="pin" size={16} />
-                    <span>{valid ? `Vĩ độ ${lat.toFixed(4)} · Kinh độ ${lon.toFixed(4)}` : 'Chưa có tọa độ'}</span>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  {valid && <a
-                    href={osmExternalUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-secondary"
-                    style={{ fontSize: '0.875rem' }}
-                  >
-                    <Icon name="map" size={16} /> Mở OpenStreetMap ↗
-                  </a>}
-                </div>
-              </div>
-
-              {/* Map Canvas / Embedded Frame */}
-              <div style={{ position: 'relative', width: '100%', height: '480px', borderRadius: 'var(--radius-card)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
-                {valid ? (
-                  <iframe
-                    title={`Bản đồ ${String(activePlace.name ?? '')}`}
-                    src={osmEmbedUrl}
-                    loading="lazy"
-                    referrerPolicy="no-referrer"
-                    style={{ width: '100%', height: '100%', border: 'none' }}
-                  />
-                ) : (
-                  <div className="empty-subtle" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <p>Chưa có thông tin tọa độ cho địa điểm này.</p>
-                  </div>
-                )}
-              </div>
-              <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textAlign: 'right', margin: 0 }}>
-                Dữ liệu bản đồ © OpenStreetMap contributors
-              </p>
-            </>
-          ) : (
-            <div className="empty-subtle">
-              <Icon name="compass" size={40} />
-              <p>Chọn một địa điểm để hiển thị trên bản đồ.</p>
-            </div>
-          )}
+        {active && <a className="btn-secondary" href={`https://www.openstreetmap.org/?mlat=${active.latitude}&mlon=${active.longitude}#map=16/${active.latitude}/${active.longitude}`} target="_blank" rel="noreferrer"><Icon name="map" size={16} /> Mở OpenStreetMap ↗</a>}
         </div>
-      </div>
+        <InteractiveMap points={mapPoints} selectedId={active?.id} onSelect={id => { if (external?.id !== id) { setExternal(null); setSelectedId(id); } }} />
+      </section>
     </div>
-  );
+  </div>;
 }

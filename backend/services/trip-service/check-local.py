@@ -74,8 +74,8 @@ ALTER DATABASE {SERVICE}_db OWNER TO {SERVICE}_migrator;
     for table,count in (("trip_destinations",2),("trip_days",3),("itinerary_items",2)):
      assert int(helper.run(["docker","exec",database,"psql","-U","postgres","-d","trip_db","-Atc","select count(*) from trip."+table+" where trip_id='40000000-0000-4000-8000-000000000001'"],env))==count
    assert helper.run(["docker","exec",app,"id","-u"],env)=="10001"
-   count=helper.run(["docker","exec",database,"psql","-U","postgres","-d",SERVICE+"_db","-Atc","select count(*) from public.flyway_schema_history where success and version is not null"],env);assert count=="7"
-   print(SERVICE+" image PASS: owned PostgreSQL, Flyway V1-V7, non-root, opt-in seeded fixtures, readiness/liveness, real RS256/JWKS, private authorization, persisted create/read/delete, frozen response schemas")
+   count=helper.run(["docker","exec",database,"psql","-U","postgres","-d",SERVICE+"_db","-Atc","select count(*) from public.flyway_schema_history where success and version is not null"],env);assert count=="8"
+   print(SERVICE+" image PASS: owned PostgreSQL, Flyway V1-V8, non-root, opt-in seeded fixtures, readiness/liveness, real RS256/JWKS, private authorization, persisted create/read/delete, frozen response schemas")
  finally:
   issuer.server_close()
   for container in reversed(started):helper.run(["docker","rm","-f",container],env)

@@ -8,6 +8,7 @@ import base64
 import importlib.util
 import json
 import os
+import re
 from pathlib import Path
 import secrets
 import socket
@@ -42,6 +43,13 @@ def request(base, path, method='GET', body=None, token=None, headers=None):
     with response:
         raw = response.read()
         return response.status, json.loads(raw) if raw else None
+
+
+def account_token(text):
+    matches = [line.strip() for line in text.splitlines() if re.fullmatch(r"[A-Za-z0-9_-]{43}", line.strip())]
+    if len(matches) != 1:
+        raise ValueError("Expected exactly one account token in verification mail")
+    return matches[0]
 
 
 def validate(path, method, status, body):
@@ -104,6 +112,8 @@ def main():
         sock.bind(('127.0.0.1', 0)); port = sock.getsockname()[1]
     base = f'http://127.0.0.1:{port}'
     env = local.app_environment(port, fixtures=True, transport=args.transport, notification_email=args.transport)
+    # This probe exercises the verification email flow even when dev sign-up skips it.
+    env['IDENTITY_EMAIL_VERIFICATION_REQUIRED'] = 'true'
     name = 'smarttravel-identity-smoke-' + secrets.token_hex(6)
     with tempfile.TemporaryFile() as log, tempfile.TemporaryDirectory() as secret_directory:
         if args.image:
@@ -117,7 +127,7 @@ def main():
                          'DB_MIGRATION_PASSWORD','DB_MIGRATION_ENABLED','JWT_ISSUER','JWT_AUDIENCE','JWT_JWKS_URI',
                          'IDENTITY_KEYS_FILE','IDENTITY_ACTIVE_KID','IDENTITY_MAIL_KEY','MAIL_HOST','MAIL_PORT',
                          'IDENTITY_FIXTURE_PASSWORD','IDENTITY_FIXTURES_ENABLED','IDENTITY_TRANSPORT_ENABLED',
-                         'IDENTITY_NOTIFICATION_EMAIL_ENABLED','BROKER_HOST','BROKER_PORT','BROKER_USERNAME','BROKER_PASSWORD','BROKER_VHOST']
+                         'IDENTITY_NOTIFICATION_EMAIL_ENABLED','IDENTITY_EMAIL_VERIFICATION_REQUIRED','BROKER_HOST','BROKER_PORT','BROKER_USERNAME','BROKER_PASSWORD','BROKER_VHOST']
             command = ['docker','run','--rm','--name',name,'--network',dependency_network(),
                        '-p',f'127.0.0.1:{port}:8101','-v',f'{keys.as_posix()}:/run/identity/keys.json:ro']
             for key in variables:
@@ -153,7 +163,7 @@ def main():
                 for message in listing['messages']:
                     if any(recipient['Address']==email for recipient in message['To']):
                         _, detail = request('http://127.0.0.1:58025','/api/v1/message/'+message['ID'])
-                        mail_token = detail['Text'].strip().splitlines()[-1]
+                        mail_token = account_token(detail['Text'])
                 if mail_token:
                     break
                 time.sleep(1)

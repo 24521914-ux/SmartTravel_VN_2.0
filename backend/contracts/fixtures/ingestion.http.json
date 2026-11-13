@@ -233,6 +233,9 @@
         {
           "place_id": "10000000-0000-4000-8000-000000000001",
           "name": "synthetic",
+          "name_en": "synthetic",
+          "address": "synthetic",
+          "description": "synthetic",
           "status": "DRAFT",
           "version": 1,
           "latitude": 10.762622,
@@ -251,6 +254,10 @@
             "00000000-0000-4000-8000-000000000001"
           ],
           "price": 0,
+          "price_min": 0,
+          "price_max": 0,
+          "rating_avg": 0,
+          "review_count": 0,
           "currency": "VND",
           "opening_hours": [
             {

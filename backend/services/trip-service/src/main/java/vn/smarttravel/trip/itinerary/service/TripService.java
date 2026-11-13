@@ -16,8 +16,10 @@ public class TripService {
     private final TripStore s;
     private final CatalogAdapter catalog;
     private final RoutingAdapter routing;
+    private final DayTravelService travel;
+    private final org.springframework.transaction.support.TransactionTemplate transaction;
     public Map<String,Object> paginate(Map<String,Object>page,int limit,String cursor){return s.paginate(page,limit,cursor);}
-    public TripService(TripStore s,CatalogAdapter catalog,RoutingAdapter routing) {this.s=s;this.catalog=catalog;this.routing=routing;}
+    public TripService(TripStore s,CatalogAdapter catalog,RoutingAdapter routing,DayTravelService travel,org.springframework.transaction.PlatformTransactionManager manager) {this.s=s;this.catalog=catalog;this.routing=routing;this.travel=travel;this.transaction=new org.springframework.transaction.support.TransactionTemplate(manager);}
     public Object interactionsSnapshot(){return s.interactionsSnapshot();}
     public List<String> warnings(UUID trip,UUID user){s.owner(trip,user,false);return s.warnings(trip);}
     public Map<String,Object> list(UUID user,int limit,String cursor) {
@@ -76,6 +78,7 @@ public class TripService {
         require(s.queryForObject(FINAL_REVIEW_SQL_6,Long.class,trip,place)==0,422,"COMPLETED_SNAPSHOT_IMMUTABLE");
         s.update(INSERT_PLACE_SNAPSHOTS_36,trip,place,p.get("name"),p.getOrDefault("address",""),p.get("latitude"),p.get("longitude"),s.encode(p.getOrDefault("opening_hours",List.of())),number(p.get("source_version")),p.get("price"),s.encode(p));
         s.update(FINAL_REVIEW_SQL_7,trip,place);
+        travel.synchronizeTrip(trip);
     }
     private Map<String,Object> itemResponse(Map<String,Object>r,long v) {var snap=s.decode(r.get("catalog_snapshot"));if(r.get("unavailable_at")!=null)snap.put("status","ARCHIVED");return map("item_id",r.get("item_id"),"place_id",r.get("place_id"),"note",r.get("note"),"duration_minutes",r.get("duration_min"),"locked",r.get("locked"),"rank",r.get("sort_order"),"source_version",r.get("source_version"),"snapshot",snap,"version",v);}
     private List<Map<String,Object>> itemRows(UUID trip,UUID day) {return s.queryForList(SELECT_ITINERARY_ITEMS_37,trip,day);}
@@ -89,6 +92,7 @@ public class TripService {
         UUID place=id(b.get("place_id"));var p=catalog.place(place);require(number(b.get("duration_minutes"))>=0,400,"INVALID_DURATION");require(b.get("locked") instanceof Boolean,400,"INVALID_LOCKED");snapshot(trip,place,p);
         UUID item=UUID.randomUUID();UUID recommendation=b.get("recommendation_request_id")==null?null:id(b.get("recommendation_request_id"));
         s.update(INSERT_ITINERARY_ITEMS_39,item,trip,day,place,number(b.get("duration_minutes")),text(b,"note",1024),b.get("locked"),p.get("price"),recommendation==null?"MANUAL":"BASIC_RECO",recommendation,trip,day);
+        travel.synchronizeDay(trip,day);
         long v=s.changed(trip,user,"ITEM_ADDED");s.event(trip,v,"trip.item.added.v1",map("item_id",item,"trip_id",trip,"user_id",user,"place_id",place,"recommendation_request_id",recommendation));
         var response=items(trip,user,day,item);s.update(DELETE_IDEMPOTENCY_RECORDS_40,scope,user.toString(),key);s.update(INSERT_IDEMPOTENCY_RECORDS_41,scope,user.toString(),key,hash,s.encode(response));return response;
     }
@@ -100,16 +104,36 @@ public class TripService {
         require(!b.containsKey("rank"),422,"USE_ATOMIC_ORDER_ENDPOINT");
         s.update(UPDATE_ITINERARY_ITEMS_43,place,b.containsKey("note")?text(b,"note",1024):old.get("note"),duration,b.getOrDefault("locked",old.get("locked")),trip,day,item);
         s.update(FINAL_REVIEW_SQL_8,trip,item);
+        travel.synchronizeDay(trip,day);
         s.changed(trip,user,"ITEM_CHANGED");return items(trip,user,day,item);
     }
-    public void deleteItem(UUID trip,UUID user,UUID day,UUID item,String version) {var t=s.owner(trip,user,true);s.expected(t,version);var old=s.one(SELECT_ITINERARY_ITEMS_42,trip,day,item);require(!Boolean.TRUE.equals(old.get("locked")),422,"ITEM_LOCKED");s.update(DELETE_ITINERARY_ITEMS_44,trip,day,item);s.changed(trip,user,"ITEM_REMOVED");}
-    public Map<String,Object> order(UUID trip,UUID user,UUID day,String version,List<UUID>ids) {var t=s.owner(trip,user,true);s.expected(t,version);s.one(SELECT_TRIP_DAYS_30,trip,day);var rows=itemRows(trip,day);require(ids.size()<=100&&ids.size()==rows.size()&&new HashSet<>(ids).size()==ids.size()&&new HashSet<>(ids).equals(new HashSet<>(rows.stream().map(r->(UUID)r.get("item_id")).toList())),422,"ORDER_MUST_CONTAIN_ALL_ITEMS");for(var row:rows)if(Boolean.TRUE.equals(row.get("locked")))require(ids.indexOf(row.get("item_id"))==number(row.get("sort_order")),422,"ITEM_LOCKED");s.execute(SET_CONSTRAINTS_45);for(int i=0;i<ids.size();i++)s.update(UPDATE_ITINERARY_ITEMS_46,i,trip,day,ids.get(i));long v=s.changed(trip,user,"ITEMS_REORDERED");return map("request_id",UUID.randomUUID(),"status","COMPLETED","version",v);}
+    public void deleteItem(UUID trip,UUID user,UUID day,UUID item,String version) {var t=s.owner(trip,user,true);s.expected(t,version);var old=s.one(SELECT_ITINERARY_ITEMS_42,trip,day,item);require(!Boolean.TRUE.equals(old.get("locked")),422,"ITEM_LOCKED");s.update(DELETE_ITINERARY_ITEMS_44,trip,day,item);travel.synchronizeDay(trip,day);s.changed(trip,user,"ITEM_REMOVED");}
+    public Map<String,Object> order(UUID trip,UUID user,UUID day,String version,List<UUID>ids) {var t=s.owner(trip,user,true);s.expected(t,version);s.one(SELECT_TRIP_DAYS_30,trip,day);var rows=itemRows(trip,day);require(ids.size()<=100&&ids.size()==rows.size()&&new HashSet<>(ids).size()==ids.size()&&new HashSet<>(ids).equals(new HashSet<>(rows.stream().map(r->(UUID)r.get("item_id")).toList())),422,"ORDER_MUST_CONTAIN_ALL_ITEMS");for(var row:rows)if(Boolean.TRUE.equals(row.get("locked")))require(ids.indexOf(row.get("item_id"))==number(row.get("sort_order")),422,"ITEM_LOCKED");s.execute(SET_CONSTRAINTS_45);for(int i=0;i<ids.size();i++)s.update(UPDATE_ITINERARY_ITEMS_46,i,trip,day,ids.get(i));travel.synchronizeDay(trip,day);long v=s.changed(trip,user,"ITEMS_REORDERED");return map("request_id",UUID.randomUUID(),"status","COMPLETED","version",v);}
     public Map<String,Object> refresh(UUID trip,UUID user,String version,List<UUID> ids) {var t=s.owner(trip,user,true);s.expected(t,version);require(!"COMPLETED".equals(t.get("status")),422,"COMPLETED_SNAPSHOT_IMMUTABLE");require(ids.size()<=100,400,"TOO_MANY_ITEMS");for(UUID item:ids){var r=s.one(SELECT_ITINERARY_ITEMS_47,trip,item);require(!Boolean.TRUE.equals(r.get("locked")),422,"ITEM_LOCKED");UUID place=(UUID)r.get("place_id");snapshot(trip,place,catalog.place(place));}long v=s.changed(trip,user,"SNAPSHOTS_REFRESHED");return map("request_id",UUID.randomUUID(),"status","COMPLETED","version",v);}
     public Map<String,Object> transfers(UUID trip,UUID user,UUID transfer) {var t=s.owner(trip,user,false);long v=number(t.get("version"));if(transfer!=null)return transferResponse(s.one(SELECT_TRANSFER_ITEMS_48,trip,transfer),v);return s.page(s.queryForList(SELECT_TRANSFER_ITEMS_49,trip).stream().map(r->transferResponse(r,v)).toList(),v);}
     private Map<String,Object> transferResponse(Map<String,Object>r,long v) {return map("transfer_id",r.get("transfer_id"),"from_item_id",r.get("from_item_id"),"to_item_id",r.get("to_item_id"),"mode",r.get("transport_mode"),"distance_m",r.get("distance_m"),"duration_seconds",r.get("duration_seconds"),"fallback",r.get("fallback"),"version",v);}
-    public Map<String,Object> transfer(UUID trip,UUID user,UUID transfer,String version,Map<String,Object>b,boolean estimate) {var t=s.owner(trip,user,true);s.expected(t,version);var old=transfer==null?Map.<String,Object>of():s.one(SELECT_TRANSFER_ITEMS_48,trip,transfer);UUID from=id(b.getOrDefault("from_item_id",old.get("from_item_id"))),to=id(b.getOrDefault("to_item_id",old.get("to_item_id")));require(!from.equals(to),422,"SAME_ROUTE_ENDPOINT");String mode=b.getOrDefault("mode",old.get("transport_mode")).toString();require(Set.of("WALK","DRIVE","BICYCLE").contains(mode),400,"INVALID_MODE");var a=s.one(SELECT_ITINERARY_ITEMS_50,trip,from);var z=s.one(SELECT_ITINERARY_ITEMS_50,trip,to);var route=routing.estimate(a,z,mode);UUID target=transfer==null?UUID.randomUUID():transfer;
-        if(!estimate){s.update(INSERT_TRANSFER_ITEMS_51,target,trip,from,to,mode,route.get("distance_m"),route.get("duration_seconds"),route.get("fallback"),s.encode(route));s.changed(trip,user,"TRANSFER_CHANGED");return transfers(trip,user,target);}
-        return map("transfer_id",target,"from_item_id",from,"to_item_id",to,"mode",mode,"distance_m",route.get("distance_m"),"duration_seconds",route.get("duration_seconds"),"fallback",route.get("fallback"),"version",t.get("version"));
+    // Legacy UC14-compatible transfer API: validate and persist in short transactions,
+    // with the external request between them. Recheck If-Match after routing.
+    @Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    public Map<String,Object> transfer(UUID trip,UUID user,UUID transfer,String version,Map<String,Object>b,boolean estimate) {
+        var input=transaction.execute(status->{
+            var t=s.owner(trip,user,true);s.expected(t,version);
+            var old=transfer==null?Map.<String,Object>of():s.one(SELECT_TRANSFER_ITEMS_48,trip,transfer);
+            UUID from=id(b.getOrDefault("from_item_id",old.get("from_item_id"))),to=id(b.getOrDefault("to_item_id",old.get("to_item_id")));
+            require(!from.equals(to),422,"SAME_ROUTE_ENDPOINT");
+            String mode=Objects.toString(b.getOrDefault("mode",old.get("transport_mode")),"");require(Set.of("WALK","DRIVE","BICYCLE").contains(mode),400,"INVALID_MODE");
+            return map("from",from,"to",to,"mode",mode,"a",s.one(SELECT_ITINERARY_ITEMS_50,trip,from),"z",s.one(SELECT_ITINERARY_ITEMS_50,trip,to));
+        });
+        @SuppressWarnings("unchecked") var a=(Map<String,Object>)input.get("a");
+        @SuppressWarnings("unchecked") var z=(Map<String,Object>)input.get("z");
+        var route=routing.estimate(a,z,input.get("mode").toString());
+        return transaction.execute(status->{
+            var t=s.owner(trip,user,true);s.expected(t,version);
+            UUID target=transfer==null?UUID.randomUUID():transfer;
+            if(transfer!=null)s.one(SELECT_TRANSFER_ITEMS_48,trip,transfer);
+            if(!estimate){s.update(INSERT_TRANSFER_ITEMS_51,target,trip,input.get("from"),input.get("to"),input.get("mode"),route.get("distance_m"),route.get("duration_seconds"),route.get("fallback"),s.encode(route));s.changed(trip,user,"TRANSFER_CHANGED");return transfers(trip,user,target);}
+            return map("transfer_id",target,"from_item_id",input.get("from"),"to_item_id",input.get("to"),"mode",input.get("mode"),"distance_m",route.get("distance_m"),"duration_seconds",route.get("duration_seconds"),"fallback",route.get("fallback"),"version",t.get("version"));
+        });
     }
     public void deleteTransfer(UUID trip,UUID user,UUID transfer,String version) {var t=s.owner(trip,user,true);s.expected(t,version);s.one(SELECT_TRANSFER_ITEMS_48,trip,transfer);s.update(DELETE_TRANSFER_ITEMS_52,trip,transfer);s.changed(trip,user,"TRANSFER_REMOVED");}
 }

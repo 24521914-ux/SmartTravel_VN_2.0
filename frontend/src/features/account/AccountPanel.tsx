@@ -1,21 +1,27 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Button, Badge, Icon } from '../../shared/ui';
-import { TravelClient, type Resource, type Page } from '../../shared/api';
+import { ApiError, TravelClient, type Resource, type Page } from '../../shared/api';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { useToast } from '../../app/providers/ToastProvider';
+import { useAppPreferences } from '../../app/providers/AppPreferences';
 import './account-auth.css';
 
-type GuestMode = 'login' | 'register' | 'verify-email' | 'forgot-password' | 'reset-password';
+type GuestMode = 'login' | 'register' | 'verify-email' | 'resend-verification' | 'forgot-password' | 'reset-password';
 
 export function AccountPanel() {
   const { user, isAuthenticated, login, logout, isLoading, reloadUser, apiClient } = useAuth();
   const { showToast } = useToast();
+  const { text } = useAppPreferences();
   const [travel] = useState(() => new TravelClient(apiClient));
   const [mode, setMode] = useState<GuestMode>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'preferences'>('profile');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [email, setEmail] = useState('');
+  const [notice, setNotice] = useState('');
+  const localMailbox = import.meta.env.DEV && ['localhost', '127.0.0.1'].includes(window.location.hostname)
+    ? (import.meta.env.VITE_LOCAL_MAILBOX_URL ?? 'http://localhost:59025') : '';
   const [profile, setProfile] = useState<Resource | null>(null);
   const [preferences, setPreferences] = useState<Resource | null>(null);
   const [categories, setCategories] = useState<Resource[]>([]);
@@ -28,7 +34,18 @@ export function AccountPanel() {
   async function run(action: () => Promise<void>) {
     setBusy(true); setError('');
     try { await action(); }
-    catch (error) { setError(error instanceof Error ? error.message : 'Không thực hiện được yêu cầu.'); }
+    catch (error) {
+      if (error instanceof ApiError && error.body.code === 'EMAIL_NOT_VERIFIED') {
+        setMode('verify-email');
+        setNotice(text('Email chưa được xác minh. Nhập mã trong email hoặc yêu cầu gửi lại mã bên dưới.', 'Verify your email using the code, or request a new code below.'));
+      } else if (error instanceof ApiError && error.status === 401 && !isAuthenticated) {
+        setError(mode === 'login'
+          ? text('Email hoặc mật khẩu không đúng, hoặc tài khoản không thể đăng nhập.', 'Incorrect email or password, or the account cannot sign in.')
+          : text('Mã không hợp lệ, đã dùng hoặc hết hạn. Hãy yêu cầu mã mới.', 'The code is invalid, used or expired. Request a new code.'));
+      } else if (error instanceof ApiError && error.status === 429) {
+        setError(text('Bạn đã yêu cầu quá nhiều lần. Vui lòng chờ rồi thử lại.', 'Too many requests. Please wait before trying again.'));
+      } else setError(error instanceof Error ? error.message : text('Không thực hiện được yêu cầu.', 'Unable to complete the request.'));
+    }
     finally { setBusy(false); }
   }
   async function allPages(service: 'catalog' | 'identity', path: string) {
@@ -49,22 +66,25 @@ export function AccountPanel() {
 
   function submit(e: FormEvent<HTMLFormElement>, action: (data: FormData) => Promise<void>) {
     e.preventDefault(); const form = e.currentTarget; const data = new FormData(form);
+    if (busy || isLoading) return;
     void run(async () => { await action(data); form.reset(); });
   }
-  const text = (data: FormData, key: string) => String(data.get(key) ?? '').trim();
+  const fieldValue = (data: FormData, key: string) => String(data.get(key) ?? '').trim();
   const guestTitles: Record<GuestMode, string> = {
-    login: 'Đăng nhập tài khoản',
-    register: 'Đăng ký tài khoản',
-    'verify-email': 'Xác minh email',
-    'forgot-password': 'Quên mật khẩu',
-    'reset-password': 'Đặt lại mật khẩu'
+    login: text('Đăng nhập tài khoản', 'Sign in to your account'),
+    register: text('Đăng ký tài khoản', 'Create an account'),
+    'verify-email': text('Xác minh email', 'Verify your email'),
+    'resend-verification': text('Gửi lại mã xác minh', 'Resend verification code'),
+    'forgot-password': text('Quên mật khẩu', 'Forgot password'),
+    'reset-password': text('Đặt lại mật khẩu', 'Reset password')
   };
   const guestDescriptions: Record<GuestMode, string> = {
-    login: 'Nhập thông tin bên dưới để tiếp tục hành trình và quản lý chuyến đi của bạn.',
-    register: 'Tạo tài khoản nhanh chóng để lên kế hoạch và lưu giữ kỷ niệm chuyến đi.',
-    'verify-email': 'Nhập mã xác nhận được gửi trong hòm thư điện tử của bạn.',
-    'forgot-password': 'Nhập email đã đăng ký để nhận mã khôi phục mật khẩu tài khoản.',
-    'reset-password': 'Nhập mã từ email và thiết lập mật khẩu mới cho tài khoản.'
+    login: text('Nhập thông tin bên dưới để tiếp tục hành trình và quản lý chuyến đi của bạn.', 'Enter your details to continue your journey and manage your trips.'),
+    register: text('Tạo tài khoản nhanh chóng để lên kế hoạch và lưu giữ kỷ niệm chuyến đi.', 'Create an account to plan trips and keep your travel memories.'),
+    'verify-email': text('Nhập mã xác nhận được gửi trong hòm thư điện tử của bạn.', 'Enter the verification code sent to your inbox.'),
+    'resend-verification': text('Nhập email đã đăng ký. Nếu tài khoản đang chờ xác minh, hệ thống sẽ gửi mã mới; mỗi lần gửi cách nhau ít nhất 60 giây.', 'Enter your registered email. Pending accounts can receive a new code, with at least 60 seconds between requests.'),
+    'forgot-password': text('Nhập email đã đăng ký để nhận mã khôi phục mật khẩu tài khoản.', 'Enter your account email to receive a password reset code.'),
+    'reset-password': text('Nhập mã từ email và thiết lập mật khẩu mới cho tài khoản.', 'Enter the email code and choose a new password.')
   };
 
   return <div className="account-panel-container">
@@ -72,7 +92,7 @@ export function AccountPanel() {
       <div className="account-auth-container">
         <div className="auth-split-card">
           {/* Left Column: Visual Hero Showcase (Image 2 aesthetic) */}
-          <section className="auth-hero-side" aria-label="Giới thiệu SmartTravel">
+          <section className="auth-hero-side" aria-label={text('Giới thiệu SmartTravel', 'About SmartTravel')}>
             <img
               src="/images/editorial/ha-long.webp"
               alt="Cảnh sắc Việt Nam"
@@ -84,13 +104,13 @@ export function AccountPanel() {
 
             <div className="auth-hero-content">
               <span className="auth-hero-badge">
-                <Icon name="compass" size={13} /> Khám phá Việt Nam
+                <Icon name="compass" size={13} /> {text('Khám phá Việt Nam', 'Discover Vietnam')}
               </span>
               <div className="auth-hero-title">
-                Bắt đầu hành trình cùng SmartTravel!
+                {text('Bắt đầu hành trình cùng SmartTravel!', 'Start your journey with SmartTravel!')}
               </div>
               <p className="auth-hero-desc">
-                Khám phá hàng ngàn điểm đến độc đáo, tạo lịch trình cá nhân hóa thông minh và kết nối cùng cộng đồng du lịch xê dịch.
+                {text('Khám phá hàng ngàn điểm đến độc đáo, tạo lịch trình cá nhân hóa thông minh và kết nối cùng cộng đồng du lịch xê dịch.', 'Explore thousands of unique places, build a smart personalized itinerary, and connect with a community of travelers.')}
               </p>
             </div>
 
@@ -100,9 +120,9 @@ export function AccountPanel() {
                 <Icon name="user" size={18} />
               </div>
               <div className="auth-proof-meta">
-                <span className="auth-proof-user">Minh Tuấn từ Hà Nội</span>
+                <span className="auth-proof-user">{text('Minh Tuấn từ Hà Nội', 'Minh Tuan from Hanoi')}</span>
                 <span className="auth-proof-action">
-                  Vừa lên lịch trình Đà Nẵng 3N2Đ <span className="auth-proof-check">✓</span>
+                  {text('Vừa lên lịch trình Đà Nẵng 3N2Đ', 'Just planned a 3-day Da Nang trip')} <span className="auth-proof-check">✓</span>
                 </span>
               </div>
             </div>
@@ -116,32 +136,36 @@ export function AccountPanel() {
                 <div className="auth-mode-pill-tabs">
                   <button
                     type="button"
+                    disabled={busy || isLoading}
                     className={`auth-mode-pill-tab ${mode === 'login' ? 'active' : ''}`}
-                    onClick={() => { setMode('login'); setError(''); }}
+                    onClick={() => { setMode('login'); setError(''); setNotice(''); }}
                   >
-                    Đăng nhập
+                    {text('Đăng nhập', 'Sign in')}
                   </button>
                   <button
                     type="button"
+                    disabled={busy || isLoading}
                     className={`auth-mode-pill-tab ${mode === 'register' ? 'active' : ''}`}
-                    onClick={() => { setMode('register'); setError(''); }}
+                    onClick={() => { setMode('register'); setError(''); setNotice(''); }}
                   >
-                    Đăng ký
+                    {text('Đăng ký', 'Sign up')}
                   </button>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <h1 className="auth-account-badge">Tài khoản</h1>
-                  <div className="auth-brand-logo">
-                    <Icon name="compass" size={20} />
-                    <span className="auth-brand-name">SMARTTRAVEL</span>
-                  </div>
                 </div>
               </div>
 
               {/* Title & Subtext */}
               <h2 className="auth-form-heading">{guestTitles[mode]}</h2>
               <p className="auth-form-subtext">{guestDescriptions[mode]}</p>
+              {email && ['verify-email', 'reset-password'].includes(mode) && (
+                <p className="auth-flow-recipient">{text('Email nhận mã: ', 'Code recipient: ')}{email.trim()}</p>
+              )}
+              {notice && <p role="status" className="auth-flow-notice">{notice}</p>}
+              {localMailbox && ['verify-email', 'resend-verification', 'forgot-password', 'reset-password'].includes(mode) && (
+                <p className="auth-mailbox-hint">
+                  {text('Môi trường local nhận thư tại Mailpit. ', 'Local emails are captured in Mailpit. ')}
+                  <a href={localMailbox} target="_blank" rel="noopener noreferrer">{text('Mở hộp thư local', 'Open local inbox')}</a>
+                </p>
+              )}
 
               {/* Error Alert */}
               {error && (
@@ -153,38 +177,51 @@ export function AccountPanel() {
 
               {/* Form */}
               <form
+                key={mode}
                 className="clay-form auth-form-body"
                 onSubmit={e => submit(e, async data => {
                   if (mode === 'login') {
-                    await login(text(data, 'email'), String(data.get('password')));
-                    showToast('Đăng nhập thành công!', 'success');
+                    await login(fieldValue(data, 'email'), String(data.get('password')));
+                    showToast(text('Đăng nhập thành công!', 'Signed in successfully!'), 'success');
                     return;
                   }
+                  if (mode === 'register' && data.get('password') !== data.get('confirm_password')) {
+                    throw new Error(text('Mật khẩu xác nhận chưa khớp.', 'Passwords do not match.'));
+                  }
                   const body = mode === 'register'
-                    ? { email: text(data, 'email'), password: String(data.get('password')), display_name: text(data, 'display_name') }
-                    : mode === 'verify-email' ? { token: text(data, 'token') }
-                    : mode === 'forgot-password' ? { email: text(data, 'email') }
-                    : { token: text(data, 'token'), password: String(data.get('password')) };
+                    ? { email: fieldValue(data, 'email'), password: String(data.get('password')), display_name: fieldValue(data, 'display_name') }
+                    : mode === 'verify-email' ? { token: fieldValue(data, 'token') }
+                    : ['forgot-password', 'resend-verification'].includes(mode) ? { email: fieldValue(data, 'email') }
+                    : { token: fieldValue(data, 'token'), password: String(data.get('password')) };
                   await apiClient.request('identity', `/api/v1/auth/${mode}`, { method: 'POST', body, authenticated: false, idempotencyKey: crypto.randomUUID() });
-                  showToast(
-                    mode === 'register'
-                      ? 'Đã đăng ký. Kiểm tra email để xác minh trước khi đăng nhập.'
-                      : mode === 'forgot-password'
-                      ? 'Nếu tài khoản tồn tại, hướng dẫn đặt lại mật khẩu sẽ được gửi qua email.'
-                      : 'Đã hoàn thành. Bạn có thể đăng nhập.',
-                    'success'
-                  );
+                  if (mode === 'register') {
+                    setEmail(fieldValue(data, 'email'));
+                    setShowPassword(false);
+                    setNotice(text('Đăng ký thành công. Nhập mật khẩu để đăng nhập.', 'Registration successful. Enter your password to sign in.'));
+                    setMode('login');
+                  } else if (mode === 'resend-verification') {
+                    setNotice(text('Đã nhận yêu cầu. Nếu email đủ điều kiện, mã xác minh sẽ được gửi. Chưa nhận được thư? Kiểm tra thư rác hoặc yêu cầu gửi lại mã.', 'Request accepted. Eligible accounts will receive a verification code. Check spam or request another code if needed.'));
+                    setMode('verify-email');
+                  } else if (mode === 'forgot-password') {
+                    setNotice(text('Đã nhận yêu cầu. Nếu tài khoản đủ điều kiện, mã đặt lại mật khẩu sẽ được gửi qua email.', 'Request accepted. Eligible accounts will receive a password reset code.'));
+                    setMode('reset-password');
+                  } else {
+                    setNotice(mode === 'verify-email'
+                      ? text('Email đã được xác minh. Bạn có thể đăng nhập.', 'Email verified. You can now sign in.')
+                      : text('Đã đặt lại mật khẩu. Hãy đăng nhập bằng mật khẩu mới.', 'Password reset. Sign in with your new password.'));
+                    setMode('login');
+                  }
                 })}
               >
                 {mode === 'register' && (
                   <div className="auth-field">
-                    <label htmlFor="register-name" className="auth-field-label">Tên hiển thị</label>
+                    <label htmlFor="register-name" className="auth-field-label">{text('Tên hiển thị', 'Display name')}</label>
                     <div className="auth-input-wrapper">
                       <input
                         id="register-name"
                         name="display_name"
                         required
-                        maxLength={1024}
+                        maxLength={120}
                         className="auth-text-input"
                         placeholder="Nguyễn Văn A"
                       />
@@ -192,13 +229,15 @@ export function AccountPanel() {
                   </div>
                 )}
 
-                {['login', 'register', 'forgot-password'].includes(mode) && (
+                {['login', 'register', 'forgot-password', 'resend-verification'].includes(mode) && (
                   <div className="auth-field">
                     <label htmlFor="login-email" className="auth-field-label">Email</label>
                     <div className="auth-input-wrapper">
                       <input
                         id="login-email"
                         name="email"
+                        value={email}
+                        onChange={event => setEmail(event.target.value)}
                         type="email"
                         autoComplete="email"
                         required
@@ -212,15 +251,18 @@ export function AccountPanel() {
 
                 {['verify-email', 'reset-password'].includes(mode) && (
                   <div className="auth-field">
-                    <label htmlFor="auth-token" className="auth-field-label">Mã xác nhận trong email</label>
+                    <label htmlFor="auth-token" className="auth-field-label">{text('Mã xác nhận trong email', 'Email verification code')}</label>
                     <div className="auth-input-wrapper">
                       <input
                         id="auth-token"
                         name="token"
+                        autoComplete="one-time-code"
+                        autoCapitalize="none"
+                        spellCheck={false}
                         required
                         maxLength={1024}
                         className="auth-text-input"
-                        placeholder="Nhập mã xác nhận..."
+                        placeholder={text('Nhập mã xác nhận...', 'Enter the verification code...')}
                       />
                     </div>
                   </div>
@@ -229,14 +271,14 @@ export function AccountPanel() {
                 {['login', 'register', 'reset-password'].includes(mode) && (
                   <div className="auth-field">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label htmlFor="login-password" className="auth-field-label">Mật khẩu</label>
+                      <label htmlFor="login-password" className="auth-field-label">{text('Mật khẩu', 'Password')}</label>
                       {mode === 'login' && (
                         <button
                           type="button"
                           className="auth-forgot-link"
-                          onClick={() => { setMode('forgot-password'); setError(''); }}
+                          onClick={() => { setMode('forgot-password'); setError(''); setNotice(''); }}
                         >
-                          Quên mật khẩu?
+                          {text('Quên mật khẩu?', 'Forgot password?')}
                         </button>
                       )}
                     </div>
@@ -250,14 +292,13 @@ export function AccountPanel() {
                         minLength={12}
                         maxLength={128}
                         className="auth-text-input"
-                        placeholder="Ít nhất 12 ký tự"
+                        placeholder={text('Ít nhất 12 ký tự', 'At least 12 characters')}
                       />
                       <button
                         type="button"
                         className="auth-pw-toggle"
                         onClick={() => setShowPassword(prev => !prev)}
-                        aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                        tabIndex={-1}
+                        aria-label={showPassword ? text('Ẩn mật khẩu', 'Hide password') : text('Hiện mật khẩu', 'Show password')}
                       >
                         <Icon name={showPassword ? 'eye' : 'lock'} size={16} />
                       </button>
@@ -265,8 +306,13 @@ export function AccountPanel() {
                   </div>
                 )}
 
+                {mode === 'register' && <div className="auth-field">
+                  <label htmlFor="confirm-password" className="auth-field-label">{text('Xác nhận mật khẩu', 'Confirm password')}</label>
+                  <input id="confirm-password" name="confirm_password" type={showPassword ? 'text' : 'password'} required minLength={12} maxLength={128} autoComplete="new-password" className="auth-text-input" />
+                </div>}
+
                 <Button type="submit" className="auth-submit-btn" disabled={busy || isLoading}>
-                  {guestTitles[mode].replace(' tài khoản', '')}
+                  {busy ? text('Đang xử lý…', 'Processing…') : mode === 'login' ? text('Đăng nhập', 'Sign in') : mode === 'register' ? text('Đăng ký', 'Sign up') : guestTitles[mode]}
                 </Button>
               </form>
 
@@ -274,13 +320,13 @@ export function AccountPanel() {
               {['login', 'register'].includes(mode) && (
                 <>
                   <div className="auth-social-label">
-                    Hoặc tiếp tục với tài khoản khác
+                    {text('Hoặc tiếp tục với tài khoản khác', 'Or continue with another account')}
                   </div>
                   <div className="auth-social-row">
                     <button
                       type="button"
                       className="auth-social-btn google"
-                      onClick={() => showToast('Đăng nhập Google sẽ sớm khả dụng trong bản cập nhật.', 'info')}
+                      onClick={() => showToast(text('Đăng nhập Google sẽ sớm khả dụng trong bản cập nhật.', 'Google sign-in will be available in a future update.'), 'info')}
                     >
                       <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.17 0 9.99 0 12s.45 3.83 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
                       <span>Google</span>
@@ -288,7 +334,7 @@ export function AccountPanel() {
                     <button
                       type="button"
                       className="auth-social-btn facebook"
-                      onClick={() => showToast('Đăng nhập Facebook sẽ sớm khả dụng trong bản cập nhật.', 'info')}
+                      onClick={() => showToast(text('Đăng nhập Facebook sẽ sớm khả dụng trong bản cập nhật.', 'Facebook sign-in will be available in a future update.'), 'info')}
                     >
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="#1877F2" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
                       <span>Facebook</span>
@@ -298,12 +344,13 @@ export function AccountPanel() {
               )}
 
               {/* Accessible Navigation for all alternate guest modes */}
-              <nav aria-label="Xác thực tài khoản" className="auth-alt-nav">
+              <nav aria-label={text('Xác thực tài khoản', 'Account access')} className="auth-alt-nav">
                 {(Object.keys(guestTitles) as GuestMode[]).filter(v => v !== mode).map(v => (
                   <button
                     type="button"
                     key={v}
-                    onClick={() => { setMode(v); setError(''); }}
+                    disabled={busy || isLoading}
+                    onClick={() => { setMode(v); setError(''); setNotice(''); }}
                   >
                     {guestTitles[v]}
                   </button>
@@ -314,11 +361,11 @@ export function AccountPanel() {
             {/* Footer Links (Image 2 style) */}
             <div className="auth-form-footer">
               <div className="auth-footer-links">
-                <button type="button" onClick={() => showToast('Chính sách bảo mật: Toàn bộ thông tin được bảo vệ theo chuẩn GDPR.', 'info')}>
-                  Chính sách bảo mật
+                <button type="button" onClick={() => showToast(text('Chính sách bảo mật: Toàn bộ thông tin được bảo vệ theo chuẩn GDPR.', 'Privacy policy: Your information is protected under GDPR standards.'), 'info')}>
+                  {text('Chính sách bảo mật', 'Privacy policy')}
                 </button>
-                <button type="button" onClick={() => showToast('Điều khoản dịch vụ: Sử dụng SmartTravel VN cho mục đích cá nhân.', 'info')}>
-                  Điều khoản dịch vụ
+                <button type="button" onClick={() => showToast(text('Điều khoản dịch vụ: Sử dụng SmartTravel VN cho mục đích cá nhân.', 'Terms of service: Use SmartTravel VN for personal purposes.'), 'info')}>
+                  {text('Điều khoản dịch vụ', 'Terms of service')}
                 </button>
               </div>
               <span>© 2026 SmartTravel VN. All rights reserved.</span>
@@ -332,7 +379,7 @@ export function AccountPanel() {
       <div className="sub-tab-bar" role="tablist">{([['profile', 'Hồ sơ cá nhân'], ['security', 'Bảo mật tài khoản'], ['preferences', 'Sở thích & Quyền riêng tư']] as const).map(([id, title]) => <button key={id} type="button" role="tab" aria-selected={activeTab === id} className={`sub-tab ${activeTab === id ? 'active' : ''}`} onClick={() => setActiveTab(id)}>{title}</button>)}</div>
       {activeTab === 'profile' && <section className="travel-panel"><h3>Thông tin cơ bản</h3><form className="clay-form" key={String(profile?.version)} onSubmit={e => submit(e, async data => {
         const current = await travel.read<Resource>('identity', '/me');
-        setProfile(await travel.mutate('identity', '/me', { display_name: text(data, 'display_name') }, 'PATCH', Number(current.version)));
+        setProfile(await travel.mutate('identity', '/me', { display_name: fieldValue(data, 'display_name') }, 'PATCH', Number(current.version)));
         await reloadUser(); showToast('Đã cập nhật hồ sơ.', 'success');
       })}><label htmlFor="display-name">Tên hiển thị<input id="display-name" name="display_name" required maxLength={1024} defaultValue={String(profile?.display_name ?? '')} /></label><Button type="submit" disabled={busy || !profile}>Lưu hồ sơ</Button></form></section>}
       {activeTab === 'security' && <section className="travel-panel"><h3>Đổi mật khẩu</h3><form className="clay-form" onSubmit={e => submit(e, async data => {
@@ -342,7 +389,7 @@ export function AccountPanel() {
         <h3>Phiên đăng nhập</h3><Button disabled={busy} onClick={() => void run(loadAccount)}>Tải lại phiên</Button>{sessions.map(session => <div key={String(session.session_id ?? session.id)}><p>{String(session.session_id ?? session.id)} · {String(session.created_at ?? '')}</p><Button disabled={busy} onClick={() => void run(async () => { await travel.mutate('identity', `/me/sessions/${encodeURIComponent(String(session.session_id ?? session.id))}`, undefined, 'DELETE'); await loadAccount(); })}>Thu hồi phiên</Button></div>)}
       </section>}
       {activeTab === 'preferences' && <section className="travel-panel"><h3>Sở thích du lịch</h3>{preferences && <form className="clay-form" key={String(preferences.version)} onSubmit={e => submit(e, async data => {
-        const saved = await travel.mutate<Resource>('identity', '/me/preferences', { category_ids: data.getAll('category_ids'), travel_style_ids: data.getAll('travel_style_ids'), food_preference_ids: data.getAll('food_preference_ids'), budget_min: text(data, 'budget_min') === '' ? null : Number(data.get('budget_min')), budget_max: text(data, 'budget_max') === '' ? null : Number(data.get('budget_max')), budget_level: text(data, 'budget_level'), currency: 'VND', personalization_enabled: data.has('personalization_enabled'), consent_version: Number(preferences.consent_version) }, 'PUT', Number(preferences.version));
+        const saved = await travel.mutate<Resource>('identity', '/me/preferences', { category_ids: data.getAll('category_ids'), travel_style_ids: data.getAll('travel_style_ids'), food_preference_ids: data.getAll('food_preference_ids'), budget_min: fieldValue(data, 'budget_min') === '' ? null : Number(data.get('budget_min')), budget_max: fieldValue(data, 'budget_max') === '' ? null : Number(data.get('budget_max')), budget_level: fieldValue(data, 'budget_level'), currency: 'VND', personalization_enabled: data.has('personalization_enabled'), consent_version: Number(preferences.consent_version) }, 'PUT', Number(preferences.version));
         setPreferences(saved); showToast('Đã lưu sở thích.', 'success');
       })}><fieldset><legend>Danh mục yêu thích</legend>{categories.map(category => { const id = String(category.category_id ?? category.id); return <label key={id}><input type="checkbox" name="category_ids" value={id} defaultChecked={(preferences.category_ids as string[] ?? []).includes(id)} />{String(category.name)}</label>; })}</fieldset>{(['TRAVEL_STYLE', 'FOOD_PREFERENCE'] as const).map(kind => { const field = kind === 'TRAVEL_STYLE' ? 'travel_style_ids' : 'food_preference_ids'; return <fieldset key={kind}><legend>{kind === 'TRAVEL_STYLE' ? 'Phong cách du lịch' : 'Sở thích ẩm thực'}</legend>{options.filter(option => option.type === kind || option.kind === kind).map(option => { const id = String(option.option_id ?? option.id); return <label key={id}><input type="checkbox" name={field} value={id} defaultChecked={(preferences[field] as string[] ?? []).includes(id)} />{String(option.name ?? option.label)}</label>; })}</fieldset>; })}<label htmlFor="budget-min">Ngân sách tối thiểu (VND)<input id="budget-min" name="budget_min" type="number" min="0" defaultValue={preferences.budget_min == null ? '' : String(preferences.budget_min)} /></label><label htmlFor="budget-max">Ngân sách tối đa (VND)<input id="budget-max" name="budget_max" type="number" min="0" defaultValue={preferences.budget_max == null ? '' : String(preferences.budget_max)} /></label><label htmlFor="budget-level">Mức ngân sách<select id="budget-level" name="budget_level" defaultValue={String(preferences.budget_level)}><option value="LOW">Thấp</option><option value="MID">Trung bình</option><option value="HIGH">Cao</option><option value="CUSTOM">Tùy chỉnh (giữ khoảng đã lưu)</option></select></label><label><input type="checkbox" name="personalization_enabled" defaultChecked={Boolean(preferences.personalization_enabled)} />Đồng ý dùng dữ liệu để cá nhân hóa theo chính sách hiện tại</label><Button type="submit" disabled={busy}>Lưu sở thích</Button></form>}
         <details><summary>Yêu cầu xóa dữ liệu cá nhân</summary><p>Yêu cầu xóa dữ liệu được xử lý bất đồng bộ trên các service. Thao tác này có thể không khôi phục được.</p><form onSubmit={e => submit(e, async () => { setDeletion(await travel.mutate('identity', '/me/deletion-requests', { policy_version: 1 })); })}><label><input type="checkbox" required />Tôi xác nhận yêu cầu xóa dữ liệu của mình</label><Button type="submit" disabled={busy}>Gửi yêu cầu xóa dữ liệu</Button></form>{deletion && <p role="status">Yêu cầu {String(deletion.request_id)} · {String(deletion.status)}</p>}</details>

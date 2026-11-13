@@ -1,6 +1,6 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Icon, Button, Badge, ErrorState } from '../../shared/ui';
-import type { TravelClient, Resource, Page } from '../../shared/api';
+import type { TravelClient, Resource } from '../../shared/api';
 import { useToast } from '../../app/providers/ToastProvider';
 import '../trips/integration-layout.css';
 
@@ -17,6 +17,11 @@ export function CollectionsPanel({ travel, busy = false }: CollectionsPanelProps
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [places, setPlaces] = useState<Resource[]>([]);
+  const [provinces, setProvinces] = useState<Resource[]>([]);
+  const [provinceId, setProvinceId] = useState('');
+  const [searched, setSearched] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const searchRevision = useRef(0);
   const [placeId, setPlaceId] = useState('');
   const [note, setNote] = useState('');
   const [editingItem, setEditingItem] = useState<Resource | null>(null);
@@ -39,6 +44,20 @@ export function CollectionsPanel({ travel, busy = false }: CollectionsPanelProps
     return () => { active = false; };
   }, [items, publicItems, travel]);
 
+  useEffect(() => {
+    let active = true;
+    void travel.readAll('catalog', '/geographic-units').then(data => {
+      if (active) setProvinces(data.items.filter(row => row.level === 'PROVINCE')
+        .sort((a, b) => String(a.name_vi ?? a.name).localeCompare(String(b.name_vi ?? b.name), 'vi')));
+    }).catch(() => { if (active) showToast('Không thể tải danh sách tỉnh/thành.', 'error'); });
+    return () => { active = false; searchRevision.current += 1; };
+  }, [travel]);
+
+  function resetPlaceSearch() {
+    searchRevision.current += 1;
+    setPlaces([]); setPlaceId(''); setNote(''); setSearched(false); setSearching(false);
+  }
+
   async function loadCollections() {
     setLoading(true);
     setError('');
@@ -53,6 +72,7 @@ export function CollectionsPanel({ travel, busy = false }: CollectionsPanelProps
   }
 
   async function loadCollectionItems(col: Resource) {
+    if (!selected || id(selected) !== id(col)) { resetPlaceSearch(); setProvinceId(''); }
     setSelected(col);
     setItems([]);
     setLoading(true);
@@ -98,7 +118,7 @@ export function CollectionsPanel({ travel, busy = false }: CollectionsPanelProps
 
   async function addPlace(event: FormEvent) {
     event.preventDefault();
-    if (!selected || !placeId) return;
+    if (!selected || !provinceId || !searched || searching || !places.some(place => String(place.id ?? place.place_id) === placeId)) return;
     setLoading(true);
     try {
       await travel.mutate('community', `/collections/${id(selected)}/items`, { place_id: placeId, note: note.trim() || 'Địa điểm yêu thích' }, 'POST', Number(selected.version));
@@ -150,9 +170,17 @@ export function CollectionsPanel({ travel, busy = false }: CollectionsPanelProps
     finally { setLoading(false); }
   }
 
-  async function findPlaces(query: string) {
-    try { setPlaces((await travel.places(query)).items); }
-    catch (error) { showToast((error as Error).message, 'error'); }
+  async function findPlaces() {
+    if (!provinceId) return;
+    const revision = ++searchRevision.current;
+    setSearching(true); setSearched(false); setPlaces([]); setPlaceId(''); setNote('');
+    try {
+      const data = await travel.readAll('catalog', `/places?geographicUnitId=${encodeURIComponent(provinceId)}`);
+      if (revision !== searchRevision.current) return;
+      setPlaces(data.items); setSearched(true);
+    } catch (error) {
+      if (revision === searchRevision.current) showToast((error as Error).message, 'error');
+    } finally { if (revision === searchRevision.current) setSearching(false); }
   }
 
   async function openItem(item: Resource) {
@@ -250,14 +278,20 @@ export function CollectionsPanel({ travel, busy = false }: CollectionsPanelProps
             <label>Chế độ hiển thị<select name="visibility" defaultValue={String(selected.visibility)}><option value="PRIVATE">Riêng tư</option><option value="PUBLIC">Công khai</option></select></label>
             <Button type="submit" disabled={loading || busy}>Lưu bộ sưu tập</Button>
           </form>
-          <form onSubmit={event => { event.preventDefault(); void findPlaces(String(new FormData(event.currentTarget).get('query') ?? '')); }}>
-            <label>Tìm địa điểm cho bộ sưu tập<input name="query" type="search" /></label>
-            <Button type="submit" disabled={loading || busy}>Tìm địa điểm</Button>
+          <form onSubmit={event => { event.preventDefault(); void findPlaces(); }}>
+            <label>Tỉnh/thành cho bộ sưu tập
+              <select value={provinceId} disabled={loading || busy || searching} onChange={event => { resetPlaceSearch(); setProvinceId(event.target.value); }} required>
+                <option value="">Chọn tỉnh/thành</option>
+                {provinces.map(province => <option key={String(province.geographic_unit_id ?? province.id)} value={String(province.geographic_unit_id ?? province.id)}>{String(province.name_vi ?? province.name)}</option>)}
+              </select>
+            </label>
+            <Button type="submit" disabled={loading || busy || searching || !provinceId}>{searching ? 'Đang tìm địa điểm…' : 'Tìm địa điểm'}</Button>
           </form>
+          <p role="status">{searching ? 'Đang tải địa điểm trong tỉnh/thành đã chọn…' : searched ? places.length > 0 ? `Tìm thấy ${places.length} địa điểm trong tỉnh/thành đã chọn.` : 'Chưa có địa điểm trong tỉnh/thành này. Vui lòng chọn tỉnh/thành khác.' : provinceId ? 'Bấm “Tìm địa điểm” để xem các địa điểm trong tỉnh/thành đã chọn.' : 'Vui lòng chọn tỉnh/thành trước khi chọn địa điểm.'}</p>
           <form onSubmit={addPlace} className="form-grid">
-            <label>Địa điểm<select value={placeId} onChange={event => setPlaceId(event.target.value)} required><option value="">Chọn địa điểm</option>{places.map(place => <option key={String(place.id ?? place.place_id)} value={String(place.id ?? place.place_id)}>{String(place.name)}</option>)}</select></label>
-            <label>Ghi chú<input value={note} onChange={event => setNote(event.target.value)} /></label>
-            <Button type="submit" disabled={loading || busy || !placeId}>Thêm địa điểm vào bộ sưu tập</Button>
+            <label>Địa điểm<select value={placeId} disabled={loading || busy || searching || !provinceId || !searched || !places.length} onChange={event => { setPlaceId(event.target.value); setNote(''); }} required><option value="">{!provinceId ? 'Chọn tỉnh/thành trước' : 'Chọn địa điểm'}</option>{places.map(place => <option key={String(place.id ?? place.place_id)} value={String(place.id ?? place.place_id)}>{String(place.name)}</option>)}</select></label>
+            <label>Ghi chú<input value={note} disabled={loading || busy || searching || !placeId} onChange={event => setNote(event.target.value)} /></label>
+            <Button type="submit" disabled={loading || busy || searching || !searched || !placeId}>Thêm địa điểm vào bộ sưu tập</Button>
           </form>
           {editingItem && <form key={id(editingItem)} onSubmit={editItem}><label>Sửa ghi chú địa điểm<input name="note" defaultValue={String(editingItem.note)} required /></label><Button type="submit" disabled={loading || busy}>Lưu ghi chú địa điểm</Button><button type="button" onClick={() => setEditingItem(null)}>Hủy sửa ghi chú</button></form>}
           {items.length > 0 ? (

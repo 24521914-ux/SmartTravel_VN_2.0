@@ -87,6 +87,10 @@
                             "minLength": 1,
                             "maxLength": 1024
                           },
+                          "author_name": {
+                            "type": "string",
+                            "maxLength": 120
+                          },
                           "media_keys": {
                             "type": "array",
                             "items": {
@@ -742,6 +746,10 @@
                       "type": "string",
                       "minLength": 1,
                       "maxLength": 1024
+                    },
+                    "author_name": {
+                      "type": "string",
+                      "maxLength": 120
                     },
                     "media_keys": {
                       "type": "array",
@@ -1412,6 +1420,10 @@
                       "type": "string",
                       "minLength": 1,
                       "maxLength": 1024
+                    },
+                    "author_name": {
+                      "type": "string",
+                      "maxLength": 120
                     },
                     "media_keys": {
                       "type": "array",
@@ -15497,6 +15509,10 @@
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 1024
+                          },
+                          "author_name": {
+                            "type": "string",
+                            "maxLength": 120
                           },
                           "media_keys": {
                             "type": "array",

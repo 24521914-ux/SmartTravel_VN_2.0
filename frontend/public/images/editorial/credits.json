@@ -31,5 +31,71 @@
     "modifications": "Resized, WebP conversion; CSS crop in page",
     "width": 1600,
     "height": 1067
+  },
+  {
+    "file": "da-nang.webp",
+    "source": "https://commons.wikimedia.org/wiki/File:My_Khe_Beach_Da_Nang.jpg",
+    "original": "https://upload.wikimedia.org/wikipedia/commons/a/a1/My_Khe_Beach_Da_Nang.jpg",
+    "author": "Dragfyre",
+    "license": "CC BY-SA 3.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+    "modifications": "Resized to fit within 1280 x 960, WebP conversion; CSS crop in page",
+    "width": 1280,
+    "height": 960
+  },
+  {
+    "file": "hue.webp",
+    "source": "https://commons.wikimedia.org/wiki/File:Vietnam,_Hue,_Imperial_City_of_Hue,_Gate.jpg",
+    "original": "https://upload.wikimedia.org/wikipedia/commons/7/7b/Vietnam,_Hue,_Imperial_City_of_Hue,_Gate.jpg",
+    "author": "Vyacheslav Argenberg",
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0",
+    "modifications": "Resized to fit within 1280 x 960, WebP conversion; CSS crop in page",
+    "width": 1280,
+    "height": 853
+  },
+  {
+    "file": "marble-mountains.webp",
+    "source": "https://commons.wikimedia.org/wiki/File:Marble_Mountains,_Vietnam.jpg",
+    "original": "https://upload.wikimedia.org/wikipedia/commons/4/44/Marble_Mountains,_Vietnam.jpg",
+    "author": "Bernard Gagnon",
+    "license": "CC BY-SA 3.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+    "modifications": "Resized to fit within 1280 x 960, WebP conversion; CSS crop in page",
+    "width": 1280,
+    "height": 783
+  },
+  {
+    "file": "ho-chi-minh.webp",
+    "source": "https://commons.wikimedia.org/wiki/File:Ho_Chi_Minh_City_-_Independence_Palace.jpg",
+    "original": "https://upload.wikimedia.org/wikipedia/commons/7/71/Ho_Chi_Minh_City_-_Independence_Palace.jpg",
+    "author": "P. Hughes",
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0",
+    "modifications": "Resized to fit within 1280 x 960, WebP conversion; CSS crop in page",
+    "width": 1280,
+    "height": 843
+  },
+  {
+    "file": "ha-noi.webp",
+    "source": "https://commons.wikimedia.org/wiki/File:Hanoi,_Vietnam,_Hoan_Kiem_Lake.jpg",
+    "original": "https://upload.wikimedia.org/wikipedia/commons/f/f1/Hanoi,_Vietnam,_Hoan_Kiem_Lake.jpg",
+    "author": "Vyacheslav Argenberg",
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0",
+    "modifications": "Resized to fit within 1280 x 960, WebP conversion; CSS crop in page",
+    "width": 1280,
+    "height": 853
+  },
+  {
+    "file": "da-lat.webp",
+    "source": "https://commons.wikimedia.org/wiki/File:Da_Lat_-_Xuan_Huong_Lake.jpg",
+    "original": "https://upload.wikimedia.org/wikipedia/commons/a/aa/Da_Lat_-_Xuan_Huong_Lake.jpg",
+    "author": "P. Hughes",
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0",
+    "modifications": "Resized to fit within 1280 x 960, WebP conversion; CSS crop in page",
+    "width": 1280,
+    "height": 850
   }
 ]

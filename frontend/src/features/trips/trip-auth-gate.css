@@ -1,0 +1,234 @@
+.trip-auth-gate {
+  display: grid;
+  grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+  gap: 14px;
+  width: 100%;
+  min-height: 520px;
+  padding: 14px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 28px;
+  background: var(--color-surface);
+  box-shadow: 0 20px 60px rgba(17, 34, 28, .1);
+}
+
+.trip-auth-login {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: clamp(22px, 4vw, 58px);
+}
+
+.trip-auth-copy {
+  width: min(100%, 440px);
+  margin-inline: auto;
+}
+
+.trip-auth-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 22px;
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .13em;
+}
+
+.trip-auth-copy h2 {
+  max-width: 15ch;
+  margin-bottom: 18px;
+  color: var(--color-text-primary);
+  font-family: var(--font-display);
+  font-size: clamp(32px, 3.25vw, 46px);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -.035em;
+}
+
+.trip-auth-description {
+  max-width: 43ch;
+  margin-bottom: 30px;
+  color: var(--color-text-secondary);
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+.trip-auth-submit {
+  min-height: 52px;
+  gap: 14px;
+  padding-inline: 23px;
+  border-radius: 15px;
+  color: var(--color-on-primary);
+  font-size: 15px;
+  box-shadow: 0 10px 24px rgba(39, 120, 78, .18);
+}
+
+.trip-auth-submit svg { transition: transform 180ms ease; }
+.trip-auth-submit:hover svg { transform: translateX(3px); }
+
+.trip-auth-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 22px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.trip-auth-note svg { flex: 0 0 auto; color: var(--color-primary); }
+
+.trip-auth-visual {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 492px;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: 21px;
+  background: #183b34;
+}
+
+.trip-auth-image,
+.trip-auth-image-shade {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.trip-auth-image {
+  z-index: -2;
+  object-fit: cover;
+  object-position: center;
+  transform: scale(1.015);
+  transition: transform 700ms cubic-bezier(.2, .7, .2, 1);
+}
+
+.trip-auth-visual:hover .trip-auth-image { transform: scale(1.045); }
+
+.trip-auth-image-shade {
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(7, 20, 16, .23) 0%, rgba(7, 20, 16, .05) 34%, rgba(7, 20, 16, .82) 100%);
+}
+
+.trip-auth-visual-top {
+  position: absolute;
+  inset: 24px 25px auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.trip-auth-location {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, .72);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .94);
+  color: #193b30;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 5px 20px rgba(5, 19, 15, .14);
+}
+
+.trip-auth-location svg { color: #27784e; }
+
+.trip-auth-photo-label {
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .15em;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, .5);
+}
+
+.trip-auth-visual-copy {
+  align-self: flex-end;
+  width: min(100%, 660px);
+  padding: 32px clamp(24px, 4vw, 48px) 39px;
+  color: #fff;
+}
+
+.trip-auth-visual-copy > p {
+  margin-bottom: 13px;
+  color: #d9e8ce;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .16em;
+}
+
+.trip-auth-visual-copy h3 {
+  max-width: 13ch;
+  margin-bottom: 12px;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: clamp(34px, 4vw, 52px);
+  font-weight: 500;
+  line-height: 1.04;
+  letter-spacing: -.025em;
+  text-wrap: balance;
+}
+
+.trip-auth-visual-copy > span {
+  display: block;
+  max-width: 45ch;
+  color: rgba(255, 255, 255, .93);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+:root[data-theme="dark"] .trip-auth-gate {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  box-shadow: 0 20px 65px rgba(0, 0, 0, .24);
+}
+
+:root[data-theme="light"] .trip-auth-gate {
+  border-color: #dce4e8;
+  background: #fff;
+  box-shadow: 0 18px 54px rgba(32, 57, 47, .1);
+}
+
+@media (max-width: 900px) {
+  .trip-auth-gate {
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+    min-height: 470px;
+  }
+
+  .trip-auth-login { padding: 26px; }
+  .trip-auth-visual { min-height: 442px; }
+  .trip-auth-visual-top { inset: 18px 18px auto; }
+}
+
+@media (max-width: 760px) {
+  .trip-auth-gate {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    min-height: 0;
+    padding: 8px;
+    border-radius: 23px;
+  }
+
+  .trip-auth-login { padding: 30px 22px 34px; }
+  .trip-auth-copy h2 { max-width: 18ch; font-size: clamp(31px, 8vw, 40px); }
+  .trip-auth-description { margin-bottom: 24px; }
+  .trip-auth-visual { min-height: 390px; border-radius: 17px; }
+  .trip-auth-visual-copy { padding: 28px 24px 29px; }
+  .trip-auth-visual-copy h3 { font-size: clamp(34px, 9vw, 46px); }
+}
+
+@media (max-width: 420px) {
+  .trip-auth-visual { min-height: 360px; }
+  .trip-auth-photo-label { display: none; }
+  .trip-auth-visual-copy > span { font-size: 14px; }
+  .trip-auth-submit { width: 100%; justify-content: space-between; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trip-auth-image,
+  .trip-auth-submit svg { transition: none; }
+}

@@ -42,6 +42,13 @@ public class AuthRepository {
         db.update("INSERT INTO identity.user_preferences(user_id) VALUES (?)", user);
     }
 
+    public boolean recentVerification(UUID user) {
+        return Boolean.TRUE.equals(db.queryForObject("""
+            SELECT EXISTS(SELECT 1 FROM identity.account_tokens WHERE user_id=? AND purpose='VERIFY_EMAIL'
+              AND consumed_at IS NULL AND expires_at>now() AND created_at>now()-interval '60 seconds')
+            """, Boolean.class, user));
+    }
+
     public void consumeAccountTokens(UUID user, String purpose) {
         db.update("UPDATE identity.account_tokens SET consumed_at=now() WHERE user_id=? AND purpose=? AND consumed_at IS NULL", user, purpose);
     }
@@ -57,6 +64,11 @@ public class AuthRepository {
 
     public Map<String, Object> lockAccountToken(String hash, String purpose) {
         return first("SELECT * FROM identity.account_tokens WHERE token_hash=? AND purpose=? FOR UPDATE", hash, purpose);
+    }
+
+    public void activateWithoutVerification(UUID user) {
+        // Temporary registration policy; do not claim the email was verified.
+        db.update("UPDATE identity.users SET status='ACTIVE' WHERE user_id=?", user);
     }
 
     public void verifyEmail(UUID user) {

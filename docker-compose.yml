@@ -142,6 +142,7 @@ services:
       IDENTITY_MAIL_KEY: ${IDENTITY_MAIL_KEY:?run backend/platform/init_env.py}
       # External SMTP; notification e-mail stays off until configured (local override: Mailpit).
       IDENTITY_NOTIFICATION_EMAIL_ENABLED: ${IDENTITY_NOTIFICATION_EMAIL_ENABLED:-false}
+      IDENTITY_EMAIL_VERIFICATION_REQUIRED: ${IDENTITY_EMAIL_VERIFICATION_REQUIRED:-false}
       IDENTITY_MAIL_FROM: ${IDENTITY_MAIL_FROM:-no-reply@smarttravel.invalid}
       MAIL_HOST: ${MAIL_HOST:-}
       MAIL_PORT: ${MAIL_PORT:-587}
@@ -149,6 +150,7 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_AUTH: ${MAIL_AUTH:-true}
       MAIL_TLS_REQUIRED: ${MAIL_TLS_REQUIRED:-true}
+      MAIL_TIMEOUT_MS: ${MAIL_TIMEOUT_MS:-2000}
       # Synthetic demo accounts fixture-*@example.invalid (password IDENTITY_FIXTURE_PASSWORD).
       IDENTITY_FIXTURES_ENABLED: ${IDENTITY_FIXTURES_ENABLED:-false}
       IDENTITY_FIXTURE_PASSWORD: ${IDENTITY_FIXTURE_PASSWORD:?run backend/platform/init_env.py}

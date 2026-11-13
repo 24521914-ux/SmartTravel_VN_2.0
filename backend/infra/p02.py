@@ -23,6 +23,7 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 import yaml
+from configure_mail import load_mail_settings
 
 ROOT = Path(__file__).resolve().parents[2]
 INFRA = Path(__file__).resolve().parent
@@ -80,7 +81,9 @@ def prepare():
     if LOCAL == DEFAULT_LOCAL:
         if not ENV_FILE.exists():
             raise SystemExit('Missing environment file: run init_env.py for the selected cloud/local-test mode first.')
-        return read_env(ENV_FILE)
+        values = read_env(ENV_FILE)
+        values.update(load_mail_settings())
+        return values
     secret_file = LOCAL / 'secrets.json'
     if not secret_file.exists():
         values = {f'{s.upper()}_{r}_PASSWORD': secrets.token_hex(24)
@@ -101,6 +104,7 @@ def prepare():
     key_file = LOCAL / 'keys.json'
     if not key_file.exists():
         exclusive(key_file, json.dumps(identity_keys.generate('p02-identity-1')))
+    values.update(load_mail_settings())
     return values
 
 
@@ -145,7 +149,7 @@ def configuration(values):
             if isinstance(volume, str) and volume.startswith('.'):
                 source, *rest = volume.split(':')
                 service['volumes'][index] = str((INFRA / source).resolve()).replace('\\', '/') + ':' + ':'.join(rest)
-        service['ports'] = [p.replace('55672:', '56672:').replace('55673:', '56673:')
+        service['ports'] = [p.replace(':-55672}', ':-56672}').replace(':-55673}', ':-56673}')
                             .replace('51025:', '52025:').replace('58025:', '59025:')
                             .replace('5643', '5743').replace('57117:', '58117:')
                             for p in service.get('ports', [])]
@@ -181,8 +185,13 @@ def configuration(values):
             env.update(IDENTITY_KEYS_FILE='/run/identity/keys.json', IDENTITY_ACTIVE_KID='p02-identity-1',
                        IDENTITY_MAIL_KEY=values['IDENTITY_MAIL_KEY'], MAIL_HOST='identity-mail', MAIL_PORT='1025',
                        IDENTITY_NOTIFICATION_EMAIL_ENABLED='true', IDENTITY_FIXTURES_ENABLED='true',
+                       IDENTITY_EMAIL_VERIFICATION_REQUIRED='true',
                        IDENTITY_FIXTURE_PASSWORD=values['IDENTITY_FIXTURE_PASSWORD'],
                        **{name: values[name] for name in WORKLOAD_SECRETS})
+            env.update({key: values[key] for key in (
+                'MAIL_HOST', 'MAIL_PORT', 'MAIL_USERNAME', 'MAIL_PASSWORD', 'MAIL_AUTH',
+                'MAIL_TLS_REQUIRED', 'MAIL_TIMEOUT_MS', 'IDENTITY_MAIL_FROM',
+                'IDENTITY_NOTIFICATION_EMAIL_ENABLED') if key in values})
             cfg['volumes']['identity-signing-keys'] = {'name': 'smarttravel-p02_identity-signing-keys'}
             volumes.append('identity-signing-keys:/run/identity:ro')
         if service == 'catalog':
@@ -380,9 +389,17 @@ def replay_catalog_dlq():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('action', choices=['smoke', 'monitor', 'manifest', 'renew', 'replay-catalog-dlq'])
+    parser.add_argument('action', choices=['smoke', 'monitor', 'manifest', 'renew', 'replay-catalog-dlq', 'apply-mail'])
     args = parser.parse_args()
-    if args.action == 'smoke':
+    if args.action == 'apply-mail':
+        values = prepare()
+        if not load_mail_settings():
+            raise SystemExit('Configure Gmail with configure_mail.py before applying it.')
+        if LOCAL != DEFAULT_LOCAL:
+            configuration(values)
+        compose('up', '-d', '--no-deps', 'identity')
+        print('Identity restarted with verified local SMTP settings; other services retained.')
+    elif args.action == 'smoke':
         from p02_smoke import smoke
         smoke()
     elif args.action == 'monitor':
