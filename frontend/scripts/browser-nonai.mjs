@@ -168,8 +168,13 @@ try {
   await responsiveCheck('user', 'Bản đồ');
   await page.getByRole('button', { name: 'Xem vị trí', exact: true }).first().click(); await idle();
   assert.match(await page.getByRole('link', { name: /Mở OpenStreetMap/ }).getAttribute('href'), /^https:\/\/www.openstreetmap.org\//);
-  await page.locator('iframe').waitFor();
-  mark('map', 'Location coordinates, OSM link and opt-in map iframe');
+  const map = page.getByRole('region', { name: 'B?n ?? ??a ?i?m t??ng t?c', exact: true });
+  await map.waitFor({ state: 'visible' });
+  await map.locator('.leaflet-marker-icon').first().waitFor({ state: 'visible' });
+  await map.locator('.leaflet-popup-content strong').waitFor({ state: 'visible' });
+  assert.equal(await map.locator('.travel-map-marker .is-selected').count(), 1);
+  assert.equal(await map.locator('iframe').count(), 0);
+  mark('map', 'Location coordinates, OSM link, Leaflet markers and selected-place popup');
   await logout(); await login('business');
   await responsiveCheck('business', 'Khám phá');
   await responsiveCheck('business', 'Tài khoản');
