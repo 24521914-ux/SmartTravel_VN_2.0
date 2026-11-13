@@ -13,7 +13,7 @@ import org.springframework.amqp.core.*;
 import java.nio.file.*;
 import java.util.*;
 import static org.assertj.core.api.Assertions.*;
-@SpringBootTest(properties={"trip.transport.enabled=true","trip.transport.initial-delay-ms=3600000","logging.level.org.springframework=INFO"})
+@SpringBootTest(properties={"trip.travel-worker.enabled=false","trip.transport.enabled=true","trip.transport.initial-delay-ms=3600000","logging.level.org.springframework=INFO"})
 @ActiveProfiles("local")
 @EnabledIfEnvironmentVariable(named="DOMAIN_TRANSPORT_TESTS",matches="true")
 class BrokerDatabaseTests {
