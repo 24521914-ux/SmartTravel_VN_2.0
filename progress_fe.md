@@ -1,8 +1,8 @@
 # Tiến độ Frontend (FE) — SmartTravel VN
 
-- [ ] Tích hợp source hiện tại vào cloud `main` — **IN_PROGRESS** · Codex, nhánh `feature/travel-workspace-integration-20261113`, nguồn `f635d79`, base `08718ac`, checkout dirty · TypeScript/Vite build PASS; `npm --prefix frontend run test:contracts` 17/0/0/0 (Node, API giả lập). Giữ UI tài khoản, bộ sưu tập theo tỉnh và timeline chuyến đi; giữ client timeout/cloud dotenv của main. Chưa chạy lại browser với cloud; trạng thái API và các vấn đề tích hợp xem [progress_be.md](progress_be.md).
+- [ ] Tích hợp source hiện tại vào cloud `main` — **PARTIAL** · Codex, nhánh `feature/travel-workspace-integration-20261113`, nguồn `f635d79`, base `08718ac`, checkout dirty · TypeScript/Vite build PASS; `npm --prefix frontend run test:contracts` 17/0/0/0 (Node, API giả lập). Giữ UI tài khoản, bộ sưu tập theo tỉnh và timeline chuyến đi; giữ client timeout/cloud dotenv của main. Chưa chạy lại browser với cloud; trạng thái API và các vấn đề tích hợp xem [progress_be.md](progress_be.md).
 
-Cập nhật: **13/11/2026 14:15** (GMT+7)
+Cập nhật: **13/11/2026 14:23** (GMT+7)
 
 
 Kiểm lại 05/11/2026: backend local đã cập nhật image Identity và kiểm API đăng ký/đăng nhập thật; chi tiết bằng chứng tại [progress_be.md](progress_be.md). FE end-to-end thật chưa chạy lại; giữ PARTIAL.
@@ -146,7 +146,7 @@ Hãy đổi mật khẩu/xóa dữ liệu cuối cùng bằng hai alias riêng; 
 
 ## 7. P03 — Kiểm thử và thiết kế lại giao diện
 
-- [x] P03-FE-TR-TIMELINE: Đồng bộ planner vào workspace hiện tại, tự lưu không làm mất draft ở item khác — **LOCAL_VERIFIED** (dirty) · Codex; source `91f15aa` dirty, thay đổi draft lưu tại `e287595` trên nhánh `feature/trip-timeline-planner`. `test:browser:trip:timeline` 11 nhóm/0 failure/0 page error; Gateway timeline 5 nhóm/0 failure, build PASS 4639 modules, client 15/0/0/0; Node24.21.0/Chromium/Gateway/DB thật. Collection bundle vẫn FAIL, không suy cả suite PASS; chi tiết T/F-42 tại [progress_be.md](progress_be.md#9-kết-nối-be--fe). Push/PR bị chặn bởi mạng F-41; chưa CI/gate.
+- [x] P03-FE-TR-TIMELINE: Đồng bộ planner vào workspace hiện tại, tự lưu không làm mất draft ở item khác — **LOCAL_VERIFIED** (dirty) · Codex; source `91f15aa` dirty, thay đổi draft lưu tại `e287595` trên nhánh `feature/trip-timeline-planner`. `test:browser:trip:timeline` 11 nhóm/0 failure/0 page error; Gateway timeline 5 nhóm/0 failure, build PASS 4639 modules, client 15/0/0/0; Node24.21.0/Chromium/Gateway/DB thật. Collection bundle vẫn FAIL, không suy cả suite PASS; chi tiết T/F-48 tại [progress_be.md](progress_be.md#9-kết-nối-be--fe). Push/PR bị chặn bởi mạng F-47; chưa CI/gate.
 
 **Bằng chứng giao diện mới** (theo ghi chép nhánh FE, checkout dirty `cfd121d` → `544dd08`, Windows, Node 24.21.0, Chromium Playwright):
 - `npm run test:ui` (`clay-ui-check.mjs`): 52 kiểm tra, 0 fail, API giả lập; 9 màn × 375/768/1440 px, màn con, trạng thái rỗng/lỗi, reduced motion.

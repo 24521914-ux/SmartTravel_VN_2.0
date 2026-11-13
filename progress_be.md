@@ -1,8 +1,8 @@
 # Tiến độ Backend (BE) — SmartTravel VN
 
-- [ ] Tích hợp source hiện tại vào cloud `main` — **IN_PROGRESS** · Codex, nhánh `feature/travel-workspace-integration-20261113`, nguồn `f635d79`, base `08718ac`, checkout dirty · Giữ thay đổi Identity/Catalog/Trip/FE; giữ cloud Compose và workload client-credentials trên main. Kiểm local: compose 14/0/0/0, cấu hình mail 7/0/0/0, seed 18/0/0/0 (Python, dependency giả lập trừ render Compose); `validate_contracts.py` PASS 184 HTTP/23 message; FE build và contract 17/0/0/0 PASS. Chưa có CI revision tích hợp; không nâng gate. Các vấn đề nhánh cũ F-32…F-35 trùng ID trên main đã đổi thành F-42…F-45, giữ bằng chứng hai phía.
+- [ ] Tích hợp source hiện tại vào cloud `main` — **PARTIAL** · Codex, nhánh `feature/travel-workspace-integration-20261113`, source `b9dd657`; checkout dirty khi kiểm local · Giữ thay đổi Identity/Catalog/Trip/FE; giữ cloud Compose và workload client-credentials trên main. Python 3.14.2: compose 14/0/0/0, cấu hình mail 7/0/0/0, seed 18/0/0/0 (dependency giả lập trừ render Compose); `validate_contracts.py` PASS 184 HTTP/23 message. Node 24.21.0: FE build PASS và contract 17/0/0/0 (API giả lập). Maven verify toàn bộ services, Java 21: 309/0/0/186, 123 unit/security chạy thật, DB/broker skip. CI P01 run 43384535643 trên `b9dd657`: contracts FAIL tại kiểm tra tầng repository (F-46); các job khác đang chạy. Không nâng gate. Các vấn đề nhánh cũ F-32…F-35 trùng ID trên main đã đổi thành F-42…F-45, giữ bằng chứng hai phía.
 
-Cập nhật: **13/11/2026 14:15** (GMT+7)
+Cập nhật: **13/11/2026 14:23** (GMT+7)
 
 Kiểm lại runtime 05/11/2026: **PARTIAL**, Codex, nhánh `feature/identity-skip-email-verification`, SHA `91f15aa`, dirty. Image Identity cũ đóng gói JAR trước thay đổi; đã `mvn -f backend/services/identity-service/pom.xml package -DskipTests -q`, `python backend/platform/build_service_image.py identity --tag smarttravel-identity:p02-local`, recreate riêng Identity, readiness 200. Kiểm API qua Gateway/PostgreSQL Docker thật, Java 21: 4/0/0/0 (admin login 200, kích hoạt tài khoản PENDING qua admin status 200, đăng ký synthetic 202, đăng nhập ngay 200). Không đổi mật khẩu tài khoản người dùng. Chưa kiểm đăng nhập bằng mật khẩu người dùng sau kích hoạt; mật khẩu thử trước đó trả 401. F-45 vẫn PARTIAL: chưa full DB/broker suite/FE end-to-end/CI; không đóng gate. Các ghi chú chưa kiểm runtime bên dưới là mốc trước lần kiểm này.
 
@@ -314,7 +314,7 @@ Yêu cầu: `plan/phases/P02-service-integration.md` · Trạng thái phase: **`
 Kiểm lại nhánh PR `feature/trip-timeline-planner`, commit `a055a20`, checkout tracked sạch: `python backend/services/trip-service/test-local.py --transport` 61/0/0/0, Java21.0.11, PostgreSQL16/RabbitMQ Docker thật, Catalog/routing stub; BUILD SUCCESS. Đây là baseline khác workspace tích hợp54 test bên dưới; không cộng số test hai lượt.
 
 - [x] P03-TR-TIMELINE: Đồng bộ Trip Planner vào workspace hiện tại và sửa contract test — **LOCAL_VERIFIED** (dirty) · Codex; source `91f15aa` dirty, phần sửa fixture lưu tại `a055a20` trên nhánh `feature/trip-timeline-planner`. `python backend/services/trip-service/test-local.py --transport`: 54 run / 0 failed / 0 errors / 0 skipped, Java 21.0.11, Docker PostgreSQL 16/RabbitMQ thật, Catalog/routing stub. Lượt trước 54/0/1/0 do stub snapshot thiếu các trường của contract mở rộng; đã dùng `placeSnapshot` canonical fixture, giữ nguyên contract. `validate_contracts.py`: 184 HTTP/23 event + 1 extension PASS; chỉ thêm hash extension vào manifest của workspace. Gateway timeline 5 nhóm PASS; FE timeline 11 nhóm PASS. Không nâng gate; còn CI/review.
-- [ ] P03-TR-PUBLISH: Push nhánh và tạo/merge PR — **BLOCKED** · F-41; GitHub TCP timeout trước xác thực. Chủ xử lý: người dùng/quản trị mạng cùng Codex; code và kiểm thử local vẫn làm được.
+- [ ] P03-TR-PUBLISH: Push nhánh và tạo/merge PR — **BLOCKED** · F-47; GitHub TCP timeout trước xác thực. Chủ xử lý: người dùng/quản trị mạng cùng Codex; code và kiểm thử local vẫn làm được.
 
 Yêu cầu: `plan/phases/P03-system-verification.md` và `plan/phases/P03-non-ai-execution.md` · Trạng thái phase: **`PARTIAL`**.
 
@@ -404,7 +404,7 @@ Bảng dưới đối chiếu 172 operation public/admin trong OpenAPI (không t
 
 **Revision:** các lượt J/K/M và lượt đầu chạy trên `d04c13a` dirty; L và browser cuối trên `101912f` dirty. Source kiểm thử đã lưu không đổi ở backend `66e6586`, FE `4e020e1`, scripts `edb10cb`; tài liệu contract `40590cf`. Chưa có CI run cho revision mới; chỉ `LOCAL_VERIFIED`, không cấp gate. ScannerBoundary từng có 2 lượt fail503 lúc JDK khởi động lạnh; sửa handshake fixture (không tăng timeout production), sau đó full37 và full38 PASS; không dùng retry che lỗi.
 
-**T — Timeline, 05/11/2026:** workspace `91f15aa` dirty, Node 24.21.0/Chromium, Gateway/Catalog/PostgreSQL thật. `test:browser:trip:timeline` 11 nhóm/0 failure/0 page error, gồm draft không hợp lệ ở một item trong khi item khác lưu, lỗi503 có điều khiển và xung đột phiên bản; `test:gateway:trip:timeline` 5 nhóm/0 failure, có cleanup synthetic fixture. Build FE PASS 4639 modules, `test:contracts` 15/0/0/0; platform checksum/policy 12/0/0/0. Bundle collection vẫn FAIL (F-42); chưa CI/gate.
+**T — Timeline, 05/11/2026:** workspace `91f15aa` dirty, Node 24.21.0/Chromium, Gateway/Catalog/PostgreSQL thật. `test:browser:trip:timeline` 11 nhóm/0 failure/0 page error, gồm draft không hợp lệ ở một item trong khi item khác lưu, lỗi503 có điều khiển và xung đột phiên bản; `test:gateway:trip:timeline` 5 nhóm/0 failure, có cleanup synthetic fixture. Build FE PASS 4639 modules, `test:contracts` 15/0/0/0; platform checksum/policy 12/0/0/0. Bundle collection vẫn FAIL (F-48); chưa CI/gate.
 
 | Service | ✅ Hoàn thiện | 🟡 Đã nối, chưa kiểm đủ | ❌ Lỗi | ⚪ Chưa thực hiện | ⏸️ Hoãn | ➖ Không áp dụng | Tổng |
 |---|---|---|---|---|---|---|---|
@@ -628,12 +628,15 @@ Bảng dưới đối chiếu 172 operation public/admin trong OpenAPI (không t
 
 ## 10. Vấn đề đang mở
 
-F-41 — Trung bình, P03, **OPEN** · Push/PR bị chặn bởi kết nối TCP tới GitHub/API GitHub; HTTPS Google và raw.githubusercontent.com vẫn 200. DNS hệ thống và DoH trùng nhau; HTTPS GitHub qua nhiều địa chỉ chính thức và SSH22 đều timeout. Có route Radmin VPN trạng thái Dead; thử ép socket qua Wi-Fi vẫn timeout nên chưa kết luận VPN là nguyên nhân. Thử thêm route tạm bị Windows từ chối quyền Administrator; không thay đổi route/firewall/DNS. Người xử lý: người dùng/quản trị mạng + Codex; cần kiểm tra trên mạng khác hoặc phiên quản trị.
 
-F-42 — Trung bình, P02, **OPEN** · Suite collection trong workspace hiện tại: lượt đầu FAIL selector tiêu đề Tài khoản, đã cập nhật sang `.account-panel-container`; lượt sau FAIL `POST /collections/{id}/items` 503. Log Community: workload token request tới Catalog thất bại; health container vẫn healthy. Timeline browser/Gateway riêng PASS; không coi bundle Trip/collection PASS. Người xử lý: N1/N2 + Codex (đồng bộ token issuer runtime).
+F-48 — Trung bình, P02, **OPEN** · Suite collection trong workspace hiện tại: lượt đầu FAIL selector tiêu đề Tài khoản, đã cập nhật sang `.account-panel-container`; lượt sau FAIL `POST /collections/{id}/items` 503. Log Community: workload token request tới Catalog thất bại; health container vẫn healthy. Timeline browser/Gateway riêng PASS; không coi bundle Trip/collection PASS. Người xử lý: N1/N2 + Codex (đồng bộ token issuer runtime).
 
 | ID | Mức | Phase | Vấn đề | Người xử lý | Trạng thái |
 |---|---|---|---|---|---|
+| F-46 | Trung bình | P01 | CI contracts trên `b9dd657`, run 43384535643 FAIL do SQL trong DayTravelService; sửa repository tại `1ed0792`, layout 7/0/0/0 và Trip unit/security 61/0/0/41, Java 21, dirty; chờ CI revision cuối | Codex | PARTIAL |
+| F-49 | Trung bình | P01 | CI ingestion trên `b9dd657`, run 43384535643: 45/0/1/0 do fixture candidate thiếu metadata HTTP; sửa tại `560194f`. Runner `test-local.py`, Java 21/PostgreSQL Docker thật: 45/0/0/12, riêng DB 17/0/0/0; broker skip, dirty; chờ CI | Codex | PARTIAL |
+| F-50 | Trung bình | P01 | CI Trip trên `b9dd657`, run 43384535643: 61/1/0/0 do worker của context broker xử lý dữ liệu trong suite domain; sửa isolation `572c619`. `test-local.py --transport`, Java 21/PostgreSQL và RabbitMQ Docker thật: 61/0/0/0, dirty; một lần FAIL CI và một lần PASS local sau sửa, chờ CI cuối | Codex | PARTIAL |
+| F-51 | Trung bình | P01/P02 | CI Identity live probe và P02 run 43384535589 trên `b9dd657` thiếu thư xác minh vì mặc định đăng ký mới không cần xác minh; cấu hình kiểm thử riêng bật xác minh tại `35bc97b`/`958907f`, cloud vẫn false. Compose regression 14/0/0/0; chờ CI live mail | Codex | PARTIAL |
 | F-01 | Cao | P01/P02 | Identity chưa nhận `catalog.contribution.applied/rejected.v1` và `intelligence.model.deployed.v1` dù registry khai báo; message bị bỏ trong môi trường kết nối | N1 + N2 | OPEN |
 | F-02 | Trung bình | P00 | 11 endpoint ngoài candidate contract: 9 endpoint cũ và `POST /media`, `GET /admin/media/{id}`. Media đã có tài liệu extension và kiểm thử, chưa freeze/duyệt phiên bản mới | N1, N2 | OPEN |
 | F-03 | Thấp | P01 | Seed category chưa có `homestay` | N1 | OPEN |
