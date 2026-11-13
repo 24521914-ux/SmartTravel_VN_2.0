@@ -2,7 +2,7 @@
 
 - [ ] Tích hợp source hiện tại vào cloud `main` — **PARTIAL** · Codex, nhánh `feature/travel-workspace-integration-20261113`, source `b9dd657`; checkout dirty khi kiểm local · Giữ thay đổi Identity/Catalog/Trip/FE; giữ cloud Compose và workload client-credentials trên main. Python 3.14.2: compose 14/0/0/0, cấu hình mail 7/0/0/0, seed 18/0/0/0 (dependency giả lập trừ render Compose); `validate_contracts.py` PASS 184 HTTP/23 message. Node 24.21.0: FE build PASS và contract 17/0/0/0 (API giả lập). Maven verify toàn bộ services, Java 21: 309/0/0/186, 123 unit/security chạy thật, DB/broker skip. CI P01 run 43384535643 trên `b9dd657`: contracts FAIL tại kiểm tra tầng repository (F-46); các job khác đang chạy. Không nâng gate. Các vấn đề nhánh cũ F-32…F-35 trùng ID trên main đã đổi thành F-42…F-45, giữ bằng chứng hai phía.
 
-Cập nhật: **13/11/2026 14:29** (GMT+7)
+Cập nhật: **13/11/2026 14:34** (GMT+7)
 
 Kiểm lại runtime 05/11/2026: **PARTIAL**, Codex, nhánh `feature/identity-skip-email-verification`, SHA `91f15aa`, dirty. Image Identity cũ đóng gói JAR trước thay đổi; đã `mvn -f backend/services/identity-service/pom.xml package -DskipTests -q`, `python backend/platform/build_service_image.py identity --tag smarttravel-identity:p02-local`, recreate riêng Identity, readiness 200. Kiểm API qua Gateway/PostgreSQL Docker thật, Java 21: 4/0/0/0 (admin login 200, kích hoạt tài khoản PENDING qua admin status 200, đăng ký synthetic 202, đăng nhập ngay 200). Không đổi mật khẩu tài khoản người dùng. Chưa kiểm đăng nhập bằng mật khẩu người dùng sau kích hoạt; mật khẩu thử trước đó trả 401. F-45 vẫn PARTIAL: chưa full DB/broker suite/FE end-to-end/CI; không đóng gate. Các ghi chú chưa kiểm runtime bên dưới là mốc trước lần kiểm này.
 
@@ -31,6 +31,7 @@ Progress gồm **hai file**: file này (`progress_be.md`) cho backend, Gateway, 
 
 | Phase | Mục tiêu | Trạng thái | Đã kiểm ở mức | Còn thiếu để đóng gate | Việc tiếp theo |
 |---|---|---|---|---|---|
+| F-52 | Trung bình | P02/P03 | P02 run 43385449288 trên `8f6068e`: real Gateway/domain/deletion PASS, browser FAIL do chờ iframe trong khi UI dùng Leaflet. Sửa assertion vùng bản đồ/marker/popup tại `ea98d08`; Node syntax PASS. Kiểm browser chỉ đọc trên cloud local chưa đủ marker nên timeout, không tính PASS; chờ CI fixture độc lập | Codex | PARTIAL |
 | **P00** Chuẩn bị chung | Contract, fixture, template, 6 skeleton chạy độc lập | `READY_FOR_REVIEW` | Local | N1/N2 ký nhận gói và freeze contract `1.0.0-candidate` | N1/N2 review contract; quyết định có mở `1.1.0` cho F-14…F-16 trước khi freeze |
 | **P01** Phát triển độc lập | 6 service có nghiệp vụ thật, test với DB thật + stub đối tác | 60/67 task `LOCAL_VERIFIED`; 7 task `PARTIAL` gồm phát event Catalog F-43 | Local DB/broker thật + CI cũ cho 5 service | Sửa F-43; chữ ký reviewer từng service; xác nhận ánh xạ CI → task | N1 xử lý F-43; review chéo các service |
 | **P02** Kết nối thật | Gateway, HTTP, broker giữa 6 service, frontend qua Gateway | `PARTIAL` 12/15 task | Local P02 trên UI hiện tại; CI cũ không đại diện revision mới | P02-01, P02-08, P02-14; chữ ký | Xử lý F-01/F-06/F-07; review các commit tích hợp |
