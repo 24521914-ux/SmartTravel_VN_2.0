@@ -1,6 +1,6 @@
 # P05 Trip Service và bản đồ
 
-Trạng thái: **Chưa triển khai**. Luồng chức năng thuộc P01-TR; dependency để bắt đầu là P00 và contract/fixture đã chốt. Phát triển, kiểm thử độc lập bằng Catalog/Intelligence stub song song với các nhóm service khác; chỉ kết nối runtime thật tại P02 sau gate 6/6. Chức năng: F09/F10. Mã task bên dưới được giữ để theo dõi chi tiết, không phải một phase nối tiếp Community.
+Trạng thái: **PARTIAL**. Trip Planner timeline đã kiểm local; bằng chứng và phần còn thiếu tại `progress_be.md`/`progress_fe.md`; chưa có CI/chữ ký để đóng gate. Chức năng: F09/F10. Mã task bên dưới được giữ để theo dõi chi tiết, không phải một phase nối tiếp Community.
 
 ## Công việc
 

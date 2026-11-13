@@ -77,6 +77,10 @@ def run(refresh=False):
         assert metadata['consumers'] and metadata['producer']
         assert metadata['kind'] in ['event','command']
     shared = json.loads((ROOT/'fixtures/shared.json').read_text(encoding='utf-8'))
+    # Additive contracts are reviewed separately from the frozen candidate APIs.
+    extensions = list((ROOT/'extensions').glob('*.openapi.json'))
+    for extension in extensions:
+        validate_spec(json.loads(extension.read_text(encoding='utf-8')))
     assert len({u['id'] for u in shared['users']}) == 4
     assert {u['consent'] for u in shared['users']} == {True, False}
     assert shared['model']['production_eligible'] is False
@@ -87,7 +91,7 @@ def run(refresh=False):
     else:
         expected=json.loads((ROOT/'checksums.json').read_text(encoding='utf-8'))
         assert expected==manifest, 'Contract revision changed: review artifacts and explicitly refresh checksums'
-    print(f'PASS {count} HTTP operations/examples/errors; {len(registry["messages"])} event/command examples, negative cases and SHA-256 manifest.')
+    print(f'PASS {count} HTTP operations/examples/errors; {len(registry["messages"])} event/command examples, {len(extensions)} additive contract(s), negative cases and SHA-256 manifest.')
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(); parser.add_argument('--refresh-checksums',action='store_true')

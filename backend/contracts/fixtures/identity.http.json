@@ -84,6 +84,23 @@
       "version": 1
     }
   },
+  "resend_verification": {
+    "path": "/api/v1/auth/resend-verification",
+    "method": "POST",
+    "status": 202,
+    "headers": {
+      "If-Match": "\"1\"",
+      "Idempotency-Key": "synthetic-fixed-key"
+    },
+    "request": {
+      "email": "fixture@example.invalid"
+    },
+    "response": {
+      "request_id": "00000000-0000-4000-8000-000000000001",
+      "status": "ACCEPTED",
+      "version": 1
+    }
+  },
   "forgot_password": {
     "path": "/api/v1/auth/forgot-password",
     "method": "POST",

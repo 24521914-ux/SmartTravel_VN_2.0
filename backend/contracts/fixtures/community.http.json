@@ -15,6 +15,7 @@
           "place_id": "10000000-0000-4000-8000-000000000001",
           "rating": 1,
           "content": "synthetic",
+          "author_name": "synthetic",
           "media_keys": [
             "synthetic"
           ],
@@ -48,6 +49,7 @@
       "place_id": "10000000-0000-4000-8000-000000000001",
       "rating": 1,
       "content": "synthetic",
+      "author_name": "synthetic",
       "media_keys": [
         "synthetic"
       ],
@@ -76,6 +78,7 @@
       "place_id": "10000000-0000-4000-8000-000000000001",
       "rating": 1,
       "content": "synthetic",
+      "author_name": "synthetic",
       "media_keys": [
         "synthetic"
       ],
@@ -569,6 +572,7 @@
           "place_id": "10000000-0000-4000-8000-000000000001",
           "rating": 1,
           "content": "synthetic",
+          "author_name": "synthetic",
           "media_keys": [
             "synthetic"
           ],

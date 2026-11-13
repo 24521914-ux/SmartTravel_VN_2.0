@@ -13,6 +13,7 @@ import vn.smarttravel.trip.itinerary.repository.LocalFixturesRepository;
 @ConditionalOnProperty(name="trip.fixtures.enabled",havingValue="true")
 public class LocalItineraryFixtures implements ApplicationRunner {
     private final LocalFixturesRepository fixtures;
-    public LocalItineraryFixtures(LocalFixturesRepository fixtures){this.fixtures=fixtures;}
-    @Transactional public void run(ApplicationArguments args){fixtures.seed();}
+    private final DayTravelService travel;
+    public LocalItineraryFixtures(LocalFixturesRepository fixtures,DayTravelService travel){this.fixtures=fixtures;this.travel=travel;}
+    @Transactional public void run(ApplicationArguments args){travel.synchronizeTrip(fixtures.seed());}
 }

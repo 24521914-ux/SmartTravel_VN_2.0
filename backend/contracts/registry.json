@@ -203,6 +203,7 @@
       "refresh",
       "logout",
       "verify_email",
+      "resend_verification",
       "forgot_password",
       "reset_password",
       "profile",

@@ -20,6 +20,7 @@ const context = await browser.newContext({ viewport: { width: 1440, height: 1000
 const page = await context.newPage();
 page.setDefaultTimeout(25000);
 const checks = [], apiResults = [], errors = [], pending = new Set();
+const ownedCollections = new Set();
 const revision = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).stdout.trim();
 const dirty = Boolean(spawnSync('git', ['status', '--porcelain'], { cwd: repo, encoding: 'utf8' }).stdout.trim());
 const sourceHash = createHash('sha256').update(readFileSync(fileURLToPath(import.meta.url))).digest('hex');
@@ -46,6 +47,8 @@ async function action(method, path, trigger, status = 200) {
   const error = response.status() === status ? '' : await response.json().then(body => `${body.code}: ${body.message}`).catch(() => 'Invalid error response');
   assert.equal(response.status(), status, `${method} ${path.replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi, '{id}')} unexpected HTTP status ${error}`);
   const data = status === 204 ? null : await response.json();
+  if (method === 'POST' && path === '/api/community/api/v1/me/collections' && data?.collection_id) ownedCollections.add(data.collection_id);
+  if (method === 'DELETE' && path.startsWith('/api/community/api/v1/me/collections/')) ownedCollections.delete(path.split('/').at(-1));
   await idle();
   return { data, request: response.request().postDataJSON() };
 }
@@ -53,7 +56,8 @@ async function navigate(name) {
   const button = page.getByRole('navigation').getByRole('button', { name, exact: true });
   if (!await button.isVisible()) await page.locator('.more-toggle').click();
   await button.click(); await idle();
-  if (name !== 'Khám phá') await page.getByRole('heading', { name, exact: true, level: 1 }).waitFor();
+  if (name === 'Tài khoản') await page.locator('.account-panel-container').waitFor();
+  else if (name !== 'Khám phá') await page.getByRole('heading', { name, exact: true, level: 1 }).waitFor();
 }
 async function login(alias) {
   await navigate('Tài khoản');
@@ -83,113 +87,7 @@ async function openPlace(id, name) {
 try {
   await page.goto(`${base}/kham-pha`); await idle(); await login('u1');
   const name = `P03 full browser ${Date.now()}`;
-  await navigate('Chuyến đi');
-  await page.getByLabel('Tên chuyến đi', { exact: true }).fill(name);
-  await page.getByLabel('Ngày bắt đầu', { exact: true }).fill('2026-12-01');
-  await page.getByLabel('Ngày kết thúc', { exact: true }).fill('2026-12-04');
-  await page.getByLabel('Ngân sách (VND)', { exact: true }).fill('2500000');
-  const created = await action('POST', '/api/trip/api/v1/me/trips', () => button('Tạo chuyến đi').click(), 201);
-  assert.equal(created.request.timezone, 'Asia/Ho_Chi_Minh'); assert.equal(created.request.currency, 'VND'); assert.equal(created.request.budget, 2500000);
-  assert.equal(created.data.name, name); assert.equal(created.data.budget, 2500000);
-  await page.getByLabel('Tên chuyến đi', { exact: true }).fill(`${name} rejected`);
-  await page.getByLabel('Ngày kết thúc', { exact: true }).fill('2026-11-30');
-  await action('POST', '/api/trip/api/v1/me/trips', () => button('Tạo chuyến đi').click(), 422);
-  assert.equal(await article(`${name} rejected`).count(), 0);
-  assert.equal(await page.getByLabel('Tên chuyến đi', { exact: true }).inputValue(), `${name} rejected`);
-  await page.getByLabel('Ngày kết thúc', { exact: true }).fill('2026-12-04');
-  await page.getByLabel('Tên chuyến đi', { exact: true }).fill('');
-  mark('trip_invalid_range_no_fake_success', 'Real backend rejects end-before-start with 422; no invented trip appears and entered name remains');
-  const tripId = created.data.trip_id ?? created.data.id;
-  await action('GET', tripPath(tripId), () => button('Xem chi tiết', article(name)).click());
-  const studio = page.locator('.trip-studio');
-  const segmentPanel = page.getByRole('region', { name: 'Chặng điểm đến', exact: true });
-  const destinationOptions = await segmentPanel.locator('select[name=destination] option').evaluateAll(nodes => nodes.map(node => node.value).filter(Boolean));
-  assert.ok(destinationOptions.length, 'Real Catalog destination required');
-  await segmentPanel.locator('select[name=destination]').selectOption(destinationOptions[0]);
-  const segment = await action('POST', `${tripPath(tripId)}/destinations`, () => button('Thêm chặng điểm đến', segmentPanel).click(), 201);
-  const segmentId = segment.data.segment_id;
-  assert.equal(segment.data.destination_id, destinationOptions[0]);
-  await action('GET', `${tripPath(tripId)}/destinations/${segmentId}`, () => button('Sửa chặng điểm đến', segmentPanel).click());
-  await segmentPanel.getByLabel('Đến ngày', { exact: true }).fill('2026-12-03');
-  const segmentEdited = await action('PATCH', `${tripPath(tripId)}/destinations/${segmentId}`, () => button('Lưu chặng điểm đến', segmentPanel).click());
-  assert.equal(segmentEdited.data.end_date, '2026-12-03');
-  mark('trip_create_destination_crud', 'Trip stored exact VND budget/timezone; destination read/edit persisted within trip range');
-
-  await page.getByLabel(/^Ngày tham quan:/).fill('2026-12-01');
-  const firstDay = await action('POST', `${tripPath(tripId)}/days`, () => button('Thêm ngày').click(), 201);
-  const dayId = firstDay.data.day_id;
-  const itemsPath = `${tripPath(tripId)}/days/${dayId}/items`;
-  await page.getByLabel(/^Ngày tham quan:/).fill('2026-12-02');
-  const secondDay = await action('POST', `${tripPath(tripId)}/days`, () => button('Thêm ngày').click(), 201);
-  await page.getByLabel('Đổi ngày tham quan', { exact: true }).fill('2026-12-03');
-  const dayEdited = await action('PATCH', `${tripPath(tripId)}/days/${secondDay.data.day_id}`, () => button('Lưu ngày tham quan').click());
-  assert.equal(dayEdited.data.date, '2026-12-03');
-  await action('DELETE', `${tripPath(tripId)}/days/${secondDay.data.day_id}`, () => button('Xóa ngày tham quan').click(), 204);
-  await action('GET', `${tripPath(tripId)}/days/${dayId}`, () => page.getByRole('tab', { name: '2026-12-01', exact: true }).click());
-  assert.equal(await page.getByRole('tab', { name: '2026-12-03', exact: true }).count(), 0);
-  mark('day_crud', 'Create two actual days; edit second date; delete it; first day persists');
-
-  const pickerButtons = button('+ Thêm vào ngày');
-  assert.ok(await pickerButtons.count() >= 2, 'Need two actual Catalog places');
-  const firstItem = await action('POST', itemsPath, () => pickerButtons.nth(0).click(), 201);
-  const secondItem = await action('POST', itemsPath, () => pickerButtons.nth(1).click(), 201);
-  const firstItemId = firstItem.data.item_id, secondItemId = secondItem.data.item_id;
-  assert.equal(firstItem.request.locked, false); assert.equal(firstItem.request.recommendation_request_id, null); assert.ok(!('start_time' in firstItem.request));
-  const placeIds = [firstItem.data.place_id, secondItem.data.place_id];
-  assert.notEqual(...placeIds);
-  const timeline = () => page.locator('.timeline-item');
-  await action('GET', `${itemsPath}/${firstItemId}`, () => button('Tải chi tiết địa điểm', timeline().nth(0)).click());
-  await timeline().nth(0).getByLabel('Ghi chú địa điểm', { exact: true }).fill('Persisted browser itinerary note');
-  await timeline().nth(0).getByLabel('Thời lượng (phút)', { exact: true }).fill('75');
-  const itemEdited = await action('PATCH', `${itemsPath}/${firstItemId}`, () => button('Lưu địa điểm', timeline().nth(0)).click());
-  assert.equal(itemEdited.data.duration_minutes, 75); assert.equal(itemEdited.data.note, 'Persisted browser itinerary note');
-  await action('PATCH', `${itemsPath}/${firstItemId}`, () => button('Khóa địa điểm', timeline().nth(0)).click());
-  assert.equal(await button('Xóa địa điểm', timeline().nth(0)).isDisabled(), true);
-  assert.equal(await button('Xuống', timeline().nth(0)).isDisabled(), true);
-  await action('PATCH', `${itemsPath}/${firstItemId}`, () => button('Mở khóa địa điểm', timeline().nth(0)).click());
-  const orderResponse = page.waitForResponse(response => response.request().method() === 'GET' && new URL(response.url()).pathname === itemsPath);
-  const ordered = await action('PUT', `${itemsPath}/order`, () => button('Xuống', timeline().nth(0)).click());
-  assert.deepEqual(ordered.request.item_ids, [secondItemId, firstItemId]);
-  assert.deepEqual((await (await orderResponse).json()).items.map(item => item.item_id), [secondItemId, firstItemId]);
-  await action('PUT', `${itemsPath}/order`, () => button('Lên', timeline().nth(1)).click());
-  mark('item_crud_lock_order', 'Server ids and snapshot names; note/duration persisted; lock prevents delete/reorder; atomic order read-after-write matches');
-
-  await page.locator('select[name=from]').selectOption(firstItemId);
-  await page.locator('select[name=to]').selectOption(secondItemId);
-  await page.locator('select[name=mode]').selectOption('DRIVE');
-  const estimate = await action('POST', `${tripPath(tripId)}/route-estimates`, () => button('Ước tính tuyến').click());
-  assert.equal(estimate.data.fallback, true); assert.equal(estimate.data.duration_seconds, null); assert.ok(estimate.data.distance_m >= 0);
-  await page.getByText(/Fallback: khoảng cách đường chim bay/).waitFor();
-  const transfer = await action('POST', `${tripPath(tripId)}/transfers`, () => button('Lưu chặng di chuyển').click(), 201);
-  const transferId = transfer.data.transfer_id;
-  await action('GET', `${tripPath(tripId)}/transfers/${transferId}`, () => button('Sửa chặng di chuyển').click());
-  await page.locator('select[name=mode]').selectOption('WALK');
-  const transferEdited = await action('PATCH', `${tripPath(tripId)}/transfers/${transferId}`, () => button('Lưu chặng di chuyển').click());
-  assert.equal(transferEdited.data.mode, 'WALK'); assert.equal(transferEdited.data.duration_seconds, null);
-  await action('DELETE', `${tripPath(tripId)}/transfers/${transferId}`, () => button('Xóa chặng di chuyển').click(), 204);
-  const refreshed = await action('POST', `${tripPath(tripId)}/snapshots/refresh`, () => button('Cập nhật thông tin địa điểm').click(), 202);
-  assert.equal(refreshed.data.status, 'COMPLETED'); assert.deepEqual(refreshed.request.item_ids, [firstItemId, secondItemId]);
-  mark('routes_transfers_snapshot', 'Actual coordinate estimate labelled fallback with null duration; transfer create/read/update/delete and snapshot refresh acknowledged');
-
-  const editedName = `${name} edited`;
-  await page.getByLabel('Tên chuyến đi mới', { exact: true }).fill(editedName);
-  await page.getByLabel('Ngân sách mới', { exact: true }).fill('1800000');
-  const editedTrip = await action('PATCH', tripPath(tripId), () => button('Lưu chuyến đi').click());
-  assert.equal(editedTrip.data.name, editedName); assert.equal(editedTrip.data.budget, 1800000);
-  for (const state of ['PLANNED', 'COMPLETED', 'DRAFT']) {
-    const changed = await action('PUT', `${tripPath(tripId)}/state`, () => page.getByLabel(/^Trạng thái chuyến đi/).selectOption(state));
-    assert.equal(changed.data.state, state);
-    assert.equal(await page.getByLabel(/^Trạng thái chuyến đi/).inputValue(), state);
-  }
-  await action('DELETE', `${itemsPath}/${secondItemId}`, () => button('Xóa địa điểm', timeline().nth(1)).click(), 204);
-  assert.equal(await timeline().count(), 1);
-  await action('DELETE', `${itemsPath}/${firstItemId}`, () => button('Xóa địa điểm', timeline().nth(0)).click(), 204);
-  await action('DELETE', `${tripPath(tripId)}/days/${dayId}`, () => button('Xóa ngày tham quan').click(), 204);
-  await action('DELETE', `${tripPath(tripId)}/destinations/${segmentId}`, () => button('Xóa chặng điểm đến', segmentPanel).click(), 204);
-  await action('DELETE', tripPath(tripId), () => button('Xóa chuyến đi', article(editedName)).click(), 204);
-  assert.equal(await article(editedName).count(), 0);
-  mark('trip_edit_state_cleanup', 'Name/budget and all state transitions persisted; item/day/segment/trip removals confirmed by real 204 and reloaded lists');
-
+  // Trip workspace regression lives in browser-trip-timeline.mjs.
   await navigate('Bộ sưu tập');
   const collectionName = `${name} collection`;
   await page.getByLabel('Tên bộ sưu tập', { exact: true }).fill(collectionName);
@@ -201,9 +99,22 @@ try {
   await detail.getByLabel('Tên mới', { exact: true }).fill(`${collectionName} edited`);
   const collectionEdited = await action('PATCH', communityPath(`/me/collections/${collectionId}`), () => button('Lưu bộ sưu tập', detail).click());
   assert.equal(collectionEdited.data.name, `${collectionName} edited`);
-  await button('Tìm địa điểm', detail).click(); await idle();
-  const places = await detail.getByLabel(/^Địa điểm/).locator('option').evaluateAll(nodes => nodes.map(node => node.value).filter(Boolean));
-  assert.ok(places.length >= 2);
+  const provincePicker = detail.getByRole('combobox', { name: /^Tỉnh\/thành cho bộ sưu tập/ });
+  const placePicker = detail.getByRole('combobox', { name: /^Địa điểm/ });
+  assert.equal(await placePicker.isDisabled(), true, 'Place picker requires a province search');
+  assert.equal(await detail.getByLabel('Ghi chú', { exact: true }).isDisabled(), true);
+  assert.equal(await button('Tìm địa điểm', detail).isDisabled(), true);
+  const provinceIds = await provincePicker.locator('option').evaluateAll(nodes => nodes.map(node => node.value).filter(Boolean));
+  let places = [];
+  for (const provinceId of provinceIds) {
+    await provincePicker.selectOption(provinceId);
+    assert.equal(await placePicker.isDisabled(), true, 'Province changes invalidate previous place results');
+    await button('Tìm địa điểm', detail).click(); await idle();
+    places = await placePicker.locator('option').evaluateAll(nodes => nodes.map(node => node.value).filter(Boolean));
+    if (places.length >= 2) break;
+  }
+  assert.ok(places.length >= 2, 'Need a province containing two actual Catalog places');
+  assert.ok((await detail.getByRole('status').innerText()).includes(String(places.length)), 'Search shows the returned place count');
   const collectionItemsPath = communityPath(`/collections/${collectionId}/items`);
   const collectionItemIds = [];
   for (let index = 0; index < 2; index++) {
@@ -304,6 +215,22 @@ try {
   console.error(`FAIL trip/collection browser: ${failure.message}`);
   await page.screenshot({ path: resolve(output, 'failure.png'), fullPage: true });
 } finally {
+  // Failed assertions must not leave this run's synthetic collections behind.
+  if (ownedCollections.size) {
+    const loginResponse = await context.request.post(`${base}/api/identity/api/v1/auth/login`, { data: { email: 'fixture-u1@example.invalid', password } });
+    if (loginResponse.ok()) {
+      const pair = await loginResponse.json();
+      for (const id of ownedCollections) {
+        const url = `${base}/api/community/api/v1/me/collections/${id}`;
+        const current = await context.request.get(url, { headers: { Authorization: `Bearer ${pair.access_token}` } });
+        if (current.ok()) {
+          const collection = await current.json();
+          const removed = await context.request.delete(url, { headers: { Authorization: `Bearer ${pair.access_token}`, 'If-Match': `"${collection.version}"` } });
+          if (removed.status() !== 204) console.error('Synthetic collection cleanup could not complete');
+        }
+      }
+    } else console.error('Synthetic collection cleanup login unavailable');
+  }
   const unique = [...new Map(apiResults.map(result => [JSON.stringify(result), result])).values()];
   const timestamp = new Date().toISOString();
   const counts = { tests_run: checks.length + (failure ? 1 : 0), tests_passed: checks.length, tests_failed: failure ? 1 : 0, tests_skipped: 0 };

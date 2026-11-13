@@ -149,6 +149,7 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_AUTH: ${MAIL_AUTH:-true}
       MAIL_TLS_REQUIRED: ${MAIL_TLS_REQUIRED:-true}
+      MAIL_TIMEOUT_MS: ${MAIL_TIMEOUT_MS:-2000}
       # Synthetic demo accounts fixture-*@example.invalid (password IDENTITY_FIXTURE_PASSWORD).
       IDENTITY_FIXTURES_ENABLED: ${IDENTITY_FIXTURES_ENABLED:-false}
       IDENTITY_FIXTURE_PASSWORD: ${IDENTITY_FIXTURE_PASSWORD:?run backend/platform/init_env.py}

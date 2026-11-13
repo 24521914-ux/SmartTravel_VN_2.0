@@ -12,6 +12,9 @@
         {
           "place_id": "10000000-0000-4000-8000-000000000001",
           "name": "synthetic",
+          "name_en": "synthetic",
+          "address": "synthetic",
+          "description": "synthetic",
           "status": "DRAFT",
           "version": 1,
           "latitude": 10.762622,
@@ -30,6 +33,10 @@
             "00000000-0000-4000-8000-000000000001"
           ],
           "price": 0,
+          "price_min": 0,
+          "price_max": 0,
+          "rating_avg": 0,
+          "review_count": 0,
           "currency": "VND",
           "opening_hours": [
             {
@@ -60,6 +67,8 @@
     },
     "request": {
       "name": "synthetic",
+      "address": "synthetic",
+      "description": "synthetic",
       "latitude": 10.762622,
       "longitude": 106.660172,
       "category_ids": [
@@ -92,6 +101,9 @@
     "response": {
       "place_id": "10000000-0000-4000-8000-000000000001",
       "name": "synthetic",
+      "name_en": "synthetic",
+      "address": "synthetic",
+      "description": "synthetic",
       "status": "DRAFT",
       "version": 1,
       "latitude": 10.762622,
@@ -110,6 +122,10 @@
         "00000000-0000-4000-8000-000000000001"
       ],
       "price": 0,
+      "price_min": 0,
+      "price_max": 0,
+      "rating_avg": 0,
+      "review_count": 0,
       "currency": "VND",
       "opening_hours": [
         {
@@ -136,6 +152,9 @@
     "response": {
       "place_id": "10000000-0000-4000-8000-000000000001",
       "name": "synthetic",
+      "name_en": "synthetic",
+      "address": "synthetic",
+      "description": "synthetic",
       "status": "DRAFT",
       "version": 1,
       "latitude": 10.762622,
@@ -154,6 +173,10 @@
         "00000000-0000-4000-8000-000000000001"
       ],
       "price": 0,
+      "price_min": 0,
+      "price_max": 0,
+      "rating_avg": 0,
+      "review_count": 0,
       "currency": "VND",
       "opening_hours": [
         {
@@ -179,6 +202,8 @@
     },
     "request": {
       "name": "synthetic",
+      "address": "synthetic",
+      "description": "synthetic",
       "latitude": 10.762622,
       "longitude": 106.660172,
       "category_ids": [
@@ -211,6 +236,9 @@
     "response": {
       "place_id": "10000000-0000-4000-8000-000000000001",
       "name": "synthetic",
+      "name_en": "synthetic",
+      "address": "synthetic",
+      "description": "synthetic",
       "status": "DRAFT",
       "version": 1,
       "latitude": 10.762622,
@@ -229,6 +257,10 @@
         "00000000-0000-4000-8000-000000000001"
       ],
       "price": 0,
+      "price_min": 0,
+      "price_max": 0,
+      "rating_avg": 0,
+      "review_count": 0,
       "currency": "VND",
       "opening_hours": [
         {
@@ -266,6 +298,9 @@
         {
           "place_id": "10000000-0000-4000-8000-000000000001",
           "name": "synthetic",
+          "name_en": "synthetic",
+          "address": "synthetic",
+          "description": "synthetic",
           "status": "PUBLISHED",
           "version": 1,
           "latitude": 10.762622,
@@ -284,6 +319,10 @@
             "00000000-0000-4000-8000-000000000001"
           ],
           "price": 0,
+          "price_min": 0,
+          "price_max": 0,
+          "rating_avg": 0,
+          "review_count": 0,
           "currency": "VND",
           "opening_hours": [
             {
@@ -315,6 +354,9 @@
     "response": {
       "place_id": "10000000-0000-4000-8000-000000000001",
       "name": "synthetic",
+      "name_en": "synthetic",
+      "address": "synthetic",
+      "description": "synthetic",
       "status": "PUBLISHED",
       "version": 1,
       "latitude": 10.762622,
@@ -333,6 +375,10 @@
         "00000000-0000-4000-8000-000000000001"
       ],
       "price": 0,
+      "price_min": 0,
+      "price_max": 0,
+      "rating_avg": 0,
+      "review_count": 0,
       "currency": "VND",
       "opening_hours": [
         {
@@ -362,6 +408,9 @@
     "response": {
       "place_id": "10000000-0000-4000-8000-000000000001",
       "name": "synthetic",
+      "name_en": "synthetic",
+      "address": "synthetic",
+      "description": "synthetic",
       "status": "DRAFT",
       "version": 1,
       "latitude": 10.762622,
@@ -380,6 +429,10 @@
         "00000000-0000-4000-8000-000000000001"
       ],
       "price": 0,
+      "price_min": 0,
+      "price_max": 0,
+      "rating_avg": 0,
+      "review_count": 0,
       "currency": "VND",
       "opening_hours": [
         {
@@ -1475,6 +1528,9 @@
         {
           "place_id": "10000000-0000-4000-8000-000000000001",
           "name": "synthetic",
+          "name_en": "synthetic",
+          "address": "synthetic",
+          "description": "synthetic",
           "status": "PUBLISHED",
           "version": 1,
           "latitude": 10.762622,
@@ -1493,6 +1549,10 @@
             "00000000-0000-4000-8000-000000000001"
           ],
           "price": 0,
+          "price_min": 0,
+          "price_max": 0,
+          "rating_avg": 0,
+          "review_count": 0,
           "currency": "VND",
           "opening_hours": [
             {
@@ -1548,6 +1608,9 @@
         {
           "place_id": "10000000-0000-4000-8000-000000000001",
           "name": "synthetic",
+          "name_en": "synthetic",
+          "address": "synthetic",
+          "description": "synthetic",
           "status": "DRAFT",
           "version": 1,
           "latitude": 10.762622,
@@ -1566,6 +1629,10 @@
             "00000000-0000-4000-8000-000000000001"
           ],
           "price": 0,
+          "price_min": 0,
+          "price_max": 0,
+          "rating_avg": 0,
+          "review_count": 0,
           "currency": "VND",
           "opening_hours": [
             {
@@ -1604,6 +1671,9 @@
         {
           "place_id": "10000000-0000-4000-8000-000000000001",
           "name": "synthetic",
+          "name_en": "synthetic",
+          "address": "synthetic",
+          "description": "synthetic",
           "status": "DRAFT",
           "version": 1,
           "latitude": 10.762622,
@@ -1622,6 +1692,10 @@
             "00000000-0000-4000-8000-000000000001"
           ],
           "price": 0,
+          "price_min": 0,
+          "price_max": 0,
+          "rating_avg": 0,
+          "review_count": 0,
           "currency": "VND",
           "opening_hours": [
             {

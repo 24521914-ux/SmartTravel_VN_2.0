@@ -21,6 +21,8 @@ public class AdminUserService {
     private final IdentityMutations mutations;
     private final TransactionTemplate tx;
     private final CursorPages cursors;
+    @org.springframework.beans.factory.annotation.Value("${identity.email-verification.required:false}")
+    private boolean emailVerificationRequired;
     public AdminUserService(AdminUserRepository repository, AuthRepository auth, CurrentUser current,
                             IdentityMutations mutations, TransactionTemplate tx, CursorPages cursors) {
         this.repository=repository; this.auth=auth; this.current=current; this.mutations=mutations; this.tx=tx; this.cursors=cursors;
@@ -64,7 +66,7 @@ public class AdminUserService {
             UUID actor=lockAdmin(jwt,user); var row=target(user,version);
             if(actor.equals(user)) throw new IdentityException(409,"ADMIN_SELF_MUTATION_FORBIDDEN");
             String requested=body.path("status").asText();
-            if(requested.equals("ACTIVE") && row.get("email_verified_at")==null) throw new IdentityException(409,"EMAIL_NOT_VERIFIED");
+            if(emailVerificationRequired && requested.equals("ACTIVE") && row.get("email_verified_at")==null) throw new IdentityException(409,"EMAIL_NOT_VERIFIED");
             repository.status(user,requested.equals("ACTIVE")?"ACTIVE":"SUSPENDED");
             auth.revokeAllSessions(user); // reactivation never resurrects a revoked family
             mutations.audit(actor,user,"ADMIN_STATUS_UPDATED");

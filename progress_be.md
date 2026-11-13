@@ -1,6 +1,12 @@
 # Tiến độ Backend (BE) — SmartTravel VN
 
-Cập nhật: **06/11/2026 19:44** (GMT+7)
+- [ ] Tích hợp source hiện tại vào cloud `main` — **IN_PROGRESS** · Codex, nhánh `feature/travel-workspace-integration-20261113`, nguồn `f635d79`, base `08718ac`, checkout dirty · Giữ thay đổi Identity/Catalog/Trip/FE; giữ cloud Compose và workload client-credentials trên main. Kiểm local: compose 14/0/0/0, cấu hình mail 7/0/0/0, seed 18/0/0/0 (Python, dependency giả lập trừ render Compose); `validate_contracts.py` PASS 184 HTTP/23 message; FE build và contract 17/0/0/0 PASS. Chưa có CI revision tích hợp; không nâng gate. Các vấn đề nhánh cũ F-32…F-35 trùng ID trên main đã đổi thành F-42…F-45, giữ bằng chứng hai phía.
+
+Cập nhật: **13/11/2026 14:15** (GMT+7)
+
+Kiểm lại runtime 05/11/2026: **PARTIAL**, Codex, nhánh `feature/identity-skip-email-verification`, SHA `91f15aa`, dirty. Image Identity cũ đóng gói JAR trước thay đổi; đã `mvn -f backend/services/identity-service/pom.xml package -DskipTests -q`, `python backend/platform/build_service_image.py identity --tag smarttravel-identity:p02-local`, recreate riêng Identity, readiness 200. Kiểm API qua Gateway/PostgreSQL Docker thật, Java 21: 4/0/0/0 (admin login 200, kích hoạt tài khoản PENDING qua admin status 200, đăng ký synthetic 202, đăng nhập ngay 200). Không đổi mật khẩu tài khoản người dùng. Chưa kiểm đăng nhập bằng mật khẩu người dùng sau kích hoạt; mật khẩu thử trước đó trả 401. F-45 vẫn PARTIAL: chưa full DB/broker suite/FE end-to-end/CI; không đóng gate. Các ghi chú chưa kiểm runtime bên dưới là mốc trước lần kiểm này.
+
+- [ ] P01 Identity — đăng ký không cần xác minh email: **PARTIAL** · Codex, nhánh `feature/identity-skip-email-verification`, baseline `91f15aa`, dirty. Theo yêu cầu người dùng 05/11/2026: mặc định `IDENTITY_EMAIL_VERIFICATION_REQUIRED=false`, tài khoản mới ACTIVE nhưng `email_verified_at` vẫn null; không gửi mã, giữ xác minh cho tài khoản PENDING cũ. FE chuyển sang đăng nhập, giữ email, xóa mật khẩu. Playwright `node frontend/scripts/browser-registration.mjs`: 1/0/0/0, Chromium + API stub; build FE PASS. Chưa kiểm DB/Gateway thật hoặc CI; suite xác minh cũ cần cấu hình bật xác minh. F-45; không đóng gate. Backend: `mvn -f backend/services/identity-service/pom.xml test -q`, Java 21, 66/0/0/44; 22 unit/security chạy thật, DB/broker skip. Lần đầu FAIL do fixture Mockito trả Map rỗng cho idempotency, đã sửa stub null; không phải flaky.
 
 Progress gồm **hai file**: file này (`progress_be.md`) cho backend, Gateway, hạ tầng và **trạng thái kết nối BE ↔ FE**; [`progress_fe.md`](progress_fe.md) cho frontend web. Mỗi file sắp theo phase P00 → P04. Yêu cầu chi tiết của từng phase vẫn nằm trong `plan/phases/`; file này chỉ ghi **đã làm tới đâu, kiểm bằng gì, làm gì tiếp**.
 
@@ -26,11 +32,11 @@ Progress gồm **hai file**: file này (`progress_be.md`) cho backend, Gateway, 
 | Phase | Mục tiêu | Trạng thái | Đã kiểm ở mức | Còn thiếu để đóng gate | Việc tiếp theo |
 |---|---|---|---|---|---|
 | **P00** Chuẩn bị chung | Contract, fixture, template, 6 skeleton chạy độc lập | `READY_FOR_REVIEW` | Local | N1/N2 ký nhận gói và freeze contract `1.0.0-candidate` | N1/N2 review contract; quyết định có mở `1.1.0` cho F-14…F-16 trước khi freeze |
-| **P01** Phát triển độc lập | 6 service có nghiệp vụ thật, test với DB thật + stub đối tác | 61/67 task `LOCAL_VERIFIED`; 6 task bàn giao `PARTIAL` | Local DB/broker thật + CI PASS cho 5 service | Chữ ký reviewer từng service; xác nhận ánh xạ CI → task | N1 review Community/Trip/Intelligence; N2 review Identity/Catalog/Ingestion |
+| **P01** Phát triển độc lập | 6 service có nghiệp vụ thật, test với DB thật + stub đối tác | 60/67 task `LOCAL_VERIFIED`; 7 task `PARTIAL` gồm phát event Catalog F-43 | Local DB/broker thật + CI cũ cho 5 service | Sửa F-43; chữ ký reviewer từng service; xác nhận ánh xạ CI → task | N1 xử lý F-43; review chéo các service |
 | **P02** Kết nối thật | Gateway, HTTP, broker giữa 6 service, frontend qua Gateway | `PARTIAL` 12/15 task | Local P02 trên UI hiện tại; CI cũ không đại diện revision mới | P02-01, P02-08, P02-14; chữ ký | Xử lý F-01/F-06/F-07; review các commit tích hợp |
 | **P03** Kiểm thử hệ thống | E2E, bảo mật, lỗi phụ thuộc, tải, restore, browser | `PARTIAL`; P03-07 `LOCAL_VERIFIED` trên UI hiện tại | Browser Gateway P02 thật; chưa chạy lại toàn bộ gate | Gate trên revision sạch; CI mới, chữ ký; AI hoãn | Chạy lại gate khi đủ điều kiện, N1/N2 review |
 | **P04** Phát hành | Triển khai mới, rollback, bàn giao vận hành | `NOT_STARTED` | — | Toàn bộ; bị chặn bởi gate P03 | Chuẩn bị target triển khai, domain, credential provider |
-| **Kết nối BE ↔ FE** | Từng API public/admin qua Gateway | 158 ✅ · 2 🟡 · 0 ❌ · 0 ⚪ · 14 ⏸️ · 1 ➖ (mục 9) | 160 API không AI được quan sát, 158 có 2xx | Hai nhánh media cần scanner thật (F-14) | Cấu hình scanner rồi kiểm lại APPROVE và đọc ảnh công khai |
+| **Kết nối BE ↔ FE** | Từng API public/admin qua Gateway | 155 ✅ · 5 🟡 · 0 ❌ · 0 ⚪ · 14 ⏸️ · 4 ➖ (mục 9) | Bằng chứng lịch sử 161 API; timeline mới xem T; còn scanner và F-42 | Scanner thật (F-14); contract/CI + N1 review cho representation (F-15) | Kiểm scanner khi có; xử lý F-42, chạy contract mới và review N1 |
 
 **Tóm tắt một dòng:** đã nối và kiểm thử FE hiện tại với Gateway/DB/broker thật trên dữ liệu tổng hợp P02; sửa sai contract và loại bỏ ghi giả khi API lỗi. Chưa xác nhận hai nhánh media phụ thuộc scanner thật; người dùng xác nhận 30/10/2026 tiếp tục bằng P02, chưa có dữ liệu du lịch có giấy phép. AI vẫn `DEFERRED`; không đóng gate hoặc ký thay N1/N2.
 
@@ -112,7 +118,7 @@ Mỗi service có database và tài khoản riêng; không service nào đọc D
 |---|---|---|---|---|
 | FLOW-01 | Đăng nhập và đi qua Gateway | Email/mật khẩu → Identity cấp access + refresh token → mỗi request Gateway đổi token qua `/internal/v1/security/exchange` → service đích kiểm phiên còn sống → trả dữ liệu | F01 | CI PASS |
 | FLOW-02 | Lưu sở thích | `PUT /me/preferences` (category UUID, phong cách, ngân sách, consent) + `If-Match` → Identity kiểm category với Catalog → lưu + outbox → event `identity.preferences.changed.v1` | F01, F05 | Phần Identity CI PASS; phần Intelligence DEFERRED |
-| FLOW-03 | Tìm kiếm địa điểm | `GET /places?q&lat&lon&radiusM&categoryId&minPrice&maxPrice&minRating&cursor` → bỏ dấu tiếng Việt + alias + PostGIS → trang kết quả, cursor ổn định | F02–F04 | CI PASS |
+| FLOW-03 | Tìm kiếm địa điểm | `GET /places?q&lat&lon&radiusM&categoryId&minPrice&maxPrice&minRating&cursor` → tên/địa chỉ bỏ dấu + alias + PostGIS → trang kết quả, cursor ổn định | F02–F04 | Local V9: `CatalogDatabaseTests` 20/0/0/0 và browser map 8/0/0/0; CI revision mới chưa chạy |
 | FLOW-04 | Review → rating | Tạo review (`PENDING`) → admin duyệt → Community cập nhật rating + outbox → `community.rating-summary.changed.v1` → Catalog lưu bản chiếu nếu version mới hơn | F06 | CI PASS |
 | FLOW-05 | Favorite và collection | `PUT/DELETE /me/favorites/{place}`; collection public/private, item, sắp xếp → Community kiểm địa điểm qua Catalog → event `community.favorite.changed.v1` | F07 | CI PASS |
 | FLOW-06 | Lập chuyến đi | Tạo trip → chặng/ngày → thêm item (Catalog kiểm + lưu snapshot) → sắp xếp với `If-Match` → di chuyển, ước tính tuyến → `trip.item.added.v1` | F09, F10 | CI PASS |
@@ -191,11 +197,12 @@ Mã task: ID = Identity, CA = Catalog, CO = Community, TR = Trip, IG = Ingestion
 
 ### 5.2. M2 — Nghiệp vụ
 
-- [x] P01-ID-03: Đăng ký/xác minh/login/logout/refresh/đặt lại/đổi mật khẩu, rate limit — **LOCAL_VERIFIED** · `AuthDatabaseTests`.
+- [x] P01-ID-03: Đăng ký/xác minh/login/logout/refresh/đặt lại/đổi mật khẩu, rate limit — **LOCAL_VERIFIED** (dirty) · `python backend/services/identity-service/test-local.py --transport --isolated-source`: 64/0/0/0 (run/failed/errors/skipped), riêng AuthDatabaseTests 38; Java 21.0.11, PostgreSQL/RabbitMQ Docker thật, SMTP mock trong DB suite. Chạy tại `857faf6` dirty; source lưu ở `2f21c75`. Browser SMTP thật qua Mailpit: mục 9/O. Gmail thật còn chờ cấu hình tài khoản gửi (F-44).
+- [ ] P02-ID-AUTH-01: Hoàn thiện đăng ký/xác minh/gửi lại mã/đăng nhập — **PARTIAL** · Người làm: Codex · Nhánh: `fix/identity-registration-verification`, source `2f21c75` · Đã sửa và kiểm local: mã hết hạn/thay thế, cooldown/rate limit, lỗi login pending, chuyển bước FE; 64 test BE, 22 Gateway, browser 13+8+1, 0 failure/error; checkout dirty. Người dùng chọn Gmail thật ngày 03/11/2026; thiếu tài khoản gửi/App Password để chạy `configure_mail.py --apply` và xác nhận email thực nhận (F-44). Next: người dùng cấu hình SMTP cục bộ; Codex kiểm lại xác thực/kết quả sau cấu hình.
 - [x] P01-ID-04: Hồ sơ, preferences, consent, admin user/status/role, API batch nội bộ — **LOCAL_VERIFIED** · `PreferencePatchTests`, `CategoryClientTests`.
 - [x] P01-ID-05: Hộp thư thông báo, gửi email có retry; yêu cầu xóa và thu ack — **LOCAL_VERIFIED** · `deletionRevokesAndTombstonesAtomicallyButRequiresAllSixAcknowledgements`.
 - [x] P01-CA-03: Phân cấp địa lý (chống vòng), taxonomy, vòng đời địa điểm + lịch sử — **LOCAL_VERIFIED** · `hierarchyCycleEffectiveOverlapAndEventPublishScheduleAreRejected`.
-- [x] P01-CA-04: Tìm tiếng Việt/alias, lọc, cursor ổn định, khoảng cách mét, lọc rating — **LOCAL_VERIFIED** · `cursorRejectsTamperingAndChangedFiltersAndPagesWithoutDuplicates`. Hiệu năng alias: F-04.
+- [x] P01-CA-04: Tìm tiếng Việt/alias, lọc, cursor ổn định, khoảng cách mét, lọc rating — **LOCAL_VERIFIED** · `cursorRejectsTamperingAndChangedFiltersAndPagesWithoutDuplicates`. Bổ sung 03/11/2026: migration V9 đưa tên + địa chỉ vào chỉ mục bỏ dấu, đồng bộ khi tạo/sửa; runtime POST/PATCH cho phép `address` theo OpenAPI. `CatalogDatabaseTests` 20/0/0/0 gồm `placeAddressSearchNormalizesAccentsAndTracksAddressUpdates`; Java 21, PostGIS Docker thật, HEAD `ca83db7`, dirty. Browser map qua Gateway 8/0/0/0 xác nhận lưu/đọc lại và tìm địa chỉ không dấu. Toàn suite không PASS: F-43. Hiệu năng alias: F-04.
 - [x] P01-CA-05: Giờ mở cửa nhiều ca/qua đêm/ngày lễ; giá NULL/0; media cách ly; bằng chứng claim riêng tư — **LOCAL_VERIFIED** · `openingOvernight24HoursHolidayAndRejectedLongShiftRollback`.
 - [x] P01-CA-06: Offering SERVICE/TOUR/EVENT/ACTIVITY/EXPERIENCE; tiện ích — **LOCAL_VERIFIED**. Seed thiếu `homestay`: F-03.
 - [x] P01-CA-07: Doanh nghiệp, thành viên, xác minh, claim, yêu cầu sửa, field được bảo vệ — **LOCAL_VERIFIED** · `businessRequiresVerifiedMembershipAndConflictPreservesPlace`.
@@ -222,7 +229,7 @@ Mã task: ID = Identity, CA = Catalog, CO = Community, TR = Trip, IG = Ingestion
 - [x] P01-ID-06: Category client, outbox 4 event, consumer thông báo/ack xóa/cập nhật category — **LOCAL_VERIFIED** · `BrokerDatabaseTests` (6). Thiếu 3 consumer theo registry: F-01.
 - [x] P01-ID-07: Contract provider JWKS/claims/batch/event; cấu hình stub không lọt production — **LOCAL_VERIFIED** · `all25FrozenOperationsHaveRealHttpProviderResponses`.
 - [x] P01-CA-08: Consumer rating có version; handler import/đóng góp idempotent; ghi + lịch sử + inbox/outbox cùng transaction — **LOCAL_VERIFIED** · `dependencyFailureRollsBackCommandInboxAndResult`.
-- [x] P01-CA-09: Phát event địa điểm/visibility/destination/category/claim; snapshot API — **LOCAL_VERIFIED** · `BrokerDatabaseTests` (5).
+- [ ] P01-CA-09: Phát event địa điểm/visibility/destination/category/claim; snapshot API — **PARTIAL** · Bằng chứng cũ: `BrokerDatabaseTests` (5). Kiểm lại 03/11/2026: `CatalogProviderTests.allSixtySixFrozenOperationsReturnValidatedProviderResponses` FAIL do payload `catalog.place.upserted.v1` thiếu 7 trường bắt buộc trong schema đang sửa trên checkout dirty (F-43); không coi bằng chứng cũ là đủ cho revision hiện tại. Người xử lý: N1.
 - [x] P01-CO-07: Client Catalog validate/batch; đóng quyền ghi khi không xác minh được địa điểm — **LOCAL_VERIFIED** · `CatalogClientTests`.
 - [x] P01-CO-08: Phát review/favorite/rating/contribution; nhận kết quả apply/visibility/xóa — **LOCAL_VERIFIED** · `BrokerDatabaseTests` (5).
 - [x] P01-TR-07: Adapter Catalog/routing; phát `trip.changed`, `trip.item.added`; nhận visibility/xóa — **LOCAL_VERIFIED** · `BrokerDatabaseTests` (12).
@@ -253,7 +260,7 @@ Mã task: ID = Identity, CA = Catalog, CO = Community, TR = Trip, IG = Ingestion
 - [x] Gateway route, security, đổi token — **LOCAL_VERIFIED** · 18 test (20/10); CI PASS trong run 39540804296.
 - [ ] Review platform — **NOT_STARTED**.
 - Frontend P01 (API client, refresh xoay vòng): xem `progress_fe.md`.
-- [ ] **Gate P01** (6/6 `READY_FOR_INTEGRATION` có chữ ký) — **PARTIAL** · Thiếu: chữ ký N1/N2 cho 6 gói.
+- [ ] **Gate P01** (6/6 `READY_FOR_INTEGRATION` có chữ ký) — **PARTIAL** · Thiếu: sửa lệch schema/producer event Catalog (F-43) và chữ ký N1/N2 cho 6 gói.
 
 ---
 
@@ -263,6 +270,7 @@ Mã task: ID = Identity, CA = Catalog, CO = Community, TR = Trip, IG = Ingestion
   - Runtime lúc chuyển dữ liệu `smarttravel-shared-cloud`: dùng đúng image ID của bộ P02 đang có; sáu service + Gateway healthy, database đổi sang cloud; khóa ký và volume tệp hiện có được giữ và sao lưu. `.env.cloud` được tạo cục bộ ở bước này, sau đó hợp nhất vào `.env` và lưu bản cũ riêng tại P04-CS-10; không commit credential. Kiểm API qua Gateway (`smoke.py`): lần đầu 6/1/0/0 (run/failed/errors/skipped), Catalog 504; sau đổi timeout Gateway riêng runtime cloud từ 2 s lên 15 s, lần kiểm sau 6/0/0/0: login, hồ sơ, địa điểm, lịch trình, yêu thích, bộ sưu tập đều 200 (địa điểm 8,66 s). Không coi lần đầu là PASS; F-38 chưa đóng. Bộ đối chiếu MongoDB ban đầu FAIL vì EJSON từ shell làm mất phân biệt kiểu số; đọc trực tiếp BSON xác nhận khớp, không sửa dữ liệu để khớp phép kiểm.
   - Đã thay runtime tạm bằng cloud Compose chuẩn build từ source tại P04-CS-10. Next: kiểm máy dev thứ hai và đủ luồng nghiệp vụ (F-39), object storage dùng chung (F-06). Chưa chạy browser FE trên cloud, chưa có CI/run ID hoặc chữ ký; không nâng trạng thái API FE, phase hay gate.
 
+P02 Bộ sưu tập: FE chọn tỉnh/thành từ `GET /geographic-units`, tìm `GET /places?geographicUnitId=…` và đếm đủ phân trang; chưa chạy lại Gateway/DB thật cho thay đổi này nên giữ nguyên ký hiệu kết nối và gate. Chi tiết kiểm tra frontend tại [progress_fe.md](progress_fe.md#6-p02--gọi-gateway-thật).
 
 Yêu cầu: `plan/phases/P02-service-integration.md` · Trạng thái phase: **`PARTIAL`** 12/15 task; P02-09 kiểm lại local ngày 30/10/2026.
 
@@ -287,21 +295,26 @@ Yêu cầu: `plan/phases/P02-service-integration.md` · Trạng thái phase: **`
 
 ---
 
-### 6.1. Dữ liệu mẫu kiểm thử thủ công — 01/11/2026
+### 6.1. Dữ liệu mẫu kiểm thử thủ công — cập nhật 03/11/2026
 
-- Trạng thái đăng nhập trang Chuyến đi — **LOCAL_VERIFIED** (dirty), Codex/`feature/local-demo-data`, HEAD `5015912`: FE không gọi API Trip khi khách chưa đăng nhập, hiển thị lời mời đăng nhập; dữ liệu riêng tư vẫn yêu cầu xác thực tại Gateway. `node frontend/scripts/browser-demo-data.mjs`: 11 kiểm tra PASS / 0 page error; ca khách 0 request Trip, tài khoản Lan đọc lịch trình từ DB thật, ca lỗi 503 được mô phỏng để kiểm tra FE vẫn báo lỗi tải dữ liệu. `npm --prefix frontend run build` PASS, Node 24/Chromium; không đổi contract, backend hoặc tổng kết nối mục 9.
-- Dọn dữ liệu công khai theo phản hồi ảnh chụp — **LOCAL_VERIFIED** (dirty), Codex/`feature/local-demo-data`, HEAD `5015912`: `python backend/infra/seed_demo.py --hide-legacy-tests` chuyển 48 địa điểm tên máy `P02`/`P03` sang `HIDDEN` qua API Catalog; đối chiếu đúng 48 ID/trạng thái trong PostgreSQL, giữ nguyên bản ghi và tham chiếu, 28 địa điểm mẫu vẫn công khai. Lần chạy lại thay đổi 0 bản ghi. `test_seed_demo.py`: 8 run / 0 failed / 0 errors / 0 skipped; `node frontend/scripts/browser-demo-data.mjs`: 9 kiểm tra PASS / 0 page error, xác nhận API public không còn tên máy và giao diện không còn `.journey-data-note`. Python 3.14, Node 24/Chromium, Gateway/PostgreSQL thật. Lệnh này dùng sau các suite tự động có tạo địa điểm công khai; không đổi tên giả thành địa điểm thật.
-- Bộ seed bổ trợ P02 — **LOCAL_VERIFIED** (dirty) · Người làm: Codex, nhánh `feature/local-demo-data`, HEAD `5015912`. `python backend/infra/seed_demo.py --verify-only` đọc API qua Gateway thật và đối chiếu ID trong PostgreSQL/MongoDB: 5 tài khoản, 28 địa điểm chính, 3 bộ sưu tập/11 item, 7 yêu thích, 3 chuyến đi/9 ngày/14 địa điểm/3 chặng điểm đến/6 chặng di chuyển, 28 đánh giá/1 báo cáo/3 đóng góp, 2 doanh nghiệp/2 thành viên editor/2 hồ sơ xác minh/2 claim/1 yêu cầu sửa, 33 thông báo, 1 ảnh chờ quét, 1 nguồn/1 job. Đây là dữ liệu mẫu, không phải nghiệm thu các task/gate P02.
-- `python -m unittest discover -s backend/infra -p test_seed_demo.py -v`: 7 run / 0 failed / 0 errors / 0 skipped; `node frontend/scripts/browser-demo-data.mjs`: 8 kiểm tra giao diện / 0 page error. Lượt cuối `python backend/infra/seed_demo.py` PASS toàn bộ đọc lại/đối chiếu DB, `new records this run: 0`; các lượt xây dựng script trước đó gặp lỗi API/ID đã sửa, không tính là PASS. Môi trường: Python 3.14, Node 24, Chromium headless, stack P02 Docker thật; HEAD `5015912`, checkout dirty. Không build lại Java và không nâng CI/gate.
-- `python backend/infra/seed_demo.py` tạo dữ liệu có tên tiếng Việt, đọc lại theo tên/ID và dùng UUID ổn định cho dữ liệu không có API tạo. 7 tên `Integration categories <timestamp>` đã được đổi thành danh mục du lịch, giữ nguyên ID/liên kết; không xóa dữ liệu cũ. Thông báo mẫu và thành viên editor được chèn trực tiếp trong DB của service tương ứng, không được tính là bằng chứng consumer/event hay API thêm thành viên hoạt động.
-- Nguồn `Cẩm nang du lịch miền Trung · Nguồn mẫu nội bộ` dùng nhánh opt-in `run=demo-vietnam` của provider local: 4 bản ghi, quan sát 2 `APPLIED`, 1 `NEEDS_REVIEW` (Mỹ Khê), 1 `FAILED` (`NORMALIZATION_INVALID`, tọa độ cố ý sai); có ứng viên ghép và lỗi để kiểm thử. Feed tích hợp cũ không đổi. Job giữ `RUNNING` khi còn bản ghi cần xử lý; không giả trạng thái hoàn tất.
-- Credential chỉ lưu trong file ignored `backend/infra/.local/p02/demo-accounts.json`; ID trong `demo-records.json` cùng thư mục. Giữ hai file này khi chạy lại để bảo toàn nhận diện sau khi người test đổi tên/xóa dữ liệu. Ảnh dùng asset Hội An có sẵn, ở trạng thái chờ scanner (F-14); evidence PDF của hồ sơ doanh nghiệp chỉ là tham chiếu giả lập, chưa có file để xem/tải. AI tiếp tục hoãn. Hướng dẫn tài khoản/kịch bản: [progress_fe.md mục 6.1](progress_fe.md#61-dữ-liệu-mẫu-để-test-thủ-công).
+- Seed P02 + readback — **LOCAL_VERIFIED** (checkout dirty), Codex, nhánh `feature/explore-ui-demo-content`, HEAD `ca83db7`. `python backend/infra/seed_demo.py` PASS; chạy lặp sau đó `new records this run: 0`, `seed-owned updates this run: 0`. `python backend/infra/seed_demo.py --verify-only` PASS, đọc qua Gateway và đối chiếu ID trong PostgreSQL/MongoDB; rating projection khớp. Dữ liệu: 8 user; 29 public place + 1 draft; 18 destination (6 vùng cấp tỉnh + 12 khu vực du lịch con), 8 offering; 4 collection/11 item, 7 favorite; 5 trip/14 day/5 destination segment/21 itinerary item/8 transfer; 29 review (22 APPROVED, 6 PENDING, 1 REJECTED; rating 1–5), 3 report, 3 contribution; 2 business/2 member/2 verification/2 claim/1 change request; 33 notification; 1 media PENDING; 1 source/1 job/4 item (APPLIED×2, FAILED, NEEDS_REVIEW), job giữ RUNNING.
+- Bộ lọc địa lý tỉnh → khu vực du lịch — **LOCAL_VERIFIED** (checkout dirty), Codex, nhánh feature/explore-ui-demo-content, HEAD ca83db7. python backend/infra/seed_demo.py --catalog-only PASS: tạo 12 đơn vị địa lý con + 12 khu vực và cập nhật phạm vi 29 địa điểm qua Catalog API; python -m unittest test_seed_demo -v: 18 run/0 failed/0 errors/0 skipped; npm --prefix frontend run test:browser:filters: 29/0/0/0, trong đó ca Gateway thật xác nhận Hội An trả tập con của tỉnh Đà Nẵng; npm --prefix frontend run build PASS (4630 modules). Nhóm địa lý là phạm vi minh họa du lịch, không đồng bộ ranh giới pháp lý. Không đổi contract Java; chưa chạy CI/review.
+- Dọn dữ liệu public cũ — `python backend/infra/seed_demo.py --hide-legacy-tests` PASS: 2 địa điểm legacy mới chuyển PUBLISHED → HIDDEN qua Catalog API; tổng 50 ID legacy ở trạng thái HIDDEN được đối chiếu trong PostgreSQL. Giữ nguyên bản ghi, ID và quan hệ; API public còn 29 địa điểm seed có tên. Có thể chạy lại sau suite tự động tạo place test; không xóa DB/manifest.
+- Test logic và UI — `python -m py_compile backend/infra/seed_demo.py backend/infra/test_seed_demo.py` PASS; `python -m unittest discover -s backend/infra -p test_seed_demo.py -v`: 16 run / 0 failed / 0 errors / 0 skipped. `node frontend/scripts/browser-demo-data.mjs`: 21 kiểm tra PASS / 0 page error, Node 24.21.0 + Chromium 156.0.8078.4, Vite FE → Gateway P02 → DB thật; guest không gọi Trip, danh sách/phân trang/chi tiết/review, quyền collection, itinerary, notification, business/editor, các queue admin và account mới. Ca HTTP 503 chỉ mô phỏng cho kiểm UI. Maven Catalog/Community `package -DskipTests` và image local PASS trước lượt kiểm. Contract validator chạy nhưng fail ở SHA manifest sau thay đổi artifact; chưa refresh vì validator yêu cầu artifact change được review. Java unit tests, CI và N1 review chưa chạy trên revision cuối.
+- Seed dùng API Gateway cho nghiệp vụ/validation/status; không reset password/role/tên và không tái tạo fixture người test đã xóa. author_name trên review là snapshot hiển thị local, cập nhật trực tiếp Mongo theo đúng ID review + chủ sở hữu vì Community chưa có API field; không đổi rating/status. Notification và business member cũng là fixture local theo đường DB hiện có, không dùng làm bằng chứng event/consumer hay API thêm member.
+- Import provider là sandbox local, job vẫn RUNNING; API item trả APPLIED×2/FAILED/NEEDS_REVIEW, chưa có item duplicate riêng. Pipeline còn map nội bộ DUPLICATE/SKIPPED thành APPLIED nên màn quản trị không tách được duplicate; mở F-42. Ảnh media PENDING vì chưa có scanner thật (F-14); evidence PDF doanh nghiệp chỉ là tham chiếu, không có file thật để tải. Giá/giờ/review/business là nội dung minh họa, không phải dữ liệu đã xác minh; AI vẫn DEFERRED.
+- Mật khẩu chỉ ở file ignored `backend/infra/.local/p02/demo-accounts.json`, record IDs trong `demo-records.json`; hướng dẫn tài khoản và ma trận thao tác tại [progress_fe.md mục 6.1](progress_fe.md#61-dữ-liệu-mẫu-để-test-thủ-công). Checkout bẩn, môi trường Python 3.14/Node 24/Chromium/Docker P02; chưa CI, không nâng gate hoặc ACCEPTED.
 
 - Kiểm lại bàn giao PR [#23](https://github.com/24521914-ux/SmartTravel_VN/pull/23) — **LOCAL_VERIFIED** · Codex, `feature/travel-demo-routing-filters`, source `7b04167`; checkout dirty chỉ còn `.ai-memory/` untracked. Node 24.21.0/Chromium 156: routing 45/0/0/0; editorial 32/0/0/0; filters lượt đầu 20 PASS/2 FAIL (Gateway chưa chạy và header che nút quay lại), sau phục hồi stack và sửa CSS `7b04167` chạy lại 1 lần 22/0/0/0; demo browser 11 PASS/0 page error qua Gateway/DB thật. Contract FE 15/0/0/0; seed Python 3.14 8/0/0/0; checksum 3/0/0/0, validator 183 HTTP + 23 event/command PASS. Java 21 Maven catalog/community/trip unit/security PASS: 113 run/0 failed/0 errors/74 skipped (DB/broker không chạy local trong lượt này). Build TypeScript/Vite sau sửa PASS. Fixture API chỉ dùng cho nhánh UI được ghi trong suite. CI đang chạy; chưa nâng CI/gate hoặc ACCEPTED.
 
 - Kiểm CI bàn giao — **CI_VERIFIED** trong phạm vi 11 check của PR #23, revision `2f2e702e3b57eaec29879ebd35682265573f0e33`: P00 `41336264353`, P01 `41336264348`, P02 `41336264376`, P03 tooling `41336264372` đều SUCCESS (11/11). CI Linux/Java 21/Node 24, DB/broker/container thật theo workflow; không suy rộng sang các gate hoặc toàn bộ task. P02 run trước `41334918573` FAIL tại smoke chờ NEEDS_REVIEW; `fc370e8` bổ sung candidate PUBLISHED độc lập và chẩn đoán, giữ assertion; local sau refresh stack/Gateway PASS (1 lượt), DB xác nhận NEEDS_REVIEW → CANCELLED. Gateway unit/security local Java 21 22/0/0/0. Đã merge PR #23 bằng `Truong102006`, merge `4223631bc955ca47475fe2bb630a7a48576a3681`; giữ nguyên trạng thái gate/chữ ký.
 
 ## 7. P03 — Kiểm thử hệ thống
+
+Kiểm lại nhánh PR `feature/trip-timeline-planner`, commit `a055a20`, checkout tracked sạch: `python backend/services/trip-service/test-local.py --transport` 61/0/0/0, Java21.0.11, PostgreSQL16/RabbitMQ Docker thật, Catalog/routing stub; BUILD SUCCESS. Đây là baseline khác workspace tích hợp54 test bên dưới; không cộng số test hai lượt.
+
+- [x] P03-TR-TIMELINE: Đồng bộ Trip Planner vào workspace hiện tại và sửa contract test — **LOCAL_VERIFIED** (dirty) · Codex; source `91f15aa` dirty, phần sửa fixture lưu tại `a055a20` trên nhánh `feature/trip-timeline-planner`. `python backend/services/trip-service/test-local.py --transport`: 54 run / 0 failed / 0 errors / 0 skipped, Java 21.0.11, Docker PostgreSQL 16/RabbitMQ thật, Catalog/routing stub. Lượt trước 54/0/1/0 do stub snapshot thiếu các trường của contract mở rộng; đã dùng `placeSnapshot` canonical fixture, giữ nguyên contract. `validate_contracts.py`: 184 HTTP/23 event + 1 extension PASS; chỉ thêm hash extension vào manifest của workspace. Gateway timeline 5 nhóm PASS; FE timeline 11 nhóm PASS. Không nâng gate; còn CI/review.
+- [ ] P03-TR-PUBLISH: Push nhánh và tạo/merge PR — **BLOCKED** · F-41; GitHub TCP timeout trước xác thực. Chủ xử lý: người dùng/quản trị mạng cùng Codex; code và kiểm thử local vẫn làm được.
 
 Yêu cầu: `plan/phases/P03-system-verification.md` và `plan/phases/P03-non-ai-execution.md` · Trạng thái phase: **`PARTIAL`**.
 
@@ -364,7 +377,7 @@ Mục tiêu: một `docker-compose.yml` tĩnh (DB, RabbitMQ, Mailpit, 6 service,
 
 ## 9. Kết nối BE ↔ FE
 
-Bảng dưới đối chiếu 171 operation public/admin trong OpenAPI (không tính 12 `/internal`) và 4 operation media mở rộng đã triển khai: **175 API**. Nguồn quan sát: `integration-coverage.mjs` đọc phản hồi Gateway của các suite PASS, không suy coverage từ source. Extension media và giới hạn contract: [catalog-media.md](docs/contracts/catalog-media.md).
+Bảng dưới đối chiếu 172 operation public/admin trong OpenAPI (không tính 12 `/internal`), 4 operation media và 2 operation timeline mở rộng: **178 API**. Nguồn quan sát: `integration-coverage.mjs` và suite timeline Gateway/browser, không suy coverage từ source. Extension media: [catalog-media.md](docs/contracts/catalog-media.md); timeline: [trip-planner.openapi.json](backend/contracts/extensions/trip-planner.openapi.json).
 
 **Kiểm lại 30/10/2026:** 160 API không AI đã được gọi qua Gateway; 158 có phản hồi 2xx. Membership DELETE đã kiểm nhánh bảo vệ chủ sở hữu (422, bản ghi giữ nguyên). GET ảnh cách ly trả 404 đúng; review REJECT 202 đúng, nhưng APPROVE 503 vì chưa có scanner thật. Vì vậy hai API media vẫn 🟡, chưa xác nhận nhánh thành công đầy đủ. JWKS chỉ dành cho Gateway (➖); 14 API AI hoãn theo quyết định trước đó.
 
@@ -386,28 +399,33 @@ Bảng dưới đối chiếu 171 operation public/admin trong OpenAPI (không t
 | L | `python backend/services/trip-service/test-local.py --transport` | 43/0/0/0; sửa CatalogAdapter dùng collection destinations + opaque cursor, bỏ URL detail không tồn tại |
 | M | `backend/mvnw.cmd -B -f backend/platform/api-gateway/pom.xml verify` | 22/0/0/0; multipart media11MB, JSON vẫn1MB, không mở rộng route khác |
 | N | `python backend/platform/validate_contracts.py`; tại `backend/platform`: `python -m unittest test_contract_checksums test_contract_policy` | 183 HTTP / 23 event PASS; checksum 3/0/0/0, policy 7/0/0/0; tổng 10/0/0/0; candidate chưa freeze. Gọi unittest bằng module từ root lỗi import, đã chạy đúng working directory; không tính lượt lỗi là PASS |
+| O | `npm --prefix frontend run test:browser:auth-recovery` / `test:browser:account` / `test:browser:auth-failure` | 13/0/0/0 kiểm khôi phục (gửi lại thật sau 60 giây, mã cũ401, mã mới202, pending login403, sai mật khẩu401), 8 nhóm tài khoản/32 request Gateway (đổi/reset mật khẩu, hồ sơ, phiên, yêu cầu xóa), 1 tình huống lỗi hồ sơ503; 0 page error; viewport 375/768/1440 không tràn và đã xem ảnh. Gateway/PostgreSQL/Mailpit thật; tài khoản synthetic riêng, không ghi đè tài khoản người dùng. Source `2f21c75`, HEAD khi chạy `857faf6` dirty, Node 24/Chromium/Java 21/Docker; chưa CI |
+| P | Identity `test-local.py --transport --isolated-source`; Gateway `mvnw.cmd ... verify`; `validate_contracts.py`; platform `test_contract_checksums test_contract_policy`; infra `test_configure_mail`; FE `build` / `test:contracts` | Lần cuối Identity 64/0/0/0 (PostgreSQL/RabbitMQ thật; lần trước 64/0/0/6 không tính broker PASS); Gateway 22/0/0/0; contract 184 HTTP/23 event và manifest PASS (candidate chưa duyệt/freeze); platform 12/0/0/0; cấu hình Gmail 6/0/0/0 (SMTP mock, không gửi thư thật); FE build 4637 modules, client 15/0/0/0. Source `2f21c75`, checkout dirty; Gmail xác thực/gửi thật chưa kiểm vì thiếu credential |
 
 **Revision:** các lượt J/K/M và lượt đầu chạy trên `d04c13a` dirty; L và browser cuối trên `101912f` dirty. Source kiểm thử đã lưu không đổi ở backend `66e6586`, FE `4e020e1`, scripts `edb10cb`; tài liệu contract `40590cf`. Chưa có CI run cho revision mới; chỉ `LOCAL_VERIFIED`, không cấp gate. ScannerBoundary từng có 2 lượt fail503 lúc JDK khởi động lạnh; sửa handshake fixture (không tăng timeout production), sau đó full37 và full38 PASS; không dùng retry che lỗi.
 
+**T — Timeline, 05/11/2026:** workspace `91f15aa` dirty, Node 24.21.0/Chromium, Gateway/Catalog/PostgreSQL thật. `test:browser:trip:timeline` 11 nhóm/0 failure/0 page error, gồm draft không hợp lệ ở một item trong khi item khác lưu, lỗi503 có điều khiển và xung đột phiên bản; `test:gateway:trip:timeline` 5 nhóm/0 failure, có cleanup synthetic fixture. Build FE PASS 4639 modules, `test:contracts` 15/0/0/0; platform checksum/policy 12/0/0/0. Bundle collection vẫn FAIL (F-42); chưa CI/gate.
+
 | Service | ✅ Hoàn thiện | 🟡 Đã nối, chưa kiểm đủ | ❌ Lỗi | ⚪ Chưa thực hiện | ⏸️ Hoãn | ➖ Không áp dụng | Tổng |
 |---|---|---|---|---|---|---|---|
-| Identity | 21 | 0 | 0 | 0 | 0 | 1 | 22 |
+| Identity | 19 | 3 | 0 | 0 | 0 | 1 | 23 |
 | Catalog | 64 | 2 | 0 | 0 | 0 | 0 | 66 |
 | Community | 30 | 0 | 0 | 0 | 0 | 0 | 30 |
-| Trip | 29 | 0 | 0 | 0 | 0 | 0 | 29 |
+| Trip | 28 | 0 | 0 | 0 | 0 | 3 | 31 |
 | Ingestion | 14 | 0 | 0 | 0 | 0 | 0 | 14 |
 | Intelligence | 0 | 0 | 0 | 0 | 14 | 0 | 14 |
-| **Tổng** | **158** | **2** | **0** | **0** | **14** | **1** | **175** |
+| **Tổng** | **155** | **5** | **0** | **0** | **14** | **4** | **178** |
 
 #### Identity
 
 | API | Trạng thái kết nối | Màn hình FE / ghi chú |
 |---|---|---|
-| `POST /auth/register` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
-| `POST /auth/login` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
+| `POST /auth/register` | 🟡 Đã nối, chưa kiểm | Chính sách mới 05/11/2026: ACTIVE ngay, không gửi email; browser-registration PASS với API stub, chưa kiểm Gateway/DB thật (F-45) |
+| `POST /auth/login` | 🟡 Đã nối, chưa kiểm | Đăng ký xong chuyển form login, giữ email, mật khẩu trống; browser-registration PASS với API stub, chưa kiểm Gateway/DB thật (F-45) |
 | `POST /auth/refresh` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
 | `POST /auth/logout` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
-| `POST /auth/verify-email` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
+| `POST /auth/verify-email` | ✅ Hoàn thiện | `test:browser:auth-recovery`: 13/0/0/0; FE → Gateway → Identity/PostgreSQL/Mailpit thật, gồm gửi lại sau cooldown và mã cũ bị từ chối. Source `2f21c75`, chạy dirty; SMTP Gmail thật chờ F-44 |
+| `POST /auth/resend-verification` | ✅ Hoàn thiện | `test:browser:auth-recovery`: 13/0/0/0; FE → Gateway → Identity/PostgreSQL/Mailpit thật, gồm gửi lại sau cooldown và mã cũ bị từ chối. Source `2f21c75`, chạy dirty; SMTP Gmail thật chờ F-44 |
 | `POST /auth/forgot-password` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
 | `POST /auth/reset-password` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
 | `GET /me` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
@@ -422,7 +440,7 @@ Bảng dưới đối chiếu 171 operation public/admin trong OpenAPI (không t
 | `PATCH /me/notifications/{notification_id}/read` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
 | `POST /me/deletion-requests` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
 | `GET /admin/users` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
-| `PATCH /admin/users/{user_id}/status` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
+| `PATCH /admin/users/{user_id}/status` | 🟡 Đã nối, chưa kiểm | Mở khóa theo cùng cấu hình xác minh email; chưa kiểm Gateway/DB thật (F-45) |
 | `PUT /admin/users/{user_id}/roles` | ✅ Hoàn thiện | Tài khoản / thông báo / quản trị user · Bằng chứng A/F/G/H |
 | `GET /.well-known/jwks.json` | ➖ Không áp dụng | Gateway dùng nội bộ, FE không gọi |
 
@@ -431,25 +449,25 @@ Bảng dưới đối chiếu 171 operation public/admin trong OpenAPI (không t
 | API | Trạng thái kết nối | Màn hình FE / ghi chú |
 |---|---|---|
 | `GET /admin/places` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
-| `POST /admin/places` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
+| `POST /admin/places` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G; `test:browser:map` 8/0/0/0 qua Gateway/DB thật, tạo địa điểm kiểm tra có địa chỉ rồi archive khi kết thúc (03/11/2026) |
 | `GET /admin/places/{place_id}` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
-| `PATCH /admin/places/{place_id}` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
+| `PATCH /admin/places/{place_id}` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G; `test:browser:map` 8/0/0/0: chọn địa chỉ gợi ý, chỉnh ghim, lưu và đọc lại đúng address/latitude/longitude qua Gateway; geocoder fixture có kiểm soát (03/11/2026) |
 | `DELETE /admin/places/{place_id}` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
-| `GET /places` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
-| `GET /places/{place_id}` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
+| `GET /places` | ✅ Hoàn thiện | Khám phá · `browser-demo-data.mjs`: tìm/lọc, phân trang và public list qua Vite/Gateway P02; 29 địa điểm có tên, không còn legacy public (03/11/2026). `browser-filters.mjs` 29/0/0/0; ca Gateway thật gửi tỉnh + khu vực và xác nhận địa điểm trong khu vực là tập con kết quả tỉnh. Contract/CI + N1 review còn theo F-15 Bổ sung địa chỉ: `test:browser:map` 8/0/0/0 qua Gateway/PostGIS thật, tìm không dấu sau khi lưu và mở đúng ghim; tra Photon thật trên browser trả 5 gợi ý Cầu Rồng (03/11/2026). |
+| `GET /places/{place_id}` | ✅ Hoàn thiện | Chi tiết điểm đến · `browser-demo-data.mjs`: trang Văn Miếu hiển thị mô tả/giá/điểm và dữ liệu thật qua Gateway P02 (03/11/2026). Contract/CI + N1 review còn theo F-15 |
 | `PUT /admin/places/{place_id}/status` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
 | `GET /admin/geographic-units` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
 | `POST /admin/geographic-units` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
 | `GET /admin/geographic-units/{id}` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
 | `PATCH /admin/geographic-units/{id}` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
 | `DELETE /admin/geographic-units/{id}` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
-| `GET /geographic-units` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
+| `GET /geographic-units` | ✅ Hoàn thiện | Khám phá · seed Catalog có 6 tỉnh và 12 đơn vị con dùng làm khu vực du lịch minh họa; browser filters kiểm selector theo quan hệ cha–con qua Gateway (03/11/2026) |
 | `GET /admin/destinations` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
 | `POST /admin/destinations` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
 | `GET /admin/destinations/{destination_id}` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
 | `PATCH /admin/destinations/{destination_id}` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
 | `DELETE /admin/destinations/{destination_id}` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
-| `GET /destinations` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
+| `GET /destinations` | ✅ Hoàn thiện | Khám phá · 12 khu vực du lịch con có phạm vi gắn với 6 tỉnh; dropdown chỉ hiện khu vực thuộc tỉnh đang chọn; ca Gateway thật Đà Nẵng → Hội An hẹp hơn kết quả tỉnh (03/11/2026) |
 | `GET /admin/categories` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
 | `POST /admin/categories` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
 | `GET /admin/categories/{id}` | ✅ Hoàn thiện | Khám phá / Catalog admin / doanh nghiệp / kiểm duyệt · Bằng chứng B/C/E/G |
@@ -501,7 +519,7 @@ Bảng dưới đối chiếu 171 operation public/admin trong OpenAPI (không t
 
 | API | Trạng thái kết nối | Màn hình FE / ghi chú |
 |---|---|---|
-| `GET /places/{place_id}/reviews` | ✅ Hoàn thiện | Đánh giá / yêu thích / bộ sưu tập / đóng góp / kiểm duyệt · Bằng chứng C/E/F |
+| `GET /places/{place_id}/reviews` | ✅ Hoàn thiện | Đánh giá điểm đến · `browser-demo-data.mjs`: chi tiết Văn Miếu hiển thị review đã duyệt, tác giả và rating projection qua Gateway P02 (03/11/2026). Contract/CI + N1 review còn theo F-15 |
 | `POST /places/{place_id}/reviews` | ✅ Hoàn thiện | Đánh giá / yêu thích / bộ sưu tập / đóng góp / kiểm duyệt · Bằng chứng C/E/F |
 | `PATCH /reviews/{review_id}` | ✅ Hoàn thiện | Đánh giá / yêu thích / bộ sưu tập / đóng góp / kiểm duyệt · Bằng chứng C/E/F |
 | `DELETE /reviews/{review_id}` | ✅ Hoàn thiện | Đánh giá / yêu thích / bộ sưu tập / đóng góp / kiểm duyệt · Bằng chứng C/E/F |
@@ -554,17 +572,19 @@ Bảng dưới đối chiếu 171 operation public/admin trong OpenAPI (không t
 | `DELETE /trips/{trip_id}/days/{day_id}` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
 | `GET /trips/{trip_id}/days/{day_id}/items` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
 | `POST /trips/{trip_id}/days/{day_id}/items` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
-| `GET /trips/{trip_id}/days/{day_id}/items/{item_id}` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
+| `GET /trips/{trip_id}/days/{day_id}/items/{item_id}` | ➖ Không áp dụng | Timeline đọc danh sách item; API vẫn giữ tương thích |
 | `PATCH /trips/{trip_id}/days/{day_id}/items/{item_id}` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
 | `DELETE /trips/{trip_id}/days/{day_id}/items/{item_id}` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
 | `PUT /trips/{trip_id}/days/{day_id}/items/order` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
 | `GET /trips/{trip_id}/transfers` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
 | `POST /trips/{trip_id}/transfers` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
-| `GET /trips/{trip_id}/transfers/{transfer_id}` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
+| `GET /trips/{trip_id}/transfers/{transfer_id}` | ➖ Không áp dụng | Timeline dùng danh sách chặng; API vẫn giữ tương thích |
 | `PATCH /trips/{trip_id}/transfers/{transfer_id}` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
 | `DELETE /trips/{trip_id}/transfers/{transfer_id}` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
-| `POST /trips/{trip_id}/route-estimates` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
+| `POST /trips/{trip_id}/route-estimates` | ➖ Không áp dụng | Timeline tính tuyến nền qua chặng tự động; API vẫn giữ tương thích |
 | `POST /trips/{trip_id}/snapshots/refresh` | ✅ Hoàn thiện | Chuyến đi: chi tiết, lịch trình, chặng và di chuyển · Bằng chứng E |
+| `GET /trips/{trip_id}/days/{day_id}/travel-legs` | ✅ Hoàn thiện | Timeline và bản đồ theo dõi chặng tự động · Bằng chứng T |
+| `PATCH /trips/{trip_id}/days/{day_id}/travel-legs/{leg_id}` | ✅ Hoàn thiện | Đổi phương tiện và thử tính lại ngay trên timeline · Bằng chứng T |
 
 #### Ingestion
 
@@ -608,6 +628,10 @@ Bảng dưới đối chiếu 171 operation public/admin trong OpenAPI (không t
 
 ## 10. Vấn đề đang mở
 
+F-41 — Trung bình, P03, **OPEN** · Push/PR bị chặn bởi kết nối TCP tới GitHub/API GitHub; HTTPS Google và raw.githubusercontent.com vẫn 200. DNS hệ thống và DoH trùng nhau; HTTPS GitHub qua nhiều địa chỉ chính thức và SSH22 đều timeout. Có route Radmin VPN trạng thái Dead; thử ép socket qua Wi-Fi vẫn timeout nên chưa kết luận VPN là nguyên nhân. Thử thêm route tạm bị Windows từ chối quyền Administrator; không thay đổi route/firewall/DNS. Người xử lý: người dùng/quản trị mạng + Codex; cần kiểm tra trên mạng khác hoặc phiên quản trị.
+
+F-42 — Trung bình, P02, **OPEN** · Suite collection trong workspace hiện tại: lượt đầu FAIL selector tiêu đề Tài khoản, đã cập nhật sang `.account-panel-container`; lượt sau FAIL `POST /collections/{id}/items` 503. Log Community: workload token request tới Catalog thất bại; health container vẫn healthy. Timeline browser/Gateway riêng PASS; không coi bundle Trip/collection PASS. Người xử lý: N1/N2 + Codex (đồng bộ token issuer runtime).
+
 | ID | Mức | Phase | Vấn đề | Người xử lý | Trạng thái |
 |---|---|---|---|---|---|
 | F-01 | Cao | P01/P02 | Identity chưa nhận `catalog.contribution.applied/rejected.v1` và `intelligence.model.deployed.v1` dù registry khai báo; message bị bỏ trong môi trường kết nối | N1 + N2 | OPEN |
@@ -619,7 +643,7 @@ Bảng dưới đối chiếu 171 operation public/admin trong OpenAPI (không t
 | F-07 | Trung bình | P02/P03 | Chưa test tương thích schema cũ/mới | Owner producer/consumer | OPEN |
 | F-09 | Trung bình | P01/P02 | PR #14–#17 không có run ID CI riêng; đã có CI cho cây file sau PR #20 | Người merge | PARTIAL |
 | F-14 | Cao | P00/P03 | Đã có upload user/admin, metadata, public read approved ở Gateway/provider; kiểm thử P02 upload/quarantine/reject PASS. Thiếu scanner thật để xác nhận APPROVE và public200; chưa có media version/If-Match và upload idempotency replay như candidate. Người dùng 30/10/2026 xác nhận chưa có scanner, tiếp tục dữ liệu P02; không bypass quarantine | N1 + N2; người dùng cung cấp scanner | PARTIAL |
-| F-15 | Trung bình | P00 | Representation Place hiện lọc các trường ngoài schema, thiếu address/description/rating_avg/review_count; cần owner thống nhất mở rộng contract. `media_keys` đã được FE dùng; Offering response price nullable đã đồng bộ, không tự gán giá0 | N1 | PARTIAL |
+| F-15 | Trung bình | P00/P02 | Place representation và OpenAPI/schema có `name_en`, `address`, `description`, `price_min/max`, `rating_avg`, `review_count`; Review có `author_name` tùy chọn. Catalog/Community build `-DskipTests` PASS; browser FE qua Gateway đã kiểm list/detail/review thật (3 API chuyển ✅ ở mục 9), giá null và rating/author khớp. `python backend/platform/validate_contracts.py` FAIL tại checksum manifest do artifact đang dirty; validator yêu cầu chỉ refresh sau khi thay đổi contract được review, nên chưa refresh. Chưa có N1 review/CI; giữ PARTIAL. `media_keys` FE đang dùng; giá Offering null không tự gán 0 | N1 | PARTIAL |
 | F-16 | Trung bình | P00 | Thiếu API liệt kê hàng chờ duyệt cho admin (claim, yêu cầu sửa, xác minh doanh nghiệp, media) và cho doanh nghiệp (claim của mình); màn admin phải nhập ID tay | N1 | OPEN |
 | F-17 | Trung bình | — | Plan chưa có scope di động: push/device token, deep link email, lưu token trên thiết bị, ảnh thu nhỏ/CDN | Người dùng quyết định | OPEN |
 | F-19 | Thấp | — | Plan lệch: còn ô `[x]` trong `plan/`; "Reviewer: A–F" thay vì N1/N2; SLO Basic recommendation P03 (< 800 ms) khác P00 (≤ 1 giây). Đã đồng bộ riêng dòng Trạng thái P07/P08 theo progress ngày 29/10/2026; hướng dẫn song song cũ cần đọc theo quyết định Basic trước ML tại P00 | Điều phối | OPEN |
@@ -638,6 +662,10 @@ Bảng dưới đối chiếu 171 operation public/admin trong OpenAPI (không t
 | F-35 | Thấp | P00 | Skeleton monolith thừa từ commit đầu: `backend/pom.xml` (artifact `demo`, JPA/Redis/Spring AI) và `backend/src/com/example/demo`, không thuộc service nào | N1 | OPEN |
 | F-36 | Trung bình | P02/P03 | `p02.py smoke` FAIL ngay bước đầu trên cấu hình mặc định: Gateway `AI_ENABLED=false` (từ `c1e8e29`) trả 503 `FEATURE_DEFERRED` cho `GET /api/v1/me/interactions` mà smoke gọi. Phát hiện 04/11/2026 khi chạy P04-CS-03; cần smoke tách phần AI hoặc `p02.py` bật AI khi chạy smoke đầy đủ | N2 | PARTIAL: đã sửa ở `545e2b1` (`p02.py` bật AI cho Gateway), đã lên `main` không qua PR, chờ CI |
 | F-37 | Thấp | P02 | Trên Windows, dải cổng loại trừ động (ví dụ 57409–57508) trùng cổng host DB của P02 (5743x) làm `p02.py up` lỗi `bind: forbidden`. Cổng DB chỉ để chẩn đoán; nên cho phép tắt/đổi cổng qua cấu hình (dự kiến trong P04-CS-04) | N2 | PARTIAL: đã sửa ở `545e2b1` (cổng DB tùy chọn qua `docker-compose.db-ports.yml`), đã lên `main` không qua PR, chờ CI |
+| F-42 | Trung bình | P02 | Sandbox import job có 4 item (`APPLIED`×2, `NEEDS_REVIEW`, `FAILED`), chưa có item trùng riêng. Ngoài ra `PipelineService.publicItemStatus` đổi nội bộ `DUPLICATE` thành `APPLIED` và `SKIPPED` thành `APPLIED` (trừ `REVIEW_REJECTED`), nên API/UI không phân biệt trùng với ghi thành công; chưa thể kiểm scenario trùng qua màn hiện tại | N1 | OPEN |
+| F-43 | Cao | P00/P01 | Schema event đang sửa trên checkout dirty yêu cầu thêm `name_en`, `address`, `description`, `price_min`, `price_max`, `rating_avg`, `review_count` nhưng `CatalogRepository.emit` vẫn phát whitelist cũ. `python backend/services/catalog-service/test-local.py` ngày 03/11/2026, HEAD `ca83db7`, dirty, Java 21/PostGIS Docker: toàn suite 39/1/0/5 (run/failed/errors/skipped), FAIL tại `CatalogProviderTests.allSixtySixFrozenOperationsReturnValidatedProviderResponses`; riêng `CatalogDatabaseTests` 20/0/0/0. Hạ P01-CA-09; chưa sửa contract/event ngoài phạm vi bản đồ. Cần thống nhất schema/producer/consumer và chạy lại provider/broker trên cùng revision | N1 + N2 review consumer | OPEN |
+| F-44 | Cao | P01/P02 | Đã sửa khôi phục xác minh/email hết hạn, chống gửi dồn và chuyển bước FE (`2f21c75`), kiểm local BE/Gateway/browser/SMTP Mailpit PASS (mục 9/O/P). Người dùng chọn Gmail thật 03/11/2026; máy chưa có SMTP credential, chờ nhập cục bộ qua `python backend/infra/configure_mail.py --apply` và xác nhận thư thực nhận. Candidate contract mới chưa CI/review; không nâng gate | Người dùng cấu hình Gmail; Codex kiểm; N1/N2 review | PARTIAL |
+| F-45 | Trung bình | P01/P02 | Chính sách đăng ký mới bỏ xác minh email theo người dùng 05/11/2026; chưa kiểm Gateway/DB thật. Suite smoke/recovery/seed cũ cần bật IDENTITY_EMAIL_VERIFICATION_REQUIRED=true hoặc thích nghi với chính sách mới; không dùng bằng chứng cũ để nâng gate | Codex + N1/N2 review | PARTIAL |
 
 
 Đã đóng: F-40 (Thấp, P00, N2: xung đột cổng host CI; overlay cổng Docker cấp trong PR #3, P00 run 42190791704 PASS trên `0b14e46`, merge `32e14e9`), F-31 (Trung bình, P03, Codex: smoke phụ thuộc candidate của suite trước; fixture độc lập `fc370e8`, CI cũ `41334918573` FAIL, CI mới `41336264376` PASS trên `2f2e702`; PR #23), F-30 (Trung bình, P03, Codex: header cố định che nút quay lại chi tiết; `7b04167`, filters lần đầu FAIL, sau sửa 22/0/0/0), F-18 (khôi phục màn và nối đủ API không AI, còn hai nhánh media tách F-14; `4e020e1`/`edb10cb`, A–G), F-22 (sửa body/path/form thật; `4e020e1`, A/B/C/E/G), F-23 (bỏ bản ghi giả, chỉ cập nhật sau API thành công; `4e020e1`, F/H và negative assertions các suite).
@@ -684,6 +712,10 @@ Mới nhất ở trên. Mỗi dòng: ngày giờ · thay đổi · PR/commit.
 | 04/11/2026 06:28 | GĐ4–GĐ7 trên nhánh (chưa merge): compose tĩnh + `.env.example` (P04-CS-04), `p02.py` thành wrapper (P04-CS-05), cache session tùy chọn (P04-CS-07) LOCAL_VERIFIED; P04-CS-06 PARTIAL (toàn bộ kiểm thử local PASS, thiếu CI run ID); F-33, F-34, F-36, F-37 PARTIAL | `545e2b1`…`7e54b3c` (nhánh `feature/platform-static-compose`) |
 | 04/11/2026 05:47 | Push thẳng P04-CS-01…03 lên `main` (fast-forward, không qua PR) theo yêu cầu người dùng; **chưa có CI và chưa có N1/N2 review** (lệch AGENTS.md mục 7). Trạng thái task giữ LOCAL_VERIFIED, F-32 vẫn PARTIAL chờ review | `ba0d301`…`6d31d22` trên `main` |
 | 04/11/2026 01:40 | P04-CS-03 LOCAL_VERIFIED trên nhánh (chưa merge): token service-to-service qua client-credentials của Identity, smoke P02 PASS 13/13; F-32 PARTIAL; thêm F-36, F-37 | `0aa99d0`, `c8a7b5f` (nhánh `feature/identity-workload-tokens`) |
+| 03/11/2026 00:46 | Seed thêm 12 khu vực du lịch con và chuyển 29 địa điểm từ phạm vi tỉnh sang khu vực qua Catalog API; 18 test seed và browser filters 29/0/0/0 PASS, có xác nhận Gateway thật; build FE PASS. Giữ trạng thái API tổng, không đổi contract, chưa CI/review | Nhánh feature/explore-ui-demo-content, HEAD ca83db7 (checkout dirty) |
+| 03/11/2026 13:18 | Sửa luồng đăng ký/xác minh/gửi lại/login và khôi phục mật khẩu; local BE64/Gateway22/browser13+8+1/client15 PASS; cập nhật 4 API tài khoản về ✅, tổng159✅/2🟡/176. Đã cập nhật riêng Identity/Gateway local; SMTP Gmail thật chờ người dùng cấu hình, F-44 PARTIAL; chưa CI/gate | Nhánh `fix/identity-registration-verification`, source `2f21c75`, chạy dirty |
+| 03/11/2026 00:34 | Mở rộng fixture P02 lên 8 tài khoản/29 địa điểm/29 review và các queue; 16 test seed PASS, seed + `--verify-only` PASS, lượt lặp tạo 0/cập nhật 0; 21 kiểm tra Playwright thật qua Vite/Gateway, 0 lỗi trang; ẩn 2 legacy public qua Catalog, tổng 50 ID hidden; mở F-42. Contract validator dừng tại checksum manifest dirty, chưa refresh khi chưa review; chưa CI/gate | Nhánh `feature/explore-ui-demo-content`, HEAD `ca83db7` |
+| 02/11/2026 23:23 | Mở rộng representation/schema Place và Review cho giá, điểm, số review, tên người đánh giá; build Catalog/Community `-DskipTests`, P02 health và GET qua Gateway thủ công PASS; suite/CI chưa chạy. Hạ ba API về 🟡 do chưa có kiểm thử contract/FE trên revision mới; giữ F-15 PARTIAL | Nhánh `feature/explore-ui-demo-content`, HEAD `ca83db7` (checkout dirty) |
 | 02/11/2026 01:33 | Merge tích hợp BE–FE, seed mẫu, path/bộ lọc/giao diện; 11 check CI PASS trên revision PR `2f2e702`; sửa F-30/F-31, không đóng gate | [PR #23](https://github.com/24521914-ux/SmartTravel_VN/pull/23), merge `4223631bc955ca47475fe2bb630a7a48576a3681` |
 | 30/10/2026 22:48 | Rà soát: 7/7 report được công cụ tổng hợp chấp nhận, 160/175 API được quan sát, 158 có 2xx; bảng API khớp tổng. Đồng bộ dòng Trạng thái hai README plan và P04 (lệch tài liệu thuộc F-19). Chỉ đọc lại bằng chứng cũ, không chạy lại suite nghiệp vụ/CI, không nâng trạng thái hoặc đóng gate | Baseline `5015912`; nhánh `fix/frontend-backend-integration`, checkout có `.ai-memory/` untracked |
 | 30/10/2026 22:03 | Kiểm lại FE↔BE trên P02: 158✅/2🟡; sửa provider UUID/PATCH/pagination, Trip destination path, media cap, report queue, refresh/login; đóng F-18/F-22/F-23. Chỉ local, chưa CI/merge/gate | `66e6586`, `4e020e1`, `edb10cb`, `40590cf` |
@@ -700,3 +732,5 @@ Mới nhất ở trên. Mỗi dòng: ngày giờ · thay đổi · PR/commit.
 | 10/10/2026 | P01 M1 storage/runtime; Identity xác thực, preferences, admin | PR #5–#7 |
 | 10/10/2026 | Cấu hình database cloud | PR #4, `5319942` |
 | 08/10/2026 | P00 nền tảng; quy tắc Git; landing frontend | PR #1–#3 |
+
+- [ ] Chuẩn bị PR tích hợp — **BLOCKED** · Codex, nhánh `feature/travel-timeline-account-integration`, source `4e6651e`, checkout dirty chỉ do `.env`/`.ai-memory/` chưa theo dõi. Java 21: Identity `mvn -f backend/services/identity-service/pom.xml test -q` 66/0/0/44; Trip `mvn -f backend/services/trip-service/pom.xml test -q` 54/0/0/41 (run/failed/errors/skipped); chỉ unit/security, DB/broker bị skip, không dùng đóng gate. `python backend/platform/validate_contracts.py` PASS: 184 HTTP, 23 event/command, 1 additive contract. Quét secret: không có credential thật; hai chuỗi mật khẩu synthetic trong test. GitHub cổng 443 timeout, chưa fetch/push/PR/CI; Codex tiếp tục đồng bộ main và tạo PR khi kết nối phục hồi. `origin/main` cache lệch 19 commit so với baseline; chưa tích hợp cache vì chưa xác nhận remote mới nhất.

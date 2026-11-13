@@ -93,7 +93,14 @@ public class AccountMail {
                     var message = new SimpleMailMessage();
                     message.setFrom(from); message.setTo((String) job.get("email"));
                     message.setSubject(parts[0].equals("RESET_PASSWORD") ? "SmartTravel password reset" : "SmartTravel account verification");
-                    message.setText(text);
+                    boolean reset = parts[0].equals("RESET_PASSWORD");
+                    message.setText((reset ? "Mã đặt lại mật khẩu SmartTravel:" : "Mã xác minh email SmartTravel:")
+                            + "\n" + parts[1] + "\n\n"
+                            + (reset
+                                ? "Mở SmartTravel → Tài khoản → Đặt lại mật khẩu. Dán mã trên và nhập mật khẩu mới. Mã có hiệu lực 30 phút."
+                                : "Mở SmartTravel → Tài khoản → Xác minh email. Dán mã trên để hoàn tất đăng ký. Mã có hiệu lực 24 giờ.")
+                            + "\nMã chỉ dùng một lần. Khi yêu cầu mã mới, mã cũ sẽ hết hiệu lực. Không chia sẻ mã này với người khác."
+                            + "\nNếu bạn không yêu cầu thao tác này, hãy bỏ qua email.");
                     sender.send(message);
                     repository.sent(jobId);
                 } catch (Exception e) {

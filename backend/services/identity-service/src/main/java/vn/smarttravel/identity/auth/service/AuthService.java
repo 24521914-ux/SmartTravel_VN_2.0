@@ -32,6 +32,8 @@ public class AuthService {
     private final IdentityMutations mutations;
     private final CurrentUser currentUser;
     private final String dummyHash;
+    @org.springframework.beans.factory.annotation.Value("${identity.email-verification.required:false}")
+    private boolean emailVerificationRequired;
 
     public AuthService(AuthRepository repository, TransactionTemplate tx, PasswordEncoder passwords, IssuerKeys issuer,
                        AccountMail mail, IdentityMutations mutations, CurrentUser currentUser) {
@@ -56,7 +58,8 @@ public class AuthService {
             if (repository.findUserByEmail(canonicalEmail) == null) {
                 UUID user = UUID.randomUUID();
                 repository.createUser(user, canonicalEmail, passwordHash, displayName);
-                accountToken(user, "VERIFY_EMAIL", Duration.ofHours(24));
+                if (emailVerificationRequired) accountToken(user, "VERIFY_EMAIL", Duration.ofHours(24));
+                else repository.activateWithoutVerification(user);
                 mutations.event(user, 1, "identity.user.registered.v1", Map.of("user_id", user, "display_name", displayName));
                 mutations.audit(user, user, "REGISTER");
             }
@@ -78,7 +81,10 @@ public class AuthService {
         return tx.execute(status -> {
             var user = repository.lockUserByEmail(canonical(email));
             boolean matches = passwords.matches(password, user == null ? dummyHash : (String) user.get("password_hash"));
-            if (!matches || !active(user)) throw IdentityException.unauthorized();
+            if (!matches) throw IdentityException.unauthorized();
+            if (user != null && "PENDING".equals(user.get("status")))
+                throw new IdentityException(403, "EMAIL_NOT_VERIFIED");
+            if (!active(user)) throw IdentityException.unauthorized();
             UUID userId = id(user, "user_id"), session = UUID.randomUUID();
             Instant absoluteExpiry = Instant.now().plus(Duration.ofDays(30));
             repository.createSession(session, userId, absoluteExpiry);
@@ -123,6 +129,17 @@ public class AuthService {
             var row = repository.findOwnedRefreshSession(Tokens.hash(token), user);
             if (row == null || !row.get("session_id").toString().equals(jwt.getClaimAsString("sid"))) throw IdentityException.unauthorized();
             repository.revokeSession(id(row, "session_id")); mutations.audit(user, user, "LOGOUT");
+        });
+    }
+
+    public void resendVerification(String email) {
+        tx.executeWithoutResult(status -> {
+            var user = repository.lockUserByEmail(canonical(email));
+            if (user == null || !"PENDING".equals(user.get("status"))) return;
+            UUID userId = id(user, "user_id");
+            // Serialize on the account lock and keep a short cooldown to prevent mail flooding.
+            if (!repository.recentVerification(userId))
+                accountToken(userId, "VERIFY_EMAIL", Duration.ofHours(24));
         });
     }
 

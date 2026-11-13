@@ -3,7 +3,8 @@ import { Icon, RatingStars, Badge, Button } from '../../shared/ui';
 import type { TravelClient, Resource, Page } from '../../shared/api';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { useToast } from '../../app/providers/ToastProvider';
-import { mediaUrl, placeImage } from './media';
+import { mediaUrl, placeImageCandidates } from './media';
+import { useAppPreferences } from '../../app/providers/AppPreferences';
 
 export interface PlaceDetailPageProps {
   place: Resource;
@@ -14,6 +15,7 @@ export interface PlaceDetailPageProps {
 }
 
 export function PlaceDetailPage({ place, travel, onBack, onAddToTrip, busy = false }: PlaceDetailPageProps) {
+  const { locale, text, formatCurrency } = useAppPreferences();
   const { showToast } = useToast();
   const { isAuthenticated, user, apiClient } = useAuth();
   const [reviews, setReviews] = useState<Resource[]>([]);
@@ -29,13 +31,26 @@ export function PlaceDetailPage({ place, travel, onBack, onAddToTrip, busy = fal
   const [ownReview, setOwnReview] = useState<Resource | null>(null);
   const [reviewMedia, setReviewMedia] = useState<Resource[]>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [imageIndex, setImageIndex] = useState(0);
 
   const placeId = String(place.id ?? place.place_id ?? '');
-  const name = String(place.name ?? place.title ?? 'Chi tiết địa điểm');
-  const address = String(place.address ?? 'Chưa có địa chỉ');
+  const imageCandidates = placeImageCandidates(place);
+  const imageUrl = imageCandidates[imageIndex] ?? '';
+  const name = String(locale === 'en' ? place.name_en ?? place.name ?? place.title ?? 'Destination details' : place.name_vi ?? place.name ?? place.title ?? 'Chi tiết địa điểm');
+  const address = String(place.address ?? text('Chưa có địa chỉ', 'Address unavailable'));
+  const rawRating = place.rating_avg ?? place.rating;
+  const rating = rawRating == null || !Number.isFinite(Number(rawRating)) ? null : Number(rawRating);
+  const reviewCount = Number(place.review_count ?? 0);
+  const rawPrice = place.price_min ?? place.price;
+  const minPrice = rawPrice == null || rawPrice === '' || !Number.isFinite(Number(rawPrice)) ? null : Number(rawPrice);
+  const maxPrice = place.price_max == null || place.price_max === '' || !Number.isFinite(Number(place.price_max)) ? null : Number(place.price_max);
+  const currency = String(place.currency ?? 'VND');
+  const placePrice = minPrice === null ? text('Chưa cập nhật giá', 'Price unavailable') : minPrice === 0 && (maxPrice === null || maxPrice === 0) ? text('Miễn phí', 'Free') : maxPrice !== null && maxPrice > minPrice ? `${formatCurrency(minPrice, currency)} – ${formatCurrency(maxPrice, currency)}` : `${text('Từ', 'From')} ${formatCurrency(minPrice, currency)}`;
   const lat = Number(place.latitude);
   const lon = Number(place.longitude);
   const hasCoordinates = place.latitude != null && place.longitude != null && Number.isFinite(lat) && Number.isFinite(lon);
+
+  useEffect(() => { setImageIndex(0); }, [placeId]);
 
   useEffect(() => {
     async function loadDetails() {
@@ -192,7 +207,7 @@ export function PlaceDetailPage({ place, travel, onBack, onAddToTrip, busy = fal
       </div>
 
       {detailError && <p role="alert">{detailError}</p>}
-      {placeImage(place) && <img src={placeImage(place)} alt={name} style={{ width: '100%', maxHeight: 420, objectFit: 'cover' }} />}
+      {imageUrl && <img src={imageUrl} alt={name} style={{ width: '100%', maxHeight: 420, objectFit: 'cover', borderRadius: 'var(--radius-card)' }} onError={() => setImageIndex(index => index + 1)} />}
       {/* Main Place Header */}
       <div className="travel-panel" style={{ padding: 'var(--space-2xl) var(--space-xl)', marginBottom: 'var(--space-xl)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
@@ -212,12 +227,15 @@ export function PlaceDetailPage({ place, travel, onBack, onAddToTrip, busy = fal
             </div>
           </div>
 
-          {typeof place.rating === 'number' && <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--color-surface-subtle)', padding: '12px 18px', borderRadius: 'var(--radius-button)' }}>
-            <RatingStars rating={place.rating} size={20} />
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+          {rating !== null && <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--color-surface-subtle)', padding: '12px 18px', borderRadius: 'var(--radius-button)' }}>
+            <RatingStars rating={rating} size={20} />
             <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-              {place.rating.toFixed(1)}
+              {rating.toFixed(1)} <small style={{ fontSize: '0.7rem', fontWeight: 500 }}>({reviewCount} {text('đánh giá', 'reviews')})</small>
             </span>
           </div>}
+          <div className="place-price-summary"><span>{text('Giá tham khảo', 'Price')}</span><strong>{placePrice}</strong></div>
+          </div>
         </div>
 
         {/* Description & Highlights */}

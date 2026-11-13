@@ -22,29 +22,48 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static vn.smarttravel.trip.shared.web.ApiValues.*;
 
 @org.springframework.test.context.ActiveProfiles("test")
-@SpringBootTest(properties="logging.level.org.springframework=INFO")
+@SpringBootTest(properties={"logging.level.org.springframework=INFO","trip.travel-worker.enabled=false"})
 @AutoConfigureMockMvc
 @EnabledIfEnvironmentVariable(named="DOMAIN_DB_TESTS",matches="true")
 class TripDatabaseTests {
     static final ObjectMapper JSON=new ObjectMapper();
     static final UUID USER=UUID.fromString("00000000-0000-4000-8000-000000000001"),OTHER=UUID.randomUUID(),PLACE=UUID.fromString("10000000-0000-4000-8000-000000000001"),PLACE2=UUID.fromString("10000000-0000-4000-8000-000000000002"),DEST=UUID.fromString("20000000-0000-4000-8000-000000000001");
+    static final Map<String,Object> CATALOG_SNAPSHOT=catalogSnapshotFixture();
     static final HttpServer stub=start();
     static volatile boolean catalogDown,routingDown;
     static volatile long catalogVersion=1;
     static volatile Integer catalogPrice=10000;
     static volatile String catalogCurrency="VND";
     static volatile long routingDelayMillis;
+    static volatile double catalogLatitude=10.76;
+    static volatile Object routeGeometry;
     static final java.util.concurrent.atomic.AtomicInteger routingCalls=new java.util.concurrent.atomic.AtomicInteger();
     @Autowired TripService service;
+    @Autowired DayTravelService travel;
+    @Autowired vn.smarttravel.trip.itinerary.repository.LocalFixturesRepository fixtures;
+    @Autowired DayTravelWorker worker;
+    @Autowired vn.smarttravel.trip.itinerary.client.RoutingAdapter routingAdapter;
     @Autowired TripEvents events;
     @Autowired JdbcTemplate db;
     @Autowired MockMvc mvc;
     @Autowired org.springframework.transaction.PlatformTransactionManager transactions;
-    static HttpServer start(){try{var server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);server.createContext("/",exchange->{try{String path=exchange.getRequestURI().getPath();Object response;int status=200;if(path.equals("/route")){routingCalls.incrementAndGet();if(routingDelayMillis>0)try{Thread.sleep(routingDelayMillis);}catch(InterruptedException error){Thread.currentThread().interrupt();}status=routingDown?429:200;response=map("distance_m",1500,"duration_seconds",300);}else if(path.contains("destinations")){status=catalogDown?503:200;response=map("items",List.of(map("destination_id",DEST.toString(),"name","Licensed synthetic destination","status","ACTIVE","version",1)),"next_cursor",null);}else {status=catalogDown?503:200;var request=JSON.readTree(exchange.getRequestBody());var id=UUID.fromString(request.path("ids").get(0).asText());response=map("items",List.of(snapshot(id)),"missing_ids",List.of());}byte[] bytes=JSON.writeValueAsBytes(response);exchange.getResponseHeaders().set("Content-Type","application/json");exchange.sendResponseHeaders(status,bytes.length);exchange.getResponseBody().write(bytes);}finally{exchange.close();}});server.start();return server;}catch(Exception e){throw new ExceptionInInitializerError(e);}}
-    static Map<String,Object> snapshot(UUID place){return map("place_id",place.toString(),"name","Synthetic licensed place","status","PUBLISHED","version",catalogVersion,"latitude",10.76,"longitude",place.equals(PLACE)?106.66:106.68,"category_ids",List.of(DEST.toString()),"tag_ids",List.of(),"amenity_ids",List.of(),"geographic_unit_id",DEST.toString(),"destination_ids",List.of(DEST.toString()),"price",catalogPrice,"currency",catalogCurrency,"opening_hours",List.of(),"media_keys",List.of(),"source_version",catalogVersion);}
+    static HttpServer start(){try{var server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);server.createContext("/",exchange->{try{String path=exchange.getRequestURI().getPath();Object response;int status=200;if(path.equals("/route")){routingCalls.incrementAndGet();if(routingDelayMillis>0)try{Thread.sleep(routingDelayMillis);}catch(InterruptedException error){Thread.currentThread().interrupt();}status=routingDown?429:200;response=map("distance_m",1500,"duration_seconds",300,"geometry",routeGeometry);}else if(path.contains("destinations")){status=catalogDown?503:200;response=map("items",List.of(map("destination_id",DEST.toString(),"name","Licensed synthetic destination","status","ACTIVE","version",1)),"next_cursor",null);}else {status=catalogDown?503:200;var request=JSON.readTree(exchange.getRequestBody());var id=UUID.fromString(request.path("ids").get(0).asText());response=map("items",List.of(snapshot(id)),"missing_ids",List.of());}byte[] bytes=JSON.writeValueAsBytes(response);exchange.getResponseHeaders().set("Content-Type","application/json");exchange.sendResponseHeaders(status,bytes.length);exchange.getResponseBody().write(bytes);}finally{exchange.close();}});server.start();return server;}catch(Exception e){throw new ExceptionInInitializerError(e);}}
+    @SuppressWarnings("unchecked")
+    static Map<String,Object> catalogSnapshotFixture(){
+        try {
+            var fixture=JSON.readTree(Files.readString(Path.of("../../contracts/fixtures/catalog.http.json")))
+                    .path("placeSnapshot").path("response").path("items").get(0);
+            return JSON.convertValue(fixture,Map.class);
+        } catch(Exception error){throw new IllegalStateException("Cannot load canonical Catalog snapshot fixture",error);}
+    }
+    static Map<String,Object> snapshot(UUID place){
+        var value=new LinkedHashMap<>(CATALOG_SNAPSHOT);
+        value.putAll(map("place_id",place.toString(),"name","Synthetic licensed place","status","PUBLISHED","version",catalogVersion,"latitude",catalogLatitude,"longitude",place.equals(PLACE)?106.66:106.68,"category_ids",List.of(DEST.toString()),"tag_ids",List.of(),"amenity_ids",List.of(),"geographic_unit_id",DEST.toString(),"destination_ids",List.of(DEST.toString()),"price",catalogPrice,"currency",catalogCurrency,"opening_hours",List.of(),"media_keys",List.of(),"source_version",catalogVersion));
+        return value;
+    }
     @DynamicPropertySource static void properties(DynamicPropertyRegistry r){String url="http://127.0.0.1:"+stub.getAddress().getPort();r.add("trip.catalog.base-url",()->url);r.add("trip.routing.url",()->url+"/route");r.add("security.jwt.jwk-set-uri",()->url+"/jwks");r.add("security.jwt.issuer",()->"test");r.add("trip.transport.enabled",()->"false");}
     private void clearAuditFixture(){var config=new org.springframework.jdbc.datasource.DriverManagerDataSource(System.getenv("DB_URL"),System.getenv("DB_MIGRATION_USER"),System.getenv("DB_MIGRATION_PASSWORD"));new org.springframework.jdbc.core.JdbcTemplate(config).update("DELETE FROM trip.audit_logs");}
-    @BeforeEach void reset(){clearAuditFixture();catalogDown=routingDown=false;catalogVersion=1;catalogPrice=10000;catalogCurrency="VND";routingDelayMillis=0;routingCalls.set(0);db.update("DELETE FROM trip.trips");for(String table:List.of("outbox_events","inbox_events","idempotency_records","route_estimates","user_tombstones","user_status","destination_status"))db.update("DELETE FROM trip."+table);}
+    @BeforeEach void reset(){clearAuditFixture();catalogDown=routingDown=false;catalogVersion=1;catalogPrice=10000;catalogCurrency="VND";routingDelayMillis=0;catalogLatitude=10.76;routeGeometry=null;routingCalls.set(0);db.update("DELETE FROM trip.trips");for(String table:List.of("outbox_events","inbox_events","idempotency_records","route_estimates","user_tombstones","user_status","destination_status"))db.update("DELETE FROM trip."+table);}
     Map<String,Object> body(){return map("name","Fixture itinerary","start_date","2026-10-01","end_date","2026-10-05","timezone","Asia/Ho_Chi_Minh","currency","VND","budget",50000);}
     long version(UUID trip){return ((Number)service.get(trip,USER).get("version")).longValue();}
     String match(UUID trip){return "\""+version(trip)+"\"";}
@@ -52,6 +71,122 @@ class TripDatabaseTests {
     UUID day(UUID trip){return id(service.day(trip,USER,null,match(trip),map("date","2026-10-02")).get("day_id"));}
     Map<String,Object> item(UUID place){return map("place_id",place.toString(),"note","Fixture visit","duration_minutes",45,"locked",false,"recommendation_request_id",null);}
     UUID add(UUID trip,UUID day,UUID place){return id(service.addItem(trip,USER,day,match(trip),UUID.randomUUID().toString(),item(place)).get("item_id"));}
+
+    @SuppressWarnings("unchecked") List<Map<String,Object>> legs(UUID trip,UUID day){return (List<Map<String,Object>>)travel.list(trip,USER,day).get("items");}
+    @Test void automaticAdjacencyTracksAddReorderDeleteWithoutCreatingLegacyTransfers(){
+        UUID trip=create(),day=day(trip),a=add(trip,day,PLACE),b=add(trip,day,PLACE2),c=add(trip,day,PLACE);
+        var before=legs(trip,day);assertThat(before).hasSize(2);
+        assertThat(before.getFirst()).containsEntry("from_item_id",a).containsEntry("to_item_id",b).containsEntry("status","PENDING");
+        UUID ab=id(before.getFirst().get("leg_id"));
+        travel.mode(trip,USER,day,ab,match(trip),map("mode","WALK"));
+        UUID d=add(trip,day,PLACE2);
+        assertThat(legs(trip,day).getFirst()).containsEntry("leg_id",ab).containsEntry("mode","WALK");
+        service.order(trip,USER,day,match(trip),List.of(a,b,d,c));
+        assertThat(legs(trip,day)).hasSize(3);
+        assertThat(legs(trip,day).getFirst()).containsEntry("leg_id",ab).containsEntry("mode","WALK");
+        assertThat(legs(trip,day).get(1)).containsEntry("from_item_id",b).containsEntry("to_item_id",d);
+        service.deleteItem(trip,USER,day,b,match(trip));
+        assertThat(legs(trip,day)).hasSize(2);
+        assertThat(legs(trip,day).getFirst()).containsEntry("from_item_id",a).containsEntry("to_item_id",d);
+        assertThat(db.queryForObject("SELECT count(*) FROM trip.transfer_items",Long.class)).isZero();
+        assertThat(db.queryForObject("SELECT count(*) FROM trip.day_travel_legs WHERE from_item_id=? OR to_item_id=?",Long.class,b,b)).isZero();
+    }
+    @Test void dayLegModePersistsSelfManagedAndUsesOwnershipAndVersionChecks(){
+        UUID trip=create(),day=day(trip);add(trip,day,PLACE);add(trip,day,PLACE2);
+        UUID leg=id(legs(trip,day).getFirst().get("leg_id"));String old=match(trip);
+        travel.mode(trip,USER,day,leg,old,map("mode","SELF_MANAGED"));
+        assertThat(legs(trip,day).getFirst()).containsEntry("mode","SELF_MANAGED").containsEntry("status","SELF_MANAGED").containsEntry("distance_m",null).containsEntry("duration_seconds",null);
+        assertThat(worker.processOne()).isFalse();assertThat(routingCalls.get()).isZero();
+        assertThatThrownBy(()->travel.mode(trip,USER,day,leg,old,map("mode","WALK"))).hasMessageContaining("VERSION_CONFLICT");
+        assertThatThrownBy(()->travel.list(trip,OTHER,day)).hasMessageContaining("NOT_FOUND");
+        assertThatThrownBy(()->travel.mode(trip,USER,day,leg,match(trip),map("mode","FLIGHT"))).hasMessageContaining("INVALID_MODE");
+    }
+    @Test void routeWorkerPersistsRealGeometryWithoutChangingItineraryVersionAndFallbackHasNoDuration(){
+        UUID trip=create(),day=day(trip);add(trip,day,PLACE);add(trip,day,PLACE2);
+        long version=version(trip);
+        routeGeometry=map("type","LineString","coordinates",List.of(List.of(106.66,10.76),List.of(106.68,10.76)));
+        assertThat(worker.processOne()).isTrue();
+        var leg=legs(trip,day).getFirst();
+        assertThat(leg).containsEntry("status","READY").containsEntry("distance_m",1500).containsEntry("duration_seconds",300).containsEntry("geometry",routeGeometry);
+        assertThat(version(trip)).isEqualTo(version);
+        routingDown=true;travel.mode(trip,USER,day,id(leg.get("leg_id")),match(trip),map("mode","WALK"));
+        assertThat(worker.processOne()).isTrue();
+        assertThat(legs(trip,day).getFirst()).containsEntry("status","FALLBACK").containsEntry("fallback",true).containsEntry("duration_seconds",null).containsEntry("geometry",null);
+    }
+    @Test void routingInFlightDoesNotBlockEditsAndCannotOverwriteNewMode()throws Exception{
+        UUID trip=create(),day=day(trip);add(trip,day,PLACE);add(trip,day,PLACE2);UUID leg=id(legs(trip,day).getFirst().get("leg_id"));
+        routingDelayMillis=1500;var executor=Executors.newSingleThreadExecutor();
+        try {
+            var calculating=executor.submit(worker::processOne);
+            long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(5);
+            while(routingCalls.get()==0&&System.nanoTime()<deadline)Thread.sleep(10);
+            assertThat(routingCalls.get()).isGreaterThan(0);
+            long start=System.nanoTime();travel.mode(trip,USER,day,leg,match(trip),map("mode","SELF_MANAGED"));
+            assertThat(java.time.Duration.ofNanos(System.nanoTime()-start)).isLessThan(java.time.Duration.ofSeconds(1));
+            assertThat(calculating.get(5,TimeUnit.SECONDS)).isTrue();
+            assertThat(legs(trip,day).getFirst()).containsEntry("status","SELF_MANAGED").containsEntry("distance_m",null);
+        } finally {executor.shutdownNow();}
+    }
+
+    @Test void freshLocalFixtureBootstrapCreatesIdempotentAutomaticEdges(){
+        var transaction=new org.springframework.transaction.support.TransactionTemplate(transactions);
+        UUID trip=transaction.execute(status->{UUID created=fixtures.seed();travel.synchronizeTrip(created);return created;});
+        UUID day=UUID.fromString("42000000-0000-4000-8000-000000000001");
+        assertThat(legs(trip,day)).hasSize(1);UUID leg=id(legs(trip,day).getFirst().get("leg_id"));
+        transaction.executeWithoutResult(status->travel.synchronizeTrip(fixtures.seed()));
+        assertThat(legs(trip,day)).hasSize(1);assertThat(legs(trip,day).getFirst()).containsEntry("leg_id",leg);
+    }
+    @Test void externalRoutingIsExplicitlyRejectedInsideDatabaseTransactions(){
+        assertThatThrownBy(()->new org.springframework.transaction.support.TransactionTemplate(transactions).execute(status->routingAdapter.estimate(map("latitude",10.7,"longitude",106.6),map("latitude",10.8,"longitude",106.7),"DRIVE")))
+            .isInstanceOf(org.springframework.transaction.IllegalTransactionStateException.class);
+    }
+    @Test void staleCalculationAfterReorderCannotResurrectObsoleteEdge()throws Exception{
+        UUID trip=create(),day=day(trip),a=add(trip,day,PLACE),b=add(trip,day,PLACE2);
+        UUID old=id(legs(trip,day).getFirst().get("leg_id"));routingDelayMillis=1200;
+        var executor=Executors.newSingleThreadExecutor();
+        try {
+            var calculating=executor.submit(worker::processOne);awaitRouting();
+            service.order(trip,USER,day,match(trip),List.of(b,a));calculating.get(5,TimeUnit.SECONDS);
+            assertThat(legs(trip,day)).hasSize(1);
+            assertThat(legs(trip,day).getFirst()).containsEntry("from_item_id",b).containsEntry("to_item_id",a).containsEntry("status","PENDING");
+            assertThat(legs(trip,day).getFirst().get("leg_id")).isNotEqualTo(old);
+            assertThat(db.queryForObject("SELECT count(*) FROM trip.day_travel_legs WHERE leg_id=?",Long.class,old)).isZero();
+        } finally {executor.shutdownNow();}
+    }
+    @Test void staleCalculationAfterItemRemovalCannotCreateOrphanLeg()throws Exception{
+        UUID trip=create(),day=day(trip);add(trip,day,PLACE);UUID b=add(trip,day,PLACE2);routingDelayMillis=1200;
+        var executor=Executors.newSingleThreadExecutor();
+        try {
+            var calculating=executor.submit(worker::processOne);awaitRouting();
+            service.deleteItem(trip,USER,day,b,match(trip));calculating.get(5,TimeUnit.SECONDS);
+            assertThat(legs(trip,day)).isEmpty();
+        } finally {executor.shutdownNow();}
+    }
+    void awaitRouting()throws Exception{
+        long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(5);
+        while(routingCalls.get()==0&&System.nanoTime()<deadline)Thread.sleep(10);
+        assertThat(routingCalls.get()).isGreaterThan(0);
+    }
+    @Test void changedSnapshotCoordinatesInvalidateAffectedRoutesAndDayDeleteCascades(){
+        UUID trip=create(),day=day(trip),a=add(trip,day,PLACE);add(trip,day,PLACE2);
+        worker.processOne();UUID leg=id(legs(trip,day).getFirst().get("leg_id"));
+        travel.mode(trip,USER,day,leg,match(trip),map("mode","BICYCLE"));worker.processOne();
+        catalogVersion=2;catalogLatitude=10.8;service.refresh(trip,USER,match(trip),List.of(a));
+        assertThat(legs(trip,day).getFirst()).containsEntry("leg_id",leg).containsEntry("mode","BICYCLE").containsEntry("status","PENDING").containsEntry("duration_seconds",null);
+        service.deleteDay(trip,USER,day,match(trip));
+        assertThat(db.queryForObject("SELECT count(*) FROM trip.day_travel_legs",Long.class)).isZero();
+    }
+    @Test void automaticLegHttpContractRejectsInvalidModeAndKeepsFrozenTransfersSeparate()throws Exception{
+        UUID trip=create(),day=day(trip),a=add(trip,day,PLACE),b=add(trip,day,PLACE2);
+        var legacy=service.transfer(trip,USER,null,match(trip),map("from_item_id",a,"to_item_id",b,"mode","DRIVE"),false);
+        String path="/api/v1/trips/"+trip+"/days/"+day+"/travel-legs";
+        var page=http("GET",path,null,200,null,null);
+        assertThat((List<?>)page.get("items")).hasSize(1);UUID leg=id(legs(trip,day).getFirst().get("leg_id"));
+        http("PATCH",path+"/"+leg,map("mode","WALK"),200,match(trip),null);
+        http("PATCH",path+"/"+leg,map("mode","FLIGHT"),400,match(trip),null);
+        assertThat(service.transfers(trip,USER,id(legacy.get("transfer_id")))).containsEntry("mode","DRIVE");
+        assertThat(legs(trip,day).getFirst()).containsEntry("mode","WALK");
+    }
     @Test void historicalStreamRequiresScopedWorkloadAndUnknownInternalRoutesAreDenied()throws Exception{
         String path="/internal/v1/interactions/snapshot";
         var scope=new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_trip:internal");

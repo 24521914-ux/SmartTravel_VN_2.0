@@ -26,7 +26,7 @@ public class SecurityConfiguration {
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/.well-known/jwks.json").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/preference-options").permitAll()
                         .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh",
-                                "/api/v1/auth/verify-email", "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password").permitAll()
+                                "/api/v1/auth/verify-email", "/api/v1/auth/resend-verification", "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasAuthority("SCOPE_identity:admin")
                         .requestMatchers("/internal/v1/users/status/batch").hasAuthority("SCOPE_identity:status:read")
                         .requestMatchers("/internal/v1/users/preferences/batch").hasAuthority("SCOPE_identity:preferences:read")
