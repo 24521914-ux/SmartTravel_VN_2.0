@@ -1,10 +1,10 @@
 # Tiến độ Frontend (FE) — SmartTravel VN
 
-- [ ] Kiểm thử bản đồ sau tích hợp — **PARTIAL** · `ea98d08` thay kiểm iframe cũ bằng Leaflet region/marker/popup, Node syntax PASS. Browser chỉ đọc cloud local thiếu marker nên timeout, chưa tính PASS. Lịch sử CI và F-52 tại [progress_be.md](progress_be.md#10-vấn-đề-đang-mở); chờ fixture CI, không nâng số API.
+- [ ] Kiểm thử bản đồ sau tích hợp — **PARTIAL** · `ea98d08` thay kiểm iframe cũ bằng Leaflet region/marker/popup; CI phát hiện nhãn locator bị mất dấu, sửa UTF-8 `ee98bcd`. Node syntax và đối chiếu aria-label component PASS. Browser chỉ đọc cloud local timeout, chưa tính PASS. Lịch sử các lượt CI và F-52 tại [progress_be.md](progress_be.md#10-vấn-đề-đang-mở); chờ fixture CI, không nâng số API.
 
 - [ ] Tích hợp source hiện tại vào cloud `main` — **PARTIAL** · Codex, nhánh `feature/travel-workspace-integration-20261113`, nguồn `f635d79`, base `08718ac`, checkout dirty · TypeScript/Vite build PASS; `npm --prefix frontend run test:contracts` 17/0/0/0 (Node, API giả lập). Giữ UI tài khoản, bộ sưu tập theo tỉnh và timeline chuyến đi; giữ client timeout/cloud dotenv của main. Chưa chạy lại browser với cloud; trạng thái API và các vấn đề tích hợp xem [progress_be.md](progress_be.md).
 
-Cập nhật: **13/11/2026 14:34** (GMT+7)
+Cập nhật: **13/11/2026 14:42** (GMT+7)
 
 
 Kiểm lại 05/11/2026: backend local đã cập nhật image Identity và kiểm API đăng ký/đăng nhập thật; chi tiết bằng chứng tại [progress_be.md](progress_be.md). FE end-to-end thật chưa chạy lại; giữ PARTIAL.
