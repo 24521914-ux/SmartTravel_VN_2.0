@@ -35,6 +35,20 @@ class PublishedPortTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'Resolve'):
                 smoke.database_port('catalog', p01=True)
 
+    def test_broker_ci_allocation_preserves_local_and_p02_defaults(self):
+        config = yaml.safe_load((ROOT / 'backend/infra/compose.p01.yaml').read_text(encoding='utf-8'))
+        ports = config['services']['identity-broker']['ports']
+        self.assertEqual(ports, ['127.0.0.1:${P01_BROKER_AMQP_PORT:-55672}:5672',
+                                 '127.0.0.1:${P01_BROKER_MANAGEMENT_PORT:-55673}:15672'])
+        self.assertEqual(ports[0].replace(':-55672}', ':-56672}'),
+                         '127.0.0.1:${P01_BROKER_AMQP_PORT:-56672}:5672')
+        workflow = yaml.safe_load((ROOT / '.github/workflows/p01-services.yml').read_text(encoding='utf-8'))
+        env = workflow['jobs']['service']['env']
+        self.assertIn("matrix.service == 'identity'", env['P01_BROKER_AMQP_PORT'])
+        self.assertIn("|| '0'", env['P01_BROKER_AMQP_PORT'])
+        with patch.object(p01, 'compose', return_value=SimpleNamespace(stdout='127.0.0.1:49174\n')):
+            self.assertEqual(p01.published_port({}, 'identity-broker', 5672), '49174')
+
     def test_developer_defaults_and_p02_mapping_remain_compatible(self):
         with patch.dict(os.environ, {}, clear=True):
             self.assertEqual(smoke.database_port('catalog', p01=True), 56432)

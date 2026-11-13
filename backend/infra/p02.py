@@ -149,7 +149,7 @@ def configuration(values):
             if isinstance(volume, str) and volume.startswith('.'):
                 source, *rest = volume.split(':')
                 service['volumes'][index] = str((INFRA / source).resolve()).replace('\\', '/') + ':' + ':'.join(rest)
-        service['ports'] = [p.replace('55672:', '56672:').replace('55673:', '56673:')
+        service['ports'] = [p.replace(':-55672}', ':-56672}').replace(':-55673}', ':-56673}')
                             .replace('51025:', '52025:').replace('58025:', '59025:')
                             .replace('5643', '5743').replace('57117:', '58117:')
                             for p in service.get('ports', [])]
