@@ -8,6 +8,7 @@ import base64
 import importlib.util
 import json
 import os
+import re
 from pathlib import Path
 import secrets
 import socket
@@ -42,6 +43,13 @@ def request(base, path, method='GET', body=None, token=None, headers=None):
     with response:
         raw = response.read()
         return response.status, json.loads(raw) if raw else None
+
+
+def account_token(text):
+    matches = [line.strip() for line in text.splitlines() if re.fullmatch(r"[A-Za-z0-9_-]{43}", line.strip())]
+    if len(matches) != 1:
+        raise ValueError("Expected exactly one account token in verification mail")
+    return matches[0]
 
 
 def validate(path, method, status, body):
@@ -155,7 +163,7 @@ def main():
                 for message in listing['messages']:
                     if any(recipient['Address']==email for recipient in message['To']):
                         _, detail = request('http://127.0.0.1:58025','/api/v1/message/'+message['ID'])
-                        mail_token = detail['Text'].strip().splitlines()[-1]
+                        mail_token = account_token(detail['Text'])
                 if mail_token:
                     break
                 time.sleep(1)

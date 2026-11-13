@@ -13,6 +13,13 @@ spec.loader.exec_module(probe)
 
 
 class IdentityImageTests(unittest.TestCase):
+    def test_account_token_ignores_instructions_after_the_code(self):
+        token = "a" * 43
+        self.assertEqual(probe.account_token("Account verification:\n" + token + "\n\nOpen the account screen.\nIgnore if unsolicited."), token)
+        for text in ["instructions only", token + "\n" + "b" * 43]:
+            with self.assertRaisesRegex(ValueError, "Expected exactly one account token"):
+                probe.account_token(text)
+
     def test_image_uses_internal_dns_and_ports(self):
         original = {'MAIL_PORT': '51025', 'DB_USER': 'identity_runtime', 'PORT': '1234'}
         env = probe.image_environment(original)
