@@ -104,6 +104,8 @@ def main():
         sock.bind(('127.0.0.1', 0)); port = sock.getsockname()[1]
     base = f'http://127.0.0.1:{port}'
     env = local.app_environment(port, fixtures=True, transport=args.transport, notification_email=args.transport)
+    # This probe exercises the verification email flow even when dev sign-up skips it.
+    env['IDENTITY_EMAIL_VERIFICATION_REQUIRED'] = 'true'
     name = 'smarttravel-identity-smoke-' + secrets.token_hex(6)
     with tempfile.TemporaryFile() as log, tempfile.TemporaryDirectory() as secret_directory:
         if args.image:
@@ -117,7 +119,7 @@ def main():
                          'DB_MIGRATION_PASSWORD','DB_MIGRATION_ENABLED','JWT_ISSUER','JWT_AUDIENCE','JWT_JWKS_URI',
                          'IDENTITY_KEYS_FILE','IDENTITY_ACTIVE_KID','IDENTITY_MAIL_KEY','MAIL_HOST','MAIL_PORT',
                          'IDENTITY_FIXTURE_PASSWORD','IDENTITY_FIXTURES_ENABLED','IDENTITY_TRANSPORT_ENABLED',
-                         'IDENTITY_NOTIFICATION_EMAIL_ENABLED','BROKER_HOST','BROKER_PORT','BROKER_USERNAME','BROKER_PASSWORD','BROKER_VHOST']
+                         'IDENTITY_NOTIFICATION_EMAIL_ENABLED','IDENTITY_EMAIL_VERIFICATION_REQUIRED','BROKER_HOST','BROKER_PORT','BROKER_USERNAME','BROKER_PASSWORD','BROKER_VHOST']
             command = ['docker','run','--rm','--name',name,'--network',dependency_network(),
                        '-p',f'127.0.0.1:{port}:8101','-v',f'{keys.as_posix()}:/run/identity/keys.json:ro']
             for key in variables:
