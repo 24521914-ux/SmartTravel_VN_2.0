@@ -677,7 +677,7 @@ F-48 — Trung bình, P02, **OPEN** · Suite collection trong workspace hiện t
 
 F-47: kết nối GitHub đã hoạt động lại; tạo nhánh, push, tạo và merge [PR #5](https://github.com/24521914-ux/SmartTravel_VN_2.0/pull/5) thành công ngày 13/11/2026. Không kết luận nguyên nhân lỗi mạng trước đó.
 
-CI 11/11 PASS: `4229b54`, P00 `43387717254`, P01 `43387717316`, P02 `43387717255`, P03 `43387717308`. Lịch sử lỗi và các lần kiểm trước sửa được giữ bên dưới; không đóng gate. 
+CI 11/11 PASS: `4229b54`, P00 `43387717254`, P01 `43387717316`, P02 `43387717255`, P03 `43387717308`. Lịch sử lỗi và các lần kiểm trước sửa được giữ bên dưới; không đóng gate.
 
 | ID | Mức | Phase | Lịch sử và cách sửa | Người xử lý | Trạng thái |
 |---|---|---|---|---|---|
