@@ -168,7 +168,7 @@ try {
   await responsiveCheck('user', 'Bản đồ');
   await page.getByRole('button', { name: 'Xem vị trí', exact: true }).first().click(); await idle();
   assert.match(await page.getByRole('link', { name: /Mở OpenStreetMap/ }).getAttribute('href'), /^https:\/\/www.openstreetmap.org\//);
-  const map = page.getByRole('region', { name: 'B?n ?? ??a ?i?m t??ng t?c', exact: true });
+  const map = page.getByRole('region', { name: 'Bản đồ địa điểm tương tác', exact: true });
   await map.waitFor({ state: 'visible' });
   await map.locator('.leaflet-marker-icon').first().waitFor({ state: 'visible' });
   await map.locator('.leaflet-popup-content strong').waitFor({ state: 'visible' });
