@@ -185,6 +185,7 @@ def configuration(values):
             env.update(IDENTITY_KEYS_FILE='/run/identity/keys.json', IDENTITY_ACTIVE_KID='p02-identity-1',
                        IDENTITY_MAIL_KEY=values['IDENTITY_MAIL_KEY'], MAIL_HOST='identity-mail', MAIL_PORT='1025',
                        IDENTITY_NOTIFICATION_EMAIL_ENABLED='true', IDENTITY_FIXTURES_ENABLED='true',
+                       IDENTITY_EMAIL_VERIFICATION_REQUIRED='true',
                        IDENTITY_FIXTURE_PASSWORD=values['IDENTITY_FIXTURE_PASSWORD'],
                        **{name: values[name] for name in WORKLOAD_SECRETS})
             env.update({key: values[key] for key in (

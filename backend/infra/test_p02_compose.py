@@ -69,6 +69,7 @@ class ComposeLayoutTests(unittest.TestCase):
             self.assertEqual(services[service]['depends_on']['rabbit-init']['condition'], 'service_completed_successfully')
             self.assertIn('healthcheck', services[service], service)
         self.assertEqual(services['identity']['depends_on']['key-init']['condition'], 'service_completed_successfully')
+        self.assertEqual(services['identity']['environment']['IDENTITY_EMAIL_VERIFICATION_REQUIRED'], 'false')
         self.assertEqual(services['community']['depends_on']['community-migrate']['condition'], 'service_completed_successfully')
 
     def test_override_adds_only_local_dependencies_and_loopback_ports(self):
@@ -84,6 +85,7 @@ class ComposeLayoutTests(unittest.TestCase):
             self.assertEqual(services[service]['depends_on'][service + '-db']['condition'], 'service_healthy')
         self.assertEqual(services['community-migrate']['depends_on']['mongo-init']['condition'], 'service_completed_successfully')
         self.assertEqual(services['gateway']['depends_on']['sandbox-init']['condition'], 'service_completed_successfully')
+        self.assertEqual(services['identity']['environment']['IDENTITY_EMAIL_VERIFICATION_REQUIRED'], 'true')
         self.assertEqual(set(services['sandbox-init']['depends_on']), {'catalog'})
         self.assertEqual(services['sandbox-init']['depends_on']['catalog']['condition'], 'service_healthy')
 
