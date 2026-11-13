@@ -1,8 +1,8 @@
 # Tiến độ Backend (BE) — SmartTravel VN
 
-- [ ] Tích hợp source hiện tại vào cloud `main` — **PARTIAL** · Codex, nhánh `feature/travel-workspace-integration-20261113`, source `b9dd657`; checkout dirty khi kiểm local · Giữ thay đổi Identity/Catalog/Trip/FE; giữ cloud Compose và workload client-credentials trên main. Python 3.14.2: compose 14/0/0/0, cấu hình mail 7/0/0/0, seed 18/0/0/0 (dependency giả lập trừ render Compose); `validate_contracts.py` PASS 184 HTTP/23 message. Node 24.21.0: FE build PASS và contract 17/0/0/0 (API giả lập). Maven verify toàn bộ services, Java 21: 309/0/0/186, 123 unit/security chạy thật, DB/broker skip. CI P01 run 43384535643 trên `b9dd657`: contracts FAIL tại kiểm tra tầng repository (F-46); các job khác đang chạy. Không nâng gate. Các vấn đề nhánh cũ F-32…F-35 trùng ID trên main đã đổi thành F-42…F-45, giữ bằng chứng hai phía.
+- [ ] Tích hợp source hiện tại vào cloud `main` — **PARTIAL** · Codex, nhánh `feature/travel-workspace-integration-20261113`, PR #5 merge `ded22c8`. CI **11/11 PASS** trên `4229b54`: P00 `43387717254`, P01 `43387717316`, P02 `43387717255`, P03 `43387717308`; Java 21, DB/broker Docker thật cho P01/P02, browser không AI 9 nhóm PASS. Giữ chức năng local và cloud Compose/workload client-credentials của main. Chưa kiểm lại toàn bộ browser trên Neon/Atlas; không nâng gate hoặc ACCEPTED. Kiểm local trước commit (dirty, source `b9dd657`): Python 3.14.2 compose14/mail7/seed18 đều 0 fail/error/skip (dependency giả lập trừ render Compose); contract184 HTTP/23 message PASS; Node24 FE build/contract17 PASS; Maven Java21 toàn services309/0/0/186 (123 unit/security, DB/broker skip), Gateway23/0/0/0. Lịch sử sửa CI F-46/F-49…F-53 giữ ở mục 10; đã gỡ trùng ID hai nhánh, không mất bằng chứng.
 
-Cập nhật: **13/11/2026 14:42** (GMT+7)
+Cập nhật: **13/11/2026 14:50** (GMT+7)
 
 Kiểm lại runtime 05/11/2026: **PARTIAL**, Codex, nhánh `feature/identity-skip-email-verification`, SHA `91f15aa`, dirty. Image Identity cũ đóng gói JAR trước thay đổi; đã `mvn -f backend/services/identity-service/pom.xml package -DskipTests -q`, `python backend/platform/build_service_image.py identity --tag smarttravel-identity:p02-local`, recreate riêng Identity, readiness 200. Kiểm API qua Gateway/PostgreSQL Docker thật, Java 21: 4/0/0/0 (admin login 200, kích hoạt tài khoản PENDING qua admin status 200, đăng ký synthetic 202, đăng nhập ngay 200). Không đổi mật khẩu tài khoản người dùng. Chưa kiểm đăng nhập bằng mật khẩu người dùng sau kích hoạt; mật khẩu thử trước đó trả 401. F-45 vẫn PARTIAL: chưa full DB/broker suite/FE end-to-end/CI; không đóng gate. Các ghi chú chưa kiểm runtime bên dưới là mốc trước lần kiểm này.
 
@@ -633,12 +633,6 @@ F-48 — Trung bình, P02, **OPEN** · Suite collection trong workspace hiện t
 
 | ID | Mức | Phase | Vấn đề | Người xử lý | Trạng thái |
 |---|---|---|---|---|---|
-| F-52 | Trung bình | P02/P03 | P02 run 43385449288 trên `8f6068e`: real Gateway/domain/deletion PASS, browser FAIL do chờ iframe trong khi UI dùng Leaflet. `ea98d08` đổi assertion vùng/marker/popup; Node syntax PASS. Kiểm browser cloud local timeout, không tính PASS. P02 run 43386712489 trên `50ce165`: domain/deletion PASS; browser FAIL vì nhãn locator tiếng Việt bị chuyển thành dấu hỏi khi ghi file. Sửa UTF-8 `ee98bcd`, Node syntax và đối chiếu chính xác aria-label component PASS; chờ CI | Codex | PARTIAL |
-| F-53 | Trung bình | P00/P01 | CI Catalog run 43386712496 trên `50ce165`: domain/broker Maven PASS, `p01.py up --service catalog` FAIL do broker host 55672 bị chiếm. `833e35c` cấp cổng broker động cho job không phải Identity, giữ default dev/P02; test_p01_ports 4/0/0/0 và test_p02_compose 14/0/0/0 PASS (Python + render Compose thật). Chờ CI, giữ lịch sử lỗi | Codex | PARTIAL |
-| F-46 | Trung bình | P01 | CI contracts trên `b9dd657`, run 43384535643 FAIL do SQL trong DayTravelService; sửa repository tại `1ed0792`, layout 7/0/0/0 và Trip unit/security 61/0/0/41, Java 21, dirty. CI contracts run 43385449305 PASS trên `8f6068e`; giữ task/gate hiện có | Codex | PARTIAL |
-| F-49 | Trung bình | P01 | CI ingestion trên `b9dd657`, run 43384535643: 45/0/1/0 do fixture candidate thiếu metadata HTTP; sửa tại `560194f`. Runner `test-local.py`, Java 21/PostgreSQL Docker thật: 45/0/0/12, riêng DB 17/0/0/0; broker skip, dirty. CI ingestion run 43385449305 PASS trên `8f6068e` | Codex | PARTIAL |
-| F-50 | Trung bình | P01 | CI Trip trên `b9dd657`, run 43384535643: 61/1/0/0 do worker của context broker xử lý dữ liệu trong suite domain; sửa isolation `572c619`. `test-local.py --transport`, Java 21/PostgreSQL và RabbitMQ Docker thật: 61/0/0/0, dirty. CI DB/broker run 43385449305 PASS trên `8f6068e`, nhưng image smoke FAIL do đếm 7 migration thay vì 8. Sửa `b4875c6`; image probe PostgreSQL Docker thật PASS V1–V8/non-root/auth/CRUD/schema; chờ CI cuối | Codex | PARTIAL |
-| F-51 | Trung bình | P01/P02 | CI Identity live probe và P02 run 43384535589 trên `b9dd657` thiếu thư xác minh vì mặc định đăng ký mới không cần xác minh; cấu hình kiểm thử riêng bật xác minh tại `35bc97b`/`958907f`, cloud vẫn false. Compose regression 14/0/0/0. CI P01 run 43385449305 trên `8f6068e` FAIL tiếp vì checker lấy dòng hướng dẫn cuối email làm token; sửa parser `e558b1a`, unit 5/0/0/0. Hai lượt CI FAIL khác nguyên nhân; chờ CI cuối | Codex | PARTIAL |
 | F-01 | Cao | P01/P02 | Identity chưa nhận `catalog.contribution.applied/rejected.v1` và `intelligence.model.deployed.v1` dù registry khai báo; message bị bỏ trong môi trường kết nối | N1 + N2 | OPEN |
 | F-02 | Trung bình | P00 | 11 endpoint ngoài candidate contract: 9 endpoint cũ và `POST /media`, `GET /admin/media/{id}`. Media đã có tài liệu extension và kiểm thử, chưa freeze/duyệt phiên bản mới | N1, N2 | OPEN |
 | F-03 | Thấp | P01 | Seed category chưa có `homestay` | N1 | OPEN |
@@ -679,6 +673,22 @@ F-48 — Trung bình, P02, **OPEN** · Suite collection trong workspace hiện t
 
 Đã đóng: F-08 (dòng trạng thái plan lỗi thời, PR #19), F-10 (PR #3/#4 đã ghi vào lịch sử), F-11 (môi trường thiếu Java 21/Docker; CI Linux đã chạy đủ), F-12 (MongoDB 8 lỗi với kernel runner ≥ 6.19; pin Ubuntu 22.04, PR #20), F-13 (kiểm phục hồi đường Community → Catalog bằng probe GET, PR #20).
 
+### Đã đóng trong PR #5
+
+F-47: kết nối GitHub đã hoạt động lại; tạo nhánh, push, tạo và merge [PR #5](https://github.com/24521914-ux/SmartTravel_VN_2.0/pull/5) thành công ngày 13/11/2026. Không kết luận nguyên nhân lỗi mạng trước đó.
+
+CI 11/11 PASS: `4229b54`, P00 `43387717254`, P01 `43387717316`, P02 `43387717255`, P03 `43387717308`. Lịch sử lỗi và các lần kiểm trước sửa được giữ bên dưới; không đóng gate.
+
+| ID | Mức | Phase | Lịch sử và cách sửa | Người xử lý | Trạng thái |
+|---|---|---|---|---|---|
+| F-52 | Trung bình | P02/P03 | P02 run 43385449288 trên `8f6068e`: real Gateway/domain/deletion PASS, browser FAIL do chờ iframe trong khi UI dùng Leaflet. `ea98d08` đổi assertion vùng/marker/popup; Node syntax PASS. Kiểm browser cloud local timeout, không tính PASS. P02 run 43386712489 trên `50ce165`: domain/deletion PASS; browser FAIL vì nhãn locator tiếng Việt bị chuyển thành dấu hỏi khi ghi file. Sửa UTF-8 `ee98bcd`, Node syntax và đối chiếu chính xác aria-label component PASS; chờ CI | Codex | CLOSED |
+| F-53 | Trung bình | P00/P01 | CI Catalog run 43386712496 trên `50ce165`: domain/broker Maven PASS, `p01.py up --service catalog` FAIL do broker host 55672 bị chiếm. `833e35c` cấp cổng broker động cho job không phải Identity, giữ default dev/P02; test_p01_ports 4/0/0/0 và test_p02_compose 14/0/0/0 PASS (Python + render Compose thật). Chờ CI, giữ lịch sử lỗi | Codex | CLOSED |
+| F-46 | Trung bình | P01 | CI contracts trên `b9dd657`, run 43384535643 FAIL do SQL trong DayTravelService; sửa repository tại `1ed0792`, layout 7/0/0/0 và Trip unit/security 61/0/0/41, Java 21, dirty. CI contracts run 43385449305 PASS trên `8f6068e`; giữ task/gate hiện có | Codex | CLOSED |
+| F-49 | Trung bình | P01 | CI ingestion trên `b9dd657`, run 43384535643: 45/0/1/0 do fixture candidate thiếu metadata HTTP; sửa tại `560194f`. Runner `test-local.py`, Java 21/PostgreSQL Docker thật: 45/0/0/12, riêng DB 17/0/0/0; broker skip, dirty. CI ingestion run 43385449305 PASS trên `8f6068e` | Codex | CLOSED |
+| F-50 | Trung bình | P01 | CI Trip trên `b9dd657`, run 43384535643: 61/1/0/0 do worker của context broker xử lý dữ liệu trong suite domain; sửa isolation `572c619`. `test-local.py --transport`, Java 21/PostgreSQL và RabbitMQ Docker thật: 61/0/0/0, dirty. CI DB/broker run 43385449305 PASS trên `8f6068e`, nhưng image smoke FAIL do đếm 7 migration thay vì 8. Sửa `b4875c6`; image probe PostgreSQL Docker thật PASS V1–V8/non-root/auth/CRUD/schema; chờ CI cuối | Codex | CLOSED |
+| F-51 | Trung bình | P01/P02 | CI Identity live probe và P02 run 43384535589 trên `b9dd657` thiếu thư xác minh vì mặc định đăng ký mới không cần xác minh; cấu hình kiểm thử riêng bật xác minh tại `35bc97b`/`958907f`, cloud vẫn false. Compose regression 14/0/0/0. CI P01 run 43385449305 trên `8f6068e` FAIL tiếp vì checker lấy dòng hướng dẫn cuối email làm token; sửa parser `e558b1a`, unit 5/0/0/0. Hai lượt CI FAIL khác nguyên nhân; chờ CI cuối | Codex | CLOSED |
+
+
 ---
 
 ## 11. Lệnh chạy kiểm thử backend
@@ -707,6 +717,7 @@ Mới nhất ở trên. Mỗi dòng: ngày giờ · thay đổi · PR/commit.
 
 | Thời điểm | Thay đổi | PR / commit |
 |---|---|---|
+| 13/11/2026 14:49 | Merge source workspace ưu tiên chức năng local, giữ hạ tầng cloud main; giải quyết conflict và sửa harness/CI. 11/11 checks PASS trên `4229b54`: P00 43387717254, P01 43387717316, P02 43387717255, P03 43387717308. Không nâng gate/ACCEPTED; browser cloud vẫn cần kiểm riêng | [PR #5](https://github.com/24521914-ux/SmartTravel_VN_2.0/pull/5), merge `ded22c89899530d0dbc4663f1392b223d0f4adac` |
 | 06/11/2026 19:44 | Merge cấu hình mặc định dùng cloud; 11 checks PASS trên head `0b14e46`: P00 run 42190791704, P01 42190791670, P02 42190791665, P03 42190791684. Giữ trạng thái task/gate; F-41 OPEN vì chưa chứng minh nguyên nhân gốc | [PR #3](https://github.com/24521914-ux/SmartTravel_VN_2.0/pull/3), merge `32e14e902795740828269605fd70838665a75c56` |
 | 06/11/2026 14:26 | Merge tài liệu chuyển dữ liệu local sang Neon/Atlas; giữ LOCAL_VERIFIED (dirty), F-39 PARTIAL và trạng thái FE hiện có. Kiểm diff, secret và link PASS; CI không chạy do bộ lọc đường dẫn tài liệu, chưa có N1/N2 xác nhận/gate | [PR #1](https://github.com/24521914-ux/SmartTravel_VN_2.0/pull/1), merge `ef90aa9e111445e5a59fe81d1ae86ea80d5a2a20` |
 | 05/11/2026 17:21 | Push thẳng P04-CS-09 (compose chuẩn app + override DB local) lên `main` (fast-forward, không qua PR) theo yêu cầu người dùng; **chưa có CI và chưa có N1/N2 review** (lệch AGENTS.md mục 7). Trạng thái task giữ nguyên; F-38 vẫn OPEN | `70ae3a8`…`d86e39b` trên `main` |

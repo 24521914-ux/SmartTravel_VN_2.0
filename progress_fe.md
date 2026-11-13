@@ -1,10 +1,10 @@
 # Tiến độ Frontend (FE) — SmartTravel VN
 
-- [ ] Kiểm thử bản đồ sau tích hợp — **PARTIAL** · `ea98d08` thay kiểm iframe cũ bằng Leaflet region/marker/popup; CI phát hiện nhãn locator bị mất dấu, sửa UTF-8 `ee98bcd`. Node syntax và đối chiếu aria-label component PASS. Browser chỉ đọc cloud local timeout, chưa tính PASS. Lịch sử các lượt CI và F-52 tại [progress_be.md](progress_be.md#10-vấn-đề-đang-mở); chờ fixture CI, không nâng số API.
+- [ ] Kiểm thử bản đồ sau tích hợp — **PARTIAL** · P02 run `43387717255` trên `4229b54`: browser không AI 9 nhóm PASS, có map Leaflet region/marker/popup. Node syntax/đối chiếu aria-label PASS; lịch sử lỗi và cách sửa F-52 tại [progress_be.md](progress_be.md#10-vấn-đề-đang-mở). Kiểm browser chỉ đọc trên cloud local trước đó timeout, chưa có full cloud suite; không nâng số API/gate.
 
-- [ ] Tích hợp source hiện tại vào cloud `main` — **PARTIAL** · Codex, nhánh `feature/travel-workspace-integration-20261113`, nguồn `f635d79`, base `08718ac`, checkout dirty · TypeScript/Vite build PASS; `npm --prefix frontend run test:contracts` 17/0/0/0 (Node, API giả lập). Giữ UI tài khoản, bộ sưu tập theo tỉnh và timeline chuyến đi; giữ client timeout/cloud dotenv của main. Chưa chạy lại browser với cloud; trạng thái API và các vấn đề tích hợp xem [progress_be.md](progress_be.md).
+- [ ] Tích hợp source hiện tại vào cloud `main` — **PARTIAL** · Codex, PR #5 merge `ded22c8`, CI 11/11 PASS trên `4229b54`; TypeScript/Vite build và contract17/0/0/0 PASS (Node, API giả lập), P02 browser9 nhóm PASS qua Gateway/DB/broker thật trong CI. Giữ UI tài khoản, bộ sưu tập theo tỉnh, timeline và client cloud. Chưa full browser cloud; trạng thái API/bằng chứng và giới hạn xem [progress_be.md](progress_be.md).
 
-Cập nhật: **13/11/2026 14:42** (GMT+7)
+Cập nhật: **13/11/2026 14:50** (GMT+7)
 
 
 Kiểm lại 05/11/2026: backend local đã cập nhật image Identity và kiểm API đăng ký/đăng nhập thật; chi tiết bằng chứng tại [progress_be.md](progress_be.md). FE end-to-end thật chưa chạy lại; giữ PARTIAL.
@@ -234,6 +234,7 @@ Chạy từ thư mục gốc repo; Node 24.
 
 | Thời điểm | Thay đổi | PR / commit |
 |---|---|---|
+| 13/11/2026 14:49 | Merge source workspace, giữ giao diện/timeline/tài khoản local và client cloud; 11/11 CI PASS trên `4229b54`, P02 browser9 nhóm PASS run43387717255. Không nâng số API/gate; chưa full cloud browser | [PR #5](https://github.com/24521914-ux/SmartTravel_VN_2.0/pull/5), merge `ded22c89899530d0dbc4663f1392b223d0f4adac` |
 | 06/11/2026 19:44 | Merge cấu hình mặc định dùng cloud; 11 checks PASS trên head `0b14e46`: P00 run 42190791704, P01 42190791670, P02 42190791665, P03 42190791684. Giữ trạng thái task/gate; F-41 OPEN vì chưa chứng minh nguyên nhân gốc | [PR #3](https://github.com/24521914-ux/SmartTravel_VN_2.0/pull/3), merge `32e14e902795740828269605fd70838665a75c56` |
 | 03/11/2026 00:52 | Trang Chuyến đi khi chưa đăng nhập thành bố cục hai cột tích hợp: CTA đăng nhập bên trái, ảnh Vịnh Hạ Long và nội dung cảm hứng bên phải; VI/EN, theme token, mobile xếp dọc. Build PASS; chưa kiểm browser trực quan | Nhánh feature/explore-ui-demo-content, HEAD ca83db7 (checkout dirty) |
 | 03/11/2026 00:46 | Đổi bộ lọc địa lý theo thứ tự tỉnh/thành → khu vực du lịch con → địa điểm; khóa khu vực trước khi chọn tỉnh và xóa lựa chọn cũ khi đổi tỉnh. Seed 12 khu vực cho 29 địa điểm. Browser filters 29/0/0/0, có Gateway thật; build PASS | Nhánh feature/explore-ui-demo-content, HEAD ca83db7 (checkout dirty) |
