@@ -767,4 +767,28 @@ class AuthDatabaseTests {
         mail.deliver();
         assertThat(db.queryForObject("SELECT failed_at IS NOT NULL FROM identity.account_mail_jobs WHERE user_id=?",Boolean.class,account.user())).isTrue();
     }
+    @Test void concurrentExchangeCallsRunInParallelAndSeeImmediateLogoutRevocation() throws Exception {
+        var owner=active(); var pair=login(owner);
+        String original=(String)pair.get("access_token");
+        var headers=new HttpHeaders(); headers.setBearerAuth(original);
+        headers.set("X-Gateway-Credential","p02-test-gateway-credential-32-bytes");
+        var pool=Executors.newFixedThreadPool(6);
+        var ready=new CountDownLatch(6); var start=new CountDownLatch(1);
+        try {
+            var targets=java.util.List.of("identity","catalog","catalog","catalog","catalog","community");
+            var futures=new java.util.ArrayList<java.util.concurrent.Future<HttpStatusCode>>();
+            for (String target : targets) {
+                futures.add(pool.submit(() -> {
+                    ready.countDown();
+                    assertThat(start.await(5,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                    return http.exchange("/internal/v1/security/exchange",HttpMethod.POST,new HttpEntity<>(Map.of("audience",target),headers),Map.class).getStatusCode();
+                }));
+            }
+            assertThat(ready.await(5,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            for (var future : futures) assertThat(future.get(10,java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(HttpStatus.OK);
+        } finally { pool.shutdownNow(); }
+        auth.logout(jwt(pair),(String)pair.get("refresh_token"));
+        assertThat(http.exchange("/internal/v1/security/exchange",HttpMethod.POST,new HttpEntity<>(Map.of("audience","catalog"),headers),Map.class).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
 }

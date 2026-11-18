@@ -110,6 +110,29 @@ public class AuthRepository {
         return first("SELECT * FROM identity.auth_sessions WHERE session_id=? AND user_id=? FOR UPDATE", session, user);
     }
 
+    public Map<String, Object> verifyActiveSession(UUID user, UUID session) {
+        return first("""
+            WITH locked_user AS MATERIALIZED (
+              SELECT user_id, status
+              FROM identity.users
+              WHERE user_id = ?
+              FOR SHARE
+            )
+            SELECT u.status,
+                   s.revoked_at,
+                   s.expires_at,
+                   array_to_string(ARRAY(
+                     SELECT r.role_code
+                     FROM identity.user_roles r
+                     WHERE r.user_id = u.user_id
+                     ORDER BY r.role_code
+                   ), ',') AS roles_csv
+            FROM locked_user u
+            JOIN identity.auth_sessions s ON s.user_id = u.user_id AND s.session_id = ?
+            FOR SHARE OF s
+            """, user, session);
+    }
+
     public Map<String, Object> lockRefreshToken(String hash) {
         return first("SELECT * FROM identity.refresh_tokens WHERE token_hash=? FOR UPDATE", hash);
     }

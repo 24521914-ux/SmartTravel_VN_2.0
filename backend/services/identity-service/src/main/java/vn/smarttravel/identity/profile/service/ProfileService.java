@@ -25,7 +25,12 @@ public class ProfileService {
     }
 
     public Map<String, Object> profile(Jwt jwt) {
-        return tx.execute(status -> profile(currentUser.requireUser(jwt)));
+        return tx.execute(status -> {
+            var verified = currentUser.requireActiveSession(jwt);
+            var account = repository.findUser(verified.user());
+            return Map.of("user_id", verified.user(), "display_name", account.get("display_name"), "status", wireStatus((String) account.get("status")),
+                    "roles", verified.roles(), "version", account.get("version"));
+        });
     }
 
     private Map<String, Object> profile(UUID user) {

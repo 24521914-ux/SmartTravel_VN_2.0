@@ -35,19 +35,17 @@ public class SessionService {
                 after = Instant.parse(parts[0]); afterId = UUID.fromString(parts[1]);
             } catch (RuntimeException e) { throw new IdentityException(400, "INVALID_CURSOR"); }
         }
-        final Instant start = after; final UUID startId = afterId;
-        return tx.execute(status -> {
-            var items = repository.sessions(currentUser.requireUser(jwt), start, startId, limit+1);
-            String next = null;
-            if (items.size()>limit) {
-                items.removeLast(); var last = items.getLast();
-                String position = ((Timestamp) last.get("created_at")).toInstant()+"|"+last.get("session_id");
-                next = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(position.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            }
-            var page = new java.util.LinkedHashMap<String, Object>();
-            page.put("items", items); page.put("next_cursor", next); page.put("as_of", Instant.now().toString()); page.put("watermark", 1);
-            return page;
-        });
+        UUID user = currentUser.requireActiveSession(jwt).user();
+        var items = repository.sessions(user, after, afterId, limit+1);
+        String next = null;
+        if (items.size()>limit) {
+            items.removeLast(); var last = items.getLast();
+            String position = ((Timestamp) last.get("created_at")).toInstant()+"|"+last.get("session_id");
+            next = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(position.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        }
+        var page = new java.util.LinkedHashMap<String, Object>();
+        page.put("items", items); page.put("next_cursor", next); page.put("as_of", Instant.now().toString()); page.put("watermark", 1);
+        return page;
     }
 
     public void deleteSession(Jwt jwt, UUID session) {
