@@ -4,7 +4,7 @@
 
 - [ ] Tích hợp source hiện tại vào cloud `main` — **PARTIAL** · Codex, PR #5 merge `ded22c8`, CI 11/11 PASS trên `4229b54`; TypeScript/Vite build và contract17/0/0/0 PASS (Node, API giả lập), P02 browser9 nhóm PASS qua Gateway/DB/broker thật trong CI. Giữ UI tài khoản, bộ sưu tập theo tỉnh, timeline và client cloud. Chưa full browser cloud; trạng thái API/bằng chứng và giới hạn xem [progress_be.md](progress_be.md).
 
-Cập nhật: **18/11/2026 12:22** (GMT+7)
+Cập nhật: **18/11/2026 12:37** (GMT+7)
 
 
 Kiểm lại 05/11/2026: backend local đã cập nhật image Identity và kiểm API đăng ký/đăng nhập thật; chi tiết bằng chứng tại [progress_be.md](progress_be.md). FE end-to-end thật chưa chạy lại; giữ PARTIAL.
@@ -234,6 +234,7 @@ Chạy từ thư mục gốc repo; Node 24.
 
 | Thời điểm | Thay đổi | PR / commit |
 |---|---|---|
+| 18/11/2026 12:37 | Cập nhật cấu hình CI `platform` sang `npm audit --omit=dev --audit-level=high` (`5752a5f`) theo quyết định người dùng xử lý F-54 (`picomatch <= 4.0.7` ở devDependency upstream); kiểm local `npm --prefix frontend audit --omit=dev --audit-level=high` đạt `0 vulnerabilities` trên `frontend` (chỉ kiểm runtime/prod deps), chờ CI PR #7 xác nhận | [PR #7](https://github.com/24521914-ux/SmartTravel_VN_2.0/pull/7), `5752a5f` |
 | 18/11/2026 12:22 | Sửa `ExploreSection.tsx` luôn gọi `/places` `limit=12` khi tải đầu/đặt lại/lọc và hiển thị lỗi 503; `osmCatalog.ts` giữ bản ghi DB thật lên đầu khi DB chưa import OSM (phù hợp P02 CI); cập nhật `browser-nonai.mjs` kiểm `/goi-y` không gọi AI. `build` PASS, `test:contracts` 17/0/0/0, `browser-collection-province` 5/0/0/0, `verify-recommendations` 20/0/0/0, Playwright `ExploreSection` (fixture/P02/503) PASS. Ghi nhận F-54 về `picomatch` trong job `platform` tại [progress_be.md](progress_be.md#10-vấn-đề-đang-mở) | [PR #7](https://github.com/24521914-ux/SmartTravel_VN_2.0/pull/7) |
 | 18/11/2026 11:42 | Thêm màn Gợi ý (`/goi-y` `RecommendationSection`), hợp nhất dữ liệu 200 địa điểm OSM + URL ảnh Cloudinary (`osmCatalog.ts`, ẩn 29 điểm demo cũ), và chuẩn hóa `RoundedSelect` bo tròn dùng chung cho toàn bộ select/filter (`/chuyen-di`, `/bo-suu-tap`, `/dong-gop`, `/tai-khoan`, modal thêm vào chuyến đi, quản trị/kiểm duyệt). `npm --prefix frontend run build` PASS (`4647` modules); `test:contracts` `17/0/0/0`; `browser-collection-province` `5/0/0/0`; kiểm tra live Playwright gợi ý/bộ lọc bo tròn PASS; `browser-filters` `21/24` PASS (`3` FAIL do cơ chế lọc cục bộ OpenData ở `ExploreSection`); 8 script browser DB-mutation còn lại đã cập nhật selector nhưng chưa chạy lại toàn bộ end-to-end. Giữ PARTIAL | Nhánh PR `feature/recommendations-cloudinary-rounded-ui` |
 | 13/11/2026 14:49 | Merge source workspace, giữ giao diện/timeline/tài khoản local và client cloud; 11/11 CI PASS trên `4229b54`, P02 browser9 nhóm PASS run43387717255. Không nâng số API/gate; chưa full cloud browser | [PR #5](https://github.com/24521914-ux/SmartTravel_VN_2.0/pull/5), merge `ded22c89899530d0dbc4663f1392b223d0f4adac` |
