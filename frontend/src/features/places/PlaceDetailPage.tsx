@@ -32,6 +32,11 @@ export function PlaceDetailPage({ place, travel, onBack, onAddToTrip, busy = fal
   const [reviewMedia, setReviewMedia] = useState<Resource[]>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
+  const [showPriceContribute, setShowPriceContribute] = useState(false);
+  const [suggestedPrice, setSuggestedPrice] = useState('');
+  const [submittingPrice, setSubmittingPrice] = useState(false);
+  const [contributingPhoto, setContributingPhoto] = useState(false);
+  const [photoContributed, setPhotoContributed] = useState(false);
 
   const placeId = String(place.id ?? place.place_id ?? '');
   const imageCandidates = placeImageCandidates(place);
@@ -53,6 +58,13 @@ export function PlaceDetailPage({ place, travel, onBack, onAddToTrip, busy = fal
   useEffect(() => { setImageIndex(0); }, [placeId]);
 
   useEffect(() => {
+    if (place.source === 'geofabrik-osm') {
+      setReviews([]);
+      setOfferings([]);
+      setDetailError('');
+      setLoading(false);
+      return;
+    }
     async function loadDetails() {
       setLoading(true);
       setDetailError('');
@@ -71,10 +83,14 @@ export function PlaceDetailPage({ place, travel, onBack, onAddToTrip, busy = fal
       }
     }
     void loadDetails();
-  }, [placeId, travel]);
+  }, [placeId, travel, place.source]);
 
   useEffect(() => {
     let active = true;
+    if (place.source === 'geofabrik-osm') {
+      setIsSaved(false);
+      return () => { active = false; };
+    }
     setIsSaved(isAuthenticated ? null : false);
     if (isAuthenticated) {
       void travel.readAll('community', '/me/favorites').then(data => {
@@ -82,7 +98,7 @@ export function PlaceDetailPage({ place, travel, onBack, onAddToTrip, busy = fal
       }).catch(error => { if (active) showToast((error as Error).message || 'Không thể tải trạng thái yêu thích.', 'error'); });
     }
     return () => { active = false; };
-  }, [travel, placeId, isAuthenticated]);
+  }, [travel, placeId, isAuthenticated, place.source]);
 
   async function handleToggleFavorite() {
     if (favoriteBusy || isSaved === null) return;
@@ -129,6 +145,47 @@ export function PlaceDetailPage({ place, travel, onBack, onAddToTrip, busy = fal
       showToast('Ảnh đã được tải lên và đang chờ quét, kiểm duyệt.', 'info');
     } catch (error) { showToast(error instanceof Error ? error.message : 'Không tải được ảnh.', 'error'); }
     finally { setUploadingMedia(false); }
+  }
+
+  async function contributePlacePhoto(file: File) {
+    setContributingPhoto(true);
+    try {
+      const form = new FormData();
+      form.set('file', file);
+      await apiClient.request<Resource>('catalog', '/api/v1/media', {
+        method: 'POST',
+        multipart: form,
+        idempotencyKey: crypto.randomUUID(),
+      });
+      setPhotoContributed(true);
+      showToast(text('Ảnh đã được tải lên hàng chờ quét và kiểm duyệt cho địa điểm này.', 'Photo uploaded to moderation queue for this place.'), 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : text('Không tải được ảnh đóng góp.', 'Could not upload contributed photo.'), 'error');
+    } finally {
+      setContributingPhoto(false);
+    }
+  }
+
+  async function submitPriceContribution(event: FormEvent) {
+    event.preventDefault();
+    const numeric = Number(suggestedPrice);
+    if (!suggestedPrice.trim() || !Number.isFinite(numeric) || numeric < 0) return;
+    setSubmittingPrice(true);
+    try {
+      await travel.mutate('community', '/contributions', {
+        type: 'EDIT',
+        target_id: placeId,
+        expected_version: Number(place.version ?? 1),
+        fields: { price: numeric, currency: 'VND' },
+      });
+      setShowPriceContribute(false);
+      setSuggestedPrice('');
+      showToast(text('Đã gửi đề xuất giá tham khảo, đang chờ kiểm duyệt.', 'Price suggestion submitted for moderation.'), 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : text('Không gửi được đề xuất giá.', 'Could not submit price suggestion.'), 'error');
+    } finally {
+      setSubmittingPrice(false);
+    }
   }
 
   async function editReview(event: FormEvent<HTMLFormElement>, review: Resource) {
@@ -207,7 +264,43 @@ export function PlaceDetailPage({ place, travel, onBack, onAddToTrip, busy = fal
       </div>
 
       {detailError && <p role="alert">{detailError}</p>}
-      {imageUrl && <img src={imageUrl} alt={name} style={{ width: '100%', maxHeight: 420, objectFit: 'cover', borderRadius: 'var(--radius-card)' }} onError={() => setImageIndex(index => index + 1)} />}
+      {imageUrl ? (
+        <figure style={{ margin: '0 0 16px' }}>
+          <img src={imageUrl} alt={name} style={{ width: '100%', maxHeight: 420, objectFit: 'cover', borderRadius: 'var(--radius-card)' }} onError={() => setImageIndex(index => index + 1)} />
+          {(typeof place.image_author === 'string' && place.image_author || typeof place.image_license === 'string' && place.image_license) && (
+            <figcaption style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: 6 }}>
+              {text('Nguồn ảnh:', 'Photo:')} Wikimedia Commons
+              {typeof place.image_author === 'string' && place.image_author ? ` · ${place.image_author}` : ''}
+              {typeof place.image_license === 'string' && place.image_license ? ` (${place.image_license})` : ''}
+            </figcaption>
+          )}
+        </figure>
+      ) : (
+        <div className="place-photo-missing" style={{ minHeight: 220, borderRadius: 'var(--radius-card)', marginBottom: 16 }}>
+          <Icon name="map" size={38} />
+          <span>{text('Ảnh địa điểm đang được cập nhật', 'Destination photo coming soon')}</span>
+          {isAuthenticated ? (
+            <label htmlFor="place-photo-contribute" className="btn-secondary btn-size-sm" style={{ cursor: contributingPhoto ? 'not-allowed' : 'pointer', marginTop: 6 }}>
+              <Icon name="plus" size={14} />
+              <span>{contributingPhoto ? text('Đang tải ảnh…', 'Uploading…') : photoContributed ? text('Đã gửi ảnh chờ duyệt · Gửi thêm', 'Photo submitted · Upload another') : text('Đóng góp ảnh địa điểm', 'Contribute photo')}</span>
+              <input
+                id="place-photo-contribute"
+                type="file"
+                accept="image/png,image/jpeg"
+                disabled={contributingPhoto}
+                style={{ display: 'none' }}
+                onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (file) void contributePlacePhoto(file);
+                  e.target.value = '';
+                }}
+              />
+            </label>
+          ) : (
+            <small>{text('Đăng nhập để đóng góp ảnh thực tế cho địa điểm này.', 'Sign in to contribute a photo for this place.')}</small>
+          )}
+        </div>
+      )}
       {/* Main Place Header */}
       <div className="travel-panel" style={{ padding: 'var(--space-2xl) var(--space-xl)', marginBottom: 'var(--space-xl)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
@@ -234,9 +327,38 @@ export function PlaceDetailPage({ place, travel, onBack, onAddToTrip, busy = fal
               {rating.toFixed(1)} <small style={{ fontSize: '0.7rem', fontWeight: 500 }}>({reviewCount} {text('đánh giá', 'reviews')})</small>
             </span>
           </div>}
-          <div className="place-price-summary"><span>{text('Giá tham khảo', 'Price')}</span><strong>{placePrice}</strong></div>
+          <div className="place-price-summary">
+            <span>{text('Giá tham khảo', 'Price')}</span>
+            <strong>{placePrice}</strong>
+            {minPrice === null && isAuthenticated && (
+              <button
+                type="button"
+                className="btn-subtle btn-size-sm"
+                style={{ marginTop: 4, alignSelf: 'flex-start' }}
+                onClick={() => setShowPriceContribute(prev => !prev)}
+              >
+                <Icon name="edit" size={13} />
+                <span>{text('Bổ sung giá', 'Suggest price')}</span>
+              </button>
+            )}
+          </div>
           </div>
         </div>
+
+        {minPrice === null && showPriceContribute && isAuthenticated && (
+          <form onSubmit={e => void submitPriceContribution(e)} style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', padding: 14, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: 'var(--color-surface-subtle)' }}>
+            <label style={{ flex: '1 1 220px' }}>
+              {text('Đề xuất giá tham khảo (VND)', 'Suggested price (VND)')}
+              <input type="number" min={0} step={1000} required placeholder="50000" value={suggestedPrice} onChange={e => setSuggestedPrice(e.target.value)} />
+            </label>
+            <button type="submit" className="btn-primary btn-size-sm" disabled={submittingPrice}>
+              {submittingPrice ? text('Đang gửi…', 'Submitting…') : text('Gửi đóng góp giá', 'Submit price')}
+            </button>
+            <button type="button" className="btn-subtle btn-size-sm" onClick={() => setShowPriceContribute(false)}>
+              {text('Hủy', 'Cancel')}
+            </button>
+          </form>
+        )}
 
         {/* Description & Highlights */}
         <div style={{ marginTop: '24px', borderTop: '1px solid var(--color-border-subtle)', paddingTop: '20px' }}>

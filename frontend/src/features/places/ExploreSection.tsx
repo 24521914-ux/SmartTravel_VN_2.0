@@ -9,6 +9,12 @@ import { useToast } from '../../app/providers/ToastProvider';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { DestinationFilters } from './DestinationFilters';
 import { useAppPreferences } from '../../app/providers/AppPreferences';
+import {
+  filterPlacesLocally,
+  isSyntheticFixtureSuite,
+  loadOpenDataPlaces,
+  mergeCatalogWithOpenData,
+} from './osmCatalog';
 
 export interface ExploreSectionProps {
   travel: TravelClient;
@@ -23,7 +29,14 @@ const editorial = [
 ];
 const isFixture = (p: Resource) => /^(Integration\b|P0[0-9][\s_-]|[0-9a-f]{8}-[0-9a-f]{4}-)/i.test(String(p.name ?? ''));
 const isTestCategory = (row: Resource) => /^(Integration\b|P0\d[\s_-]|synthetic\b|test\b)/i.test(String(row.name ?? ''));
-const categoryIcon = (name: string) => /nhà hàng|ẩm thực|ăn/i.test(name) ? 'food' : /khách sạn|lưu trú/i.test(name) ? 'building' : /bảo tàng|văn hóa|di sản/i.test(name) ? 'layers' : /thiên nhiên|sinh thái/i.test(name) ? 'leaf' : 'compass';
+const categoryIcon = (name: string) => /cà phê/i.test(name) ? 'coffee' : /nhà hàng|ẩm thực|ăn/i.test(name) ? 'food' : /khách sạn|lưu trú/i.test(name) ? 'building' : /bảo tàng|văn hóa|di sản|danh lam/i.test(name) ? 'layers' : /thiên nhiên|sinh thái/i.test(name) ? 'leaf' : 'compass';
+
+interface MergedExploreCatalog {
+  places: Resource[];
+  categories: Resource[];
+  geographicUnits: Resource[];
+  destinations: Resource[];
+}
 
 export function ExploreSection({ travel, onNavigateToTrip, onNavigate, busy = false }: ExploreSectionProps) {
   const { showToast } = useToast();
@@ -45,6 +58,7 @@ export function ExploreSection({ travel, onNavigateToTrip, onNavigate, busy = fa
   const [destinationsList, setDestinationsList] = useState<Resource[]>([]);
   const [geographicUnits, setGeographicUnits] = useState<Resource[]>([]);
   const [expanded, setExpanded] = useState(false);
+  const masterCatalog = useRef<MergedExploreCatalog | null>(null);
   const requestId = useRef(0);
   const results = useRef<HTMLElement>(null);
   const destinationCarousel = useRef<HTMLDivElement>(null);
@@ -53,11 +67,64 @@ export function ExploreSection({ travel, onNavigateToTrip, onNavigate, busy = fa
     const id = ++requestId.current;
     setLoading(true); setError(false);
     try {
-      const params = new URLSearchParams({ limit: '12' });
+      const hasAppliedFilters = Boolean(searchQuery || categoryId || nextCursor || Object.values(appliedFilters.current).some(v => v !== ''));
+      if (hasAppliedFilters && !nextCursor && masterCatalog.current) {
+        const filtered = filterPlacesLocally(
+          masterCatalog.current.places,
+          { query: searchQuery, categoryId, filters: appliedFilters.current },
+          masterCatalog.current.geographicUnits,
+        );
+        if (id !== requestId.current) return;
+        setPlaces(filtered);
+        setCursor(null);
+        return;
+      }
+
+      const params = new URLSearchParams({ limit: hasAppliedFilters || nextCursor ? '12' : '100' });
       if (searchQuery) params.set('q', searchQuery);
       if (categoryId) params.set('categoryId', categoryId);
       if (nextCursor) params.set('cursor', nextCursor);
       Object.entries(appliedFilters.current).forEach(([key, value]) => { if (value !== '') params.set(key, value); });
+
+      if (!hasAppliedFilters) {
+        const openData = await loadOpenDataPlaces();
+        if (id !== requestId.current) return;
+        const [placesRes, catsRes, destRes, geoRes] = await Promise.all([
+          openData.length ? travel.readAll('catalog', '/places') : travel.read<Page>('catalog', `/places?${params}`),
+          travel.readAll('catalog', '/categories').catch(() => ({ items: [] as Resource[] })),
+          travel.readAll('catalog', '/destinations').catch(() => ({ items: [] as Resource[] })),
+          travel.readAll('catalog', '/geographic-units').catch(() => ({ items: [] as Resource[] })),
+        ]);
+        if (id !== requestId.current) return;
+        const rawCats = catsRes.items ?? [];
+        const rawDests = destRes.items ?? [];
+        const rawGeos = geoRes.items ?? [];
+        const isSyntheticTest = placesRes.items.some(isSyntheticFixtureSuite);
+        if (openData.length && !isSyntheticTest) {
+          const merged = mergeCatalogWithOpenData({
+            catalogPlaces: placesRes.items,
+            openDataPlaces: openData,
+            categories: rawCats,
+            geographicUnits: rawGeos,
+            destinations: rawDests,
+          });
+          masterCatalog.current = merged;
+          setCategories(merged.categories);
+          setDestinationsList(merged.destinations);
+          setGeographicUnits(merged.geographicUnits);
+          setPlaces(merged.places);
+          setCursor(null);
+          return;
+        }
+        masterCatalog.current = null;
+        setCategories(rawCats);
+        setDestinationsList(rawDests);
+        setGeographicUnits(rawGeos);
+        setPlaces(placesRes.items);
+        setCursor(placesRes.next_cursor ?? null);
+        return;
+      }
+
       const data = await travel.read<Page>('catalog', `/places?${params}`);
       if (id !== requestId.current) return;
       setPlaces(old => nextCursor ? [...old, ...data.items.filter(p => !old.some(x => (x.place_id ?? x.id) === (p.place_id ?? p.id)))] : data.items);
@@ -67,11 +134,7 @@ export function ExploreSection({ travel, onNavigateToTrip, onNavigate, busy = fa
   }
   useEffect(() => {
     void loadPlaces('', '');
-    let cancelled = false;
-    void travel.readAll('catalog', '/categories').then(data => { if (!cancelled) setCategories(data.items ?? []); }).catch(() => { if (!cancelled) showToast('Không thể tải danh mục địa điểm.', 'error'); });
-    void travel.readAll('catalog', '/destinations').then(data => { if (!cancelled) setDestinationsList(data.items ?? []); }).catch(() => { if (!cancelled) showToast('Không thể tải khu vực du lịch.', 'error'); });
-    void travel.readAll('catalog', '/geographic-units').then(units => { if (!cancelled) setGeographicUnits(units.items); }).catch(() => { if (!cancelled) showToast('Không thể tải địa giới hành chính.', 'error'); });
-    return () => { cancelled = true; requestId.current++; };
+    return () => { requestId.current++; };
   }, [travel]);
   useEffect(() => {
     let active = true;
@@ -97,8 +160,20 @@ export function ExploreSection({ travel, onNavigateToTrip, onNavigate, busy = fa
     void loadPlaces('', '');
   }
   async function selectPlace(place: Resource) {
-    try { setSelectedPlace(await travel.place(String(place.place_id ?? place.id))); }
-    catch (error) { showToast((error as Error).message || 'Không thể tải chi tiết địa điểm.', 'error'); }
+    if (place.source === 'geofabrik-osm') {
+      setSelectedPlace(place);
+      return;
+    }
+    try {
+      const detail = await travel.place(String(place.place_id ?? place.id));
+      setSelectedPlace({
+        ...detail,
+        image_url: detail.image_url ?? place.image_url,
+        image_author: detail.image_author ?? place.image_author,
+        image_license: detail.image_license ?? place.image_license,
+        commons_url: detail.commons_url ?? place.commons_url,
+      });
+    } catch (error) { showToast((error as Error).message || 'Không thể tải chi tiết địa điểm.', 'error'); }
   }
   async function favorite(place: Resource, next: boolean) {
     if (!isAuthenticated) { onNavigate?.('Tài khoản'); throw new Error('Sign in required'); }

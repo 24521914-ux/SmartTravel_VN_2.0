@@ -3,6 +3,12 @@ import { ErrorState, Icon } from '../../shared/ui';
 import type { Resource, TravelClient } from '../../shared/api';
 import { InteractiveMap, validCoordinates, type MapPoint } from './InteractiveMap';
 import { searchAddress, type GeocodedPlace } from './geocoding';
+import {
+  filterPlacesLocally,
+  isSyntheticFixtureSuite,
+  loadOpenDataPlaces,
+  mergeCatalogWithOpenData,
+} from './osmCatalog';
 import './map-panel.css';
 
 export interface MapPanelProps { travel: TravelClient; busy?: boolean }
@@ -21,14 +27,41 @@ export function MapPanel({ travel, busy = false }: MapPanelProps) {
   const [external, setExternal] = useState<GeocodedPlace | null>(null);
   const [lookupBusy, setLookupBusy] = useState(false);
   const [lookupMessage, setLookupMessage] = useState('');
+  const masterPlaces = useRef<Resource[] | null>(null);
   const generation = useRef(0), lookupGeneration = useRef(0);
   async function loadPlaces(search = '', nextCursor?: string) {
     const request = ++generation.current;
     setLoading(true); setError('');
     if (!nextCursor) { lookupGeneration.current++; setLookupBusy(false); setExternal(null); setCandidates([]); setLookupMessage(''); }
     try {
-      const data = await travel.places(search, { cursor: nextCursor, limit: 20 });
+      if (!nextCursor && masterPlaces.current) {
+        const filtered = filterPlacesLocally(masterPlaces.current, { query: search });
+        if (request !== generation.current) return;
+        setPlaces(filtered);
+        setSelectedId(filtered[0] ? idOf(filtered[0]) : '');
+        setCursor(null); setAppliedQuery(search);
+        return;
+      }
+      const openData = nextCursor ? [] : await loadOpenDataPlaces();
       if (request !== generation.current) return;
+      const data = openData.length
+        ? await travel.readAll('catalog', '/places')
+        : await travel.places(search, { cursor: nextCursor, limit: 20 });
+      if (request !== generation.current) return;
+      if (!nextCursor && openData.length && !data.items.some(isSyntheticFixtureSuite)) {
+        const merged = mergeCatalogWithOpenData({
+          catalogPlaces: data.items,
+          openDataPlaces: openData,
+          categories: [],
+          geographicUnits: [],
+        }).places;
+        masterPlaces.current = merged;
+        const filtered = filterPlacesLocally(merged, { query: search });
+        setPlaces(filtered);
+        setSelectedId(filtered[0] ? idOf(filtered[0]) : '');
+        setCursor(null); setAppliedQuery(search);
+        return;
+      }
       setPlaces(previous => nextCursor ? [...previous, ...data.items.filter(row => !previous.some(p => idOf(p) === idOf(row)))] : data.items);
       if (!nextCursor) setSelectedId(data.items[0] ? idOf(data.items[0]) : '');
       setCursor(data.next_cursor ?? null); setAppliedQuery(search);

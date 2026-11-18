@@ -37,6 +37,15 @@ import {
   CurrencyCircleDollar,
   ForkKnife,
   ChatCircle,
+  Coffee,
+  Sparkle,
+  Users,
+  Mountains,
+  Waves,
+  SunHorizon,
+  CheckCircle,
+  Crosshair,
+  House,
   type Icon as PhosphorIcon
 } from '@phosphor-icons/react';
 
@@ -79,6 +88,15 @@ const icons: Record<string, PhosphorIcon> = {
   price: CurrencyCircleDollar,
   food: ForkKnife,
   chat: ChatCircle,
+  coffee: Coffee,
+  sparkle: Sparkle,
+  users: Users,
+  mountains: Mountains,
+  waves: Waves,
+  sunset: SunHorizon,
+  checkCircle: CheckCircle,
+  crosshair: Crosshair,
+  indoor: House,
 };
 
 export interface IconProps {
