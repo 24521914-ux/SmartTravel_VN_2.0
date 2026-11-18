@@ -152,9 +152,28 @@ export function mergeCatalogWithOpenData(params: {
     return { places: catalogPlaces, categories, geographicUnits, destinations };
   }
 
-  // Strip the 29 legacy seed_demo places and test smoke records so only newly updated places remain
+  const isMatchedOpenDataPlace = (cp: Resource) => {
+    const cName = normalize(String(cp.name_vi ?? cp.name ?? ''));
+    const clat = Number(cp.latitude);
+    const clon = Number(cp.longitude);
+    return (
+      Number.isFinite(clat) &&
+      Number.isFinite(clon) &&
+      openDataPlaces.some(
+        op =>
+          normalize(String(op.name ?? '')) === cName &&
+          distanceKm(clat, clon, Number(op.latitude), Number(op.longitude)) <= 0.35,
+      )
+    );
+  };
+
+  // Strip the 29 legacy seed_demo places only once OSM places exist in catalog DB;
+  // isolated P02 local CI DBs start with only seed_demo rows needed for smoke writes.
+  const hasImportedOsmPlaces = catalogPlaces.some(
+    cp => !isTestPlaceRecord(cp) && !isLegacySeededDemoPlace(cp) && isMatchedOpenDataPlace(cp),
+  );
   const activeCatalogPlaces = catalogPlaces.filter(
-    cp => !isTestPlaceRecord(cp) && !isLegacySeededDemoPlace(cp),
+    cp => !isTestPlaceRecord(cp) && (!hasImportedOsmPlaces || !isLegacySeededDemoPlace(cp)),
   );
 
   const nextCategories = [...categories];

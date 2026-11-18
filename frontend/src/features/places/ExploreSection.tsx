@@ -68,29 +68,16 @@ export function ExploreSection({ travel, onNavigateToTrip, onNavigate, busy = fa
     setLoading(true); setError(false);
     try {
       const hasAppliedFilters = Boolean(searchQuery || categoryId || nextCursor || Object.values(appliedFilters.current).some(v => v !== ''));
-      if (hasAppliedFilters && !nextCursor && masterCatalog.current) {
-        const filtered = filterPlacesLocally(
-          masterCatalog.current.places,
-          { query: searchQuery, categoryId, filters: appliedFilters.current },
-          masterCatalog.current.geographicUnits,
-        );
-        if (id !== requestId.current) return;
-        setPlaces(filtered);
-        setCursor(null);
-        return;
-      }
-
-      const params = new URLSearchParams({ limit: hasAppliedFilters || nextCursor ? '12' : '100' });
+      const params = new URLSearchParams({ limit: '12' });
       if (searchQuery) params.set('q', searchQuery);
       if (categoryId) params.set('categoryId', categoryId);
       if (nextCursor) params.set('cursor', nextCursor);
       Object.entries(appliedFilters.current).forEach(([key, value]) => { if (value !== '') params.set(key, value); });
 
       if (!hasAppliedFilters) {
-        const openData = await loadOpenDataPlaces();
-        if (id !== requestId.current) return;
-        const [placesRes, catsRes, destRes, geoRes] = await Promise.all([
-          openData.length ? travel.readAll('catalog', '/places') : travel.read<Page>('catalog', `/places?${params}`),
+        const [openData, firstPage, catsRes, destRes, geoRes] = await Promise.all([
+          loadOpenDataPlaces(),
+          travel.read<Page>('catalog', `/places?${params}`),
           travel.readAll('catalog', '/categories').catch(() => ({ items: [] as Resource[] })),
           travel.readAll('catalog', '/destinations').catch(() => ({ items: [] as Resource[] })),
           travel.readAll('catalog', '/geographic-units').catch(() => ({ items: [] as Resource[] })),
@@ -99,10 +86,23 @@ export function ExploreSection({ travel, onNavigateToTrip, onNavigate, busy = fa
         const rawCats = catsRes.items ?? [];
         const rawDests = destRes.items ?? [];
         const rawGeos = geoRes.items ?? [];
-        const isSyntheticTest = placesRes.items.some(isSyntheticFixtureSuite);
+        const isSyntheticTest = firstPage.items.some(isSyntheticFixtureSuite);
         if (openData.length && !isSyntheticTest) {
+          const allDbPlaces = [...firstPage.items];
+          let next = firstPage.next_cursor ?? null;
+          while (next) {
+            const page = await travel.read<Page>('catalog', `/places?limit=100&cursor=${encodeURIComponent(next)}`);
+            if (id !== requestId.current) return;
+            for (const row of page.items) {
+              const rowId = row.place_id ?? row.id;
+              if (!allDbPlaces.some(existing => (existing.place_id ?? existing.id) === rowId)) {
+                allDbPlaces.push(row);
+              }
+            }
+            next = page.next_cursor ?? null;
+          }
           const merged = mergeCatalogWithOpenData({
-            catalogPlaces: placesRes.items,
+            catalogPlaces: allDbPlaces,
             openDataPlaces: openData,
             categories: rawCats,
             geographicUnits: rawGeos,
@@ -120,13 +120,23 @@ export function ExploreSection({ travel, onNavigateToTrip, onNavigate, busy = fa
         setCategories(rawCats);
         setDestinationsList(rawDests);
         setGeographicUnits(rawGeos);
-        setPlaces(placesRes.items);
-        setCursor(placesRes.next_cursor ?? null);
+        setPlaces(firstPage.items);
+        setCursor(firstPage.next_cursor ?? null);
         return;
       }
 
       const data = await travel.read<Page>('catalog', `/places?${params}`);
       if (id !== requestId.current) return;
+      if (!nextCursor && masterCatalog.current && !data.items.some(isSyntheticFixtureSuite)) {
+        const filtered = filterPlacesLocally(
+          masterCatalog.current.places,
+          { query: searchQuery, categoryId, filters: appliedFilters.current },
+          masterCatalog.current.geographicUnits,
+        );
+        setPlaces(filtered);
+        setCursor(null);
+        return;
+      }
       setPlaces(old => nextCursor ? [...old, ...data.items.filter(p => !old.some(x => (x.place_id ?? x.id) === (p.place_id ?? p.id)))] : data.items);
       setCursor(data.next_cursor ?? null);
     } catch { if (id === requestId.current) setError(true); }
