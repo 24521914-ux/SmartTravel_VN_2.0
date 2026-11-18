@@ -1,6 +1,6 @@
-import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useEffect, type FormEvent } from 'react';
 import type { Resource } from '../../shared/api';
-import { Icon } from '../../shared/ui';
+import { Icon, RoundedSelect } from '../../shared/ui';
 import { useAppPreferences } from '../../app/providers/AppPreferences';
 import './destination-filters.css';
 
@@ -15,94 +15,6 @@ interface Props {
   onSubmit: (event: FormEvent) => void;
   onReset: () => void;
   busy: boolean;
-}
-
-interface SelectOption { value: string; label: string }
-
-function RoundedSelect({ label, value, options, onChange, compact = false, disabled = false }: {
-  label: string;
-  value: string;
-  options: SelectOption[];
-  onChange: (value: string) => void;
-  compact?: boolean;
-  disabled?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const listboxId = useId();
-  const selectedIndex = Math.max(0, options.findIndex(option => option.value === value));
-  const selected = options[selectedIndex];
-
-  useEffect(() => { if (disabled) setOpen(false); }, [disabled]);
-
-  useEffect(() => {
-    if (!open) return;
-    const dismissOutside = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    document.addEventListener('pointerdown', dismissOutside, true);
-    return () => document.removeEventListener('pointerdown', dismissOutside, true);
-  }, [open]);
-
-  const focusOption = (index: number) => optionRefs.current[Math.min(options.length - 1, Math.max(0, index))]?.focus();
-  const showMenu = (index = selectedIndex) => {
-    setOpen(true);
-    window.requestAnimationFrame(() => focusOption(index));
-  };
-  const choose = (option: SelectOption) => {
-    onChange(option.value);
-    setOpen(false);
-    triggerRef.current?.focus();
-  };
-  const handleTriggerKey = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      event.preventDefault();
-      showMenu(event.key === 'ArrowUp' ? options.length - 1 : selectedIndex);
-    } else if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      if (open) choose(selected); else showMenu();
-    } else if (event.key === 'Escape' && open) setOpen(false);
-  };
-  const handleOptionKey = (event: ReactKeyboardEvent<HTMLButtonElement>, index: number) => {
-    if (event.key === 'ArrowDown') { event.preventDefault(); focusOption(index + 1); }
-    else if (event.key === 'ArrowUp') { event.preventDefault(); focusOption(index - 1); }
-    else if (event.key === 'Home') { event.preventDefault(); focusOption(0); }
-    else if (event.key === 'End') { event.preventDefault(); focusOption(options.length - 1); }
-    else if (event.key === 'Escape') { event.preventDefault(); setOpen(false); triggerRef.current?.focus(); }
-  };
-
-  return <div className={`rounded-select${compact ? ' rounded-select-compact' : ''}`} ref={rootRef}>
-    <button
-      ref={triggerRef}
-      type="button"
-      className="rounded-select-trigger"
-      role="combobox"
-      aria-label={label}
-      aria-expanded={open}
-      aria-haspopup="listbox"
-      aria-controls={listboxId}
-      disabled={disabled}
-      onClick={() => open ? setOpen(false) : showMenu()}
-      onKeyDown={handleTriggerKey}
-    >
-      <span>{selected?.label ?? ''}</span><Icon name="chevronDown" size={15} />
-    </button>
-    {open && !disabled && <div className="rounded-select-popover" id={listboxId} role="listbox" aria-label={label}>
-      {options.map((option, index) => <button
-        key={option.value}
-        ref={node => { optionRefs.current[index] = node; }}
-        id={`${listboxId}-option-${index}`}
-        type="button"
-        role="option"
-        aria-selected={option.value === value}
-        className="rounded-select-option"
-        onClick={() => choose(option)}
-        onKeyDown={event => handleOptionKey(event, index)}
-      ><span>{option.label}</span><span aria-hidden="true" className="rounded-select-check">{option.value === value ? '✓' : ''}</span></button>)}
-    </div>}
-  </div>;
 }
 
 export function DestinationFilters({ query, onQueryChange, filters, onFiltersChange, destinations, geographicUnits, appliedCount, onSubmit, onReset, busy }: Props) {

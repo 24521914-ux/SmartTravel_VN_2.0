@@ -45,9 +45,11 @@ try {
   await page.getByLabel('Ngày bắt đầu', { exact: true }).fill('2026-12-01');
   await page.getByLabel('Ngày kết thúc', { exact: true }).fill('2026-12-04');
   const destinationPicker = page.getByLabel('Điểm đến ban đầu (không bắt buộc)', { exact: true });
-  await expect(destinationPicker.locator('option').nth(1)).toBeAttached();
-  const initialDestination = await destinationPicker.locator('option').nth(1).getAttribute('value');
-  await destinationPicker.selectOption(initialDestination);
+  await destinationPicker.click();
+  const initialOption = page.getByRole('listbox', { name: 'Điểm đến ban đầu (không bắt buộc)' }).getByRole('option').nth(1);
+  await expect(initialOption).toBeAttached();
+  const initialDestination = await initialOption.getAttribute('data-value');
+  await initialOption.click();
   const created = await confirmed('POST', '/api/trip/api/v1/me/trips', () => button('Tạo chuyến đi').click(), 201);
   tripId = created.trip_id;
   await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
@@ -118,7 +120,10 @@ try {
   await first.locator('summary').click();
   mark('contextual lock protects editing/order; unlock and canonical snapshot refresh');
   const legs = page.getByTestId('travel-leg');
-  await confirmed('PATCH', `${root}/days/${day.day_id}/travel-legs/${await legs.first().getAttribute('data-leg-id')}`, () => legs.first().getByRole('combobox').selectOption('WALK'));
+  await confirmed('PATCH', `${root}/days/${day.day_id}/travel-legs/${await legs.first().getAttribute('data-leg-id')}`, async () => {
+    await legs.first().getByRole('combobox').click();
+    await legs.first().getByRole('listbox').locator('[role="option"][data-value="WALK"]').click();
+  });
   mark('duration/note autosave and inline transport mode persist through Gateway');
   let intercept = true;
   await page.route(`**${itemsPath}/${firstId}`, async route => {

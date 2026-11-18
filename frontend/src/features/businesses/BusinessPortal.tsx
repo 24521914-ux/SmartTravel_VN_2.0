@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Icon, Button, Badge } from '../../shared/ui';
+import { Icon, Button, Badge, RoundedSelect } from '../../shared/ui';
 import type { TravelClient, Resource, Page } from '../../shared/api';
 import { useToast } from '../../app/providers/ToastProvider';
 
@@ -222,7 +222,23 @@ export function BusinessPortal({ travel, busy = false }: BusinessPortalProps) {
                       <span>{String(m.user_id ?? m.member_id)}</span>
                       <Badge variant="primary">{String(m.role ?? 'MANAGER')}</Badge>
                       <Button type="button" disabled={loading || busy} onClick={() => void act(async () => { const member = await travel.read<Resource>('catalog', `/businesses/${encodeURIComponent(resourceId(selected))}/members/${encodeURIComponent(String(m.member_id ?? m.id))}`); setMembers(previous => previous.map(row => row === m ? member : row)); })}>Tải lại thành viên</Button>
-                      <select aria-label={`Vai trò ${String(m.user_id ?? m.member_id ?? m.id)}`} value={String(m.role)} disabled={loading || busy} onChange={e => { const role = e.target.value; void act(async () => { await travel.mutate('catalog', `/businesses/${encodeURIComponent(resourceId(selected))}/members/${encodeURIComponent(String(m.member_id ?? m.id))}`, { role }, 'PATCH', Number(m.version)); await openBusinessManagement(selected); setActiveTab('members'); }); }}><option value="OWNER">OWNER</option><option value="EDITOR">EDITOR</option></select>
+                      <RoundedSelect
+                        fitContent
+                        label={`Vai trò ${String(m.user_id ?? m.member_id ?? m.id)}`}
+                        value={String(m.role)}
+                        disabled={loading || busy}
+                        onChange={role => {
+                          void act(async () => {
+                            await travel.mutate('catalog', `/businesses/${encodeURIComponent(resourceId(selected))}/members/${encodeURIComponent(String(m.member_id ?? m.id))}`, { role }, 'PATCH', Number(m.version));
+                            await openBusinessManagement(selected);
+                            setActiveTab('members');
+                          });
+                        }}
+                        options={[
+                          { value: 'OWNER', label: 'OWNER' },
+                          { value: 'EDITOR', label: 'EDITOR' },
+                        ]}
+                      />
                       <Button type="button" disabled={loading || busy} onClick={() => { if (window.confirm('Xóa membership này?')) void act(async () => { await travel.mutate('catalog', `/businesses/${encodeURIComponent(resourceId(selected))}/members/${encodeURIComponent(String(m.member_id ?? m.id))}`, undefined, 'DELETE', Number(m.version)); await openBusinessManagement(selected); setActiveTab('members'); }); }}>Xóa membership</Button>
                     </div>
                   ))}

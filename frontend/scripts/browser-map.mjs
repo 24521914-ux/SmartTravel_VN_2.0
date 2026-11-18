@@ -86,7 +86,8 @@ try {
   createdId = created.place_id ?? created.id;
   await page.goto(`${base}/quan-tri`);
   const catalog = page.getByRole('region', { name: 'Quản lý danh mục du lịch', exact: true });
-  await catalog.getByLabel('Nhóm dữ liệu').selectOption('places');
+  await catalog.getByLabel('Nhóm dữ liệu').click();
+  await catalog.getByRole('listbox').locator('[role="option"][data-value="places"]').click();
   await expect(catalog.getByRole('button', { name: 'Tải lại danh mục', exact: true })).toBeEnabled();
   const editButton = catalog.getByRole('button', { name: `Chi tiết / sửa ${name}`, exact: true });
   for (let i = 0; i < 100 && !await editButton.count(); i++) {

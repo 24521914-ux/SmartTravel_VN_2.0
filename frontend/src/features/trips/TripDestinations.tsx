@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import type { Resource, TravelClient } from '../../shared/api';
+import { RoundedSelect } from '../../shared/ui';
 import { useToast } from '../../app/providers/ToastProvider';
 
 interface Props { travel: TravelClient; trip: Resource; busy: boolean; onChanged: () => Promise<unknown> }
@@ -59,7 +60,21 @@ export function TripDestinations({ travel, trip, busy, onChanged }: Props) {
     <h3>Chặng điểm đến</h3>
     {error && <p role="alert">{error} <button type="button" onClick={() => void load()}>Thử lại</button></p>}
     <form key={editing ? id(editing) : 'new'} onSubmit={save} className="form-grid">
-      <label>Điểm đến của chặng<select name="destination" defaultValue={String(editing?.destination_id ?? '')} required><option value="">Chọn điểm đến</option>{destinations.map(row => <option key={id(row)} value={id(row)}>{String(row.name)}</option>)}</select></label>
+      <div className="tp-field">
+        <label htmlFor="tp-segment-dest">Điểm đến của chặng</label>
+        <RoundedSelect
+          id="tp-segment-dest"
+          name="destination"
+          label="Điểm đến của chặng"
+          required
+          defaultValue={String(editing?.destination_id ?? '')}
+          placeholder="Chọn điểm đến"
+          options={[
+            { value: '', label: 'Chọn điểm đến' },
+            ...destinations.map(row => ({ value: id(row), label: String(row.name) })),
+          ]}
+        />
+      </div>
       <label>Từ ngày<input name="start" type="date" min={String(trip.start_date)} max={String(trip.end_date)} defaultValue={String(editing?.start_date ?? trip.start_date)} required /></label>
       <label>Đến ngày<input name="end" type="date" min={String(trip.start_date)} max={String(trip.end_date)} defaultValue={String(editing?.end_date ?? trip.end_date)} required /></label>
       <button type="submit" disabled={busy || saving}>{editing ? 'Lưu chặng điểm đến' : 'Thêm chặng điểm đến'}</button>

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { type ApiClient, type Resource } from '../../shared/api';
-import { Button } from '../../shared/ui';
+import { Button, RoundedSelect } from '../../shared/ui';
 
 export function AdminMediaPanel({ apiClient }: { apiClient: ApiClient }) {
   const [media, setMedia] = useState<Resource | null>(null);
@@ -21,7 +21,7 @@ export function AdminMediaPanel({ apiClient }: { apiClient: ApiClient }) {
     <p>Ảnh PNG/JPEG tối đa 10 MB. Ảnh được cách ly sau khi tải lên và chỉ hiển thị công khai sau khi máy quét an toàn và quản trị viên duyệt.</p>
     {error && <p role="alert">{error}</p>}
     <form className="clay-form" onSubmit={e => void submit(e, true)}><label htmlFor="media-file">Ảnh cần tải lên<input id="media-file" type="file" name="file" accept="image/png,image/jpeg" required /></label><Button type="submit" disabled={busy}>Tải ảnh lên</Button></form>
-    <form className="clay-form" key={String(media?.media_id ?? 'review')} onSubmit={e => void submit(e, false)}><label htmlFor="media-id">Mã ảnh<input id="media-id" name="media_id" required pattern="[0-9a-fA-F-]{36}" defaultValue={String(media?.media_id ?? '')} /></label><label htmlFor="media-action">Quyết định ảnh<select id="media-action" name="action"><option value="APPROVE">Duyệt sau khi quét</option><option value="REJECT">Từ chối</option><option value="REVOKE">Thu hồi</option></select></label><label htmlFor="media-reason">Lý do xử lý ảnh<input id="media-reason" name="reason" required maxLength={1024} /></label><Button type="submit" disabled={busy}>Lưu quyết định ảnh</Button></form>
+    <form className="clay-form" key={String(media?.media_id ?? 'review')} onSubmit={e => void submit(e, false)}><label htmlFor="media-id">Mã ảnh<input id="media-id" name="media_id" required pattern="[0-9a-fA-F-]{36}" defaultValue={String(media?.media_id ?? '')} /></label><div className="form-group"><label htmlFor="media-action">Quyết định ảnh</label><RoundedSelect id="media-action" name="action" label="Quyết định ảnh" defaultValue="APPROVE" options={[{ value: 'APPROVE', label: 'Duyệt sau khi quét' }, { value: 'REJECT', label: 'Từ chối' }, { value: 'REVOKE', label: 'Thu hồi' }]} /></div><label htmlFor="media-reason">Lý do xử lý ảnh<input id="media-reason" name="reason" required maxLength={1024} /></label><Button type="submit" disabled={busy}>Lưu quyết định ảnh</Button></form>
     {media && <div role="status"><p>Mã ảnh: {String(media.media_id)} · Trạng thái: {String(media.moderation_status)} · Mã tài nguyên: {String(media.object_key)}</p>{media.moderation_status === 'APPROVED' && <img src={`/api/catalog/api/v1/media/${encodeURIComponent(String(media.media_id))}`} alt="Ảnh đã được duyệt" style={{ maxWidth: '100%', maxHeight: 320 }} />}</div>}
   </section>;
 }

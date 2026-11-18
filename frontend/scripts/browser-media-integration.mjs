@@ -36,7 +36,8 @@ try {
   await media.getByLabel('Mã ảnh', { exact: true }).fill(id); await media.getByLabel('Lý do xử lý ảnh').fill('Synthetic media integration');
   await call(`/admin/media/${id}/review`, 'POST', 503, () => media.getByRole('button', { name: 'Lưu quyết định ảnh', exact: true }).click());
   await media.getByRole('alert').waitFor(); checks.push('approval fails closed without scanner');
-  await media.getByLabel('Quyết định ảnh').selectOption('REJECT');
+  await media.getByLabel('Quyết định ảnh').click();
+  await media.getByRole('listbox').locator('[role="option"][data-value="REJECT"]').click();
   await call(`/admin/media/${id}/review`, 'POST', 202, () => media.getByRole('button', { name: 'Lưu quyết định ảnh', exact: true }).click());
   await media.getByText(/REJECTED/).waitFor(); checks.push('admin rejects quarantined media');
   await page.getByRole('button', { name: 'Đăng xuất khỏi hệ thống' }).click();

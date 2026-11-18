@@ -58,7 +58,9 @@ try {
   await page.getByRole('heading', { name: 'Browser updated profile', exact: true }).waitFor(); checks.push('profile persists');
   await page.getByRole('tab', { name: 'Sở thích & Quyền riêng tư', exact: true }).click();
   await page.getByLabel('Ngân sách tối thiểu (VND)').fill('0'); await page.getByLabel('Ngân sách tối đa (VND)').fill('1000000');
-  await page.getByLabel('Mức ngân sách').selectOption('MID'); await submit('Lưu sở thích', '/me/preferences'); checks.push('preferences');
+  await page.getByLabel('Mức ngân sách').click();
+  await page.getByRole('listbox', { name: 'Mức ngân sách' }).locator('[role="option"][data-value="MID"]').click();
+  await submit('Lưu sở thích', '/me/preferences'); checks.push('preferences');
   await page.getByRole('tab', { name: 'Bảo mật tài khoản', exact: true }).click();
   await page.getByRole('button', { name: 'Tải lại phiên', exact: true }).click();
   await page.getByRole('button', { name: 'Thu hồi phiên', exact: true }).first().waitFor(); checks.push('sessions real');

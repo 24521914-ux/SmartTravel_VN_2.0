@@ -1,4 +1,4 @@
-﻿.tp-planner {
+.tp-planner {
   --tp-ink: #22372f;
   --tp-muted: #607068;
   --tp-line: #dce5dd;
@@ -48,7 +48,7 @@
   color: var(--tp-muted);
   font-size: 13px;
 }
-.tp-planner button,
+.tp-planner button:not(.rounded-select-trigger):not(.rounded-select-option),
 .tp-planner input,
 .tp-planner select,
 .tp-planner textarea {
@@ -56,7 +56,7 @@
   color: var(--tp-ink);
   background: #fff;
   border: 1px solid var(--tp-line);
-  border-radius: 10px;
+  border-radius: 12px;
   box-shadow: none;
   max-width: 100%;
   min-width: 0;
@@ -66,7 +66,7 @@
 .tp-planner select,
 .tp-planner textarea {
   width: 100%;
-  padding: 10px 11px;
+  padding: 10px 12px;
   font-size: 16px;
   min-height: 44px;
 }
@@ -77,9 +77,9 @@
 .tp-planner textarea::placeholder {
   color: #708076;
 }
-.tp-planner button {
+.tp-planner button:not(.rounded-select-trigger):not(.rounded-select-option) {
   cursor: pointer;
-  padding: 9px 13px;
+  padding: 9px 14px;
   min-height: 44px;
   font-size: 13px;
   font-weight: 600;
@@ -92,7 +92,7 @@
     background 0.15s,
     border-color 0.15s;
 }
-.tp-planner button:hover:not(:disabled) {
+.tp-planner button:not(.rounded-select-trigger):not(.rounded-select-option):hover:not(:disabled) {
   background: #eaf1e8;
   border-color: #91ad99;
 }
@@ -104,7 +104,8 @@
   outline: 3px solid #4a8c78;
   outline-offset: 3px;
 }
-.tp-planner label {
+.tp-planner label,
+.tp-planner .tp-field {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -112,6 +113,32 @@
   font-weight: 600;
   color: var(--tp-muted);
   min-width: 0;
+}
+.tp-planner .rounded-select-trigger {
+  background: #fff;
+  border-color: var(--tp-line);
+  color: var(--tp-ink);
+  min-height: 44px;
+}
+.tp-planner .rounded-select-trigger:hover:not(:disabled) {
+  background: #eaf1e8;
+  border-color: #91ad99;
+}
+.tp-planner .rounded-select-popover {
+  background: #fff;
+  border-color: var(--tp-line);
+  color: var(--tp-ink);
+}
+.tp-planner .rounded-select-option {
+  color: var(--tp-ink);
+}
+.tp-planner .rounded-select-option:hover:not(:disabled),
+.tp-planner .rounded-select-option:focus-visible {
+  background: #eaf1e8;
+}
+.tp-planner .rounded-select-option[aria-selected="true"] {
+  background: #dceadf;
+  color: var(--tp-brand);
 }
 .tp-planner .tp-primary {
   background: var(--tp-brand);
@@ -157,9 +184,14 @@
   gap: 10px;
   margin-bottom: 20px;
 }
-.tp-trip-picker label {
+.tp-trip-picker label,
+.tp-trip-picker > .tp-field {
   width: 320px;
   max-width: 100%;
+}
+.tp-trip-picker > button {
+  border-radius: 999px !important;
+  padding-inline: 18px !important;
 }
 .tp-overview {
   padding: 24px 26px;
@@ -220,7 +252,8 @@
 .tp-form > label:first-child {
   grid-column: span 2;
 }
-.tp-settings > label {
+.tp-settings > label,
+.tp-settings > .tp-settings-state {
   max-width: 260px;
   margin-top: 18px;
 }
@@ -316,9 +349,10 @@
   gap: 8px;
   margin: 12px 0 18px;
 }
-.tp-filters select {
+.tp-filters select,
+.tp-filters .rounded-select-trigger {
   font-size: 12px;
-  padding: 7px;
+  padding: 7px 10px;
 }
 .tp-place-list {
   display: flex;
@@ -503,18 +537,22 @@
 .tp-leg > div {
   flex: 1;
 }
-.tp-leg label {
-  font-size: 10px;
+.tp-leg label,
+.tp-leg .tp-leg-control {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--tp-muted);
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
-.tp-leg select {
-  font-size: 11px;
-  min-height: 32px;
-  padding: 4px 8px;
+.tp-leg select,
+.tp-leg .tp-leg-select .rounded-select-trigger {
+  font-size: 11.5px;
+  min-height: 34px;
+  padding: 5px 12px;
   width: auto;
   background: #f1f4ee;
 }
@@ -866,7 +904,8 @@
   .tp-map-canvas {
     height: 430px;
   }
-  .tp-trip-picker label {
+  .tp-trip-picker label,
+  .tp-trip-picker > .tp-field {
     width: 100%;
   }
   .tp-map {

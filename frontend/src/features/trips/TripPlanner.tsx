@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Icon } from "../../shared/ui";
+import { Icon, RoundedSelect } from "../../shared/ui";
 import {
   ApiError,
   type TravelClient,
@@ -789,30 +789,35 @@ export function TripPlanner({
                 placeholder="Không bắt buộc · mặc định 0"
               />
             </label>
-            <label>
-              Điểm đến ban đầu (không bắt buộc)
-              <select
+            <div className="tp-field">
+              <label htmlFor="tp-new-destination">
+                Điểm đến ban đầu (không bắt buộc)
+              </label>
+              <RoundedSelect
+                id="tp-new-destination"
                 name="destination"
-                aria-label="Điểm đến ban đầu (không bắt buộc)"
+                label="Điểm đến ban đầu (không bắt buộc)"
                 defaultValue=""
-              >
-                <option value="">Chọn sau</option>
-                {destinations.map((destination) => (
-                  <option
-                    key={String(destination.destination_id ?? destination.id)}
-                    value={String(destination.destination_id ?? destination.id)}
-                  >
-                    {String(destination.name)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Tiền tệ
-              <select name="currency" defaultValue="VND">
-                <option value="VND">VND — Việt Nam đồng</option>
-              </select>
-            </label>
+                placeholder="Chọn sau"
+                options={[
+                  { value: "", label: "Chọn sau" },
+                  ...destinations.map((destination) => ({
+                    value: String(destination.destination_id ?? destination.id),
+                    label: String(destination.name),
+                  })),
+                ]}
+              />
+            </div>
+            <div className="tp-field">
+              <label htmlFor="tp-new-currency">Tiền tệ</label>
+              <RoundedSelect
+                id="tp-new-currency"
+                name="currency"
+                label="Tiền tệ"
+                defaultValue="VND"
+                options={[{ value: "VND", label: "VND — Việt Nam đồng" }]}
+              />
+            </div>
             <button className="tp-primary" disabled={sync === "saving" || busy}>
               Tạo chuyến đi
             </button>
@@ -823,27 +828,28 @@ export function TripPlanner({
         <section className="tp-trip-picker-section" aria-labelledby="created-trips-heading">
           <h2 id="created-trips-heading">Các chuyến đi đã tạo</h2>
           <nav className="tp-trip-picker" aria-label="Chọn chuyến đi">
-            <label>
-              Chuyến đi
-              <select
-                aria-label="Chọn chuyến đi"
+            <div className="tp-field">
+              <label htmlFor="tp-trip-selector">Chuyến đi</label>
+              <RoundedSelect
+                id="tp-trip-selector"
+                label="Chọn chuyến đi"
+                pill
                 disabled={disabled}
                 value={tripId}
-                onChange={(e) => {
-                  const value = trips.find(
-                    (row) => rowId(row) === e.target.value,
-                  );
+                placeholder="Chọn chuyến đi của bạn"
+                onChange={(selectedId) => {
+                  const value = trips.find((row) => rowId(row) === selectedId);
                   if (value) void openTrip(value);
                 }}
-              >
-                <option value="">Chọn chuyến đi của bạn</option>
-                {trips.map((row) => (
-                  <option key={rowId(row)} value={rowId(row)}>
-                    {String(row.name)}
-                  </option>
-                ))}
-              </select>
-            </label>
+                options={[
+                  { value: "", label: "Chọn chuyến đi của bạn" },
+                  ...trips.map((row) => ({
+                    value: rowId(row),
+                    label: String(row.name),
+                  })),
+                ]}
+              />
+            </div>
             {!trip &&
               trips.slice(0, 4).map((row) => (
                 <button
@@ -958,26 +964,26 @@ export function TripPlanner({
                   Áp dụng thay đổi
                 </button>
               </form>
-              <label>
-                Trạng thái chuyến đi
-                <select
+              <div className="tp-field tp-settings-state">
+                <label htmlFor="tp-trip-state">Trạng thái chuyến đi</label>
+                <RoundedSelect
+                  id="tp-trip-state"
+                  label="Trạng thái chuyến đi"
                   value={String(trip.state)}
                   disabled={disabled}
-                  onChange={(e) =>
+                  onChange={(stateValue) =>
                     void mutate({
                       path: `${base}/state`,
                       method: "PUT",
-                      body: { state: e.target.value },
+                      body: { state: stateValue },
                     })
                   }
-                >
-                  {Object.entries(states).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  options={Object.entries(states).map(([value, label]) => ({
+                    value,
+                    label,
+                  }))}
+                />
+              </div>
               <details>
                 <summary>Điểm đến & di chuyển liên tỉnh</summary>
                 <p className="tp-hint">
@@ -1123,40 +1129,40 @@ export function TripPlanner({
                 />
               </label>
               <div className="tp-filters">
-                <label>
-                  Danh mục
-                  <select
+                <div className="tp-field">
+                  <label htmlFor="tp-filter-category">Danh mục</label>
+                  <RoundedSelect
+                    id="tp-filter-category"
+                    label="Danh mục"
+                    compact
                     value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                  >
-                    <option value="">Tất cả danh mục</option>
-                    {categories.map((row) => (
-                      <option
-                        key={String(row.category_id ?? row.id)}
-                        value={String(row.category_id ?? row.id)}
-                      >
-                        {String(row.name)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Điểm đến
-                  <select
+                    onChange={setCategory}
+                    options={[
+                      { value: "", label: "Tất cả danh mục" },
+                      ...categories.map((row) => ({
+                        value: String(row.category_id ?? row.id),
+                        label: String(row.name),
+                      })),
+                    ]}
+                  />
+                </div>
+                <div className="tp-field">
+                  <label htmlFor="tp-filter-destination">Điểm đến</label>
+                  <RoundedSelect
+                    id="tp-filter-destination"
+                    label="Điểm đến"
+                    compact
                     value={destination}
-                    onChange={(e) => setDestination(e.target.value)}
-                  >
-                    <option value="">Tất cả điểm đến</option>
-                    {destinations.map((row) => (
-                      <option
-                        key={String(row.destination_id ?? row.id)}
-                        value={String(row.destination_id ?? row.id)}
-                      >
-                        {String(row.name)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    onChange={setDestination}
+                    options={[
+                      { value: "", label: "Tất cả điểm đến" },
+                      ...destinations.map((row) => ({
+                        value: String(row.destination_id ?? row.id),
+                        label: String(row.name),
+                      })),
+                    ]}
+                  />
+                </div>
               </div>
               {placeError && (
                 <p role="alert">
@@ -1490,26 +1496,26 @@ export function TripPlanner({
                       >
                         <span className="tp-leg-line">↓</span>
                         <div>
-                          <label>
-                            Di chuyển đến điểm tiếp theo
-                            <select
-                              aria-label={`Phương tiện từ ${name}`}
+                          <div className="tp-leg-control">
+                            <span>Di chuyển đến điểm tiếp theo</span>
+                            <RoundedSelect
+                              label={`Phương tiện từ ${name}`}
+                              compact
+                              fitContent
+                              pill
                               value={String(leg?.mode ?? "DRIVE")}
                               disabled={disabled || !leg}
-                              onChange={(e) =>
+                              onChange={(modeValue) =>
                                 void mutate({
                                   path: `${dayBase}/travel-legs/${String(leg?.leg_id)}`,
-                                  body: { mode: e.target.value },
+                                  body: { mode: modeValue },
                                 })
                               }
-                            >
-                              {Object.entries(modes).map(([value, label]) => (
-                                <option key={value} value={value}>
-                                  {label}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
+                              options={Object.entries(modes).map(
+                                ([value, label]) => ({ value, label }),
+                              )}
+                            />
+                          </div>
                           <p role="status">
                             {!leg || leg.status === "PENDING"
                               ? "Đang tính tuyến… Lịch trình vẫn được lưu."
@@ -1679,44 +1685,56 @@ function IntercityTransfers({
           });
         }}
       >
-        <label>
-          Điểm đi
-          <select
+        <div className="tp-field">
+          <label htmlFor="tp-transfer-from">Điểm đi</label>
+          <RoundedSelect
+            id="tp-transfer-from"
             name="from"
+            label="Điểm đi"
             required
             defaultValue={String(editing?.from_item_id ?? "")}
-          >
-            <option value="">Chọn điểm</option>
-            {items.map((item) => (
-              <option key={rowId(item)} value={rowId(item)}>
-                {placeName(item)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Điểm đến
-          <select
+            placeholder="Chọn điểm"
+            options={[
+              { value: "", label: "Chọn điểm" },
+              ...items.map((item) => ({
+                value: rowId(item),
+                label: placeName(item),
+              })),
+            ]}
+          />
+        </div>
+        <div className="tp-field">
+          <label htmlFor="tp-transfer-to">Điểm đến</label>
+          <RoundedSelect
+            id="tp-transfer-to"
             name="to"
+            label="Điểm đến"
             required
             defaultValue={String(editing?.to_item_id ?? "")}
-          >
-            <option value="">Chọn điểm</option>
-            {items.map((item) => (
-              <option key={rowId(item)} value={rowId(item)}>
-                {placeName(item)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Phương tiện
-          <select name="mode" defaultValue={String(editing?.mode ?? "DRIVE")}>
-            <option value="DRIVE">Ô tô</option>
-            <option value="WALK">Đi bộ</option>
-            <option value="BICYCLE">Xe đạp</option>
-          </select>
-        </label>
+            placeholder="Chọn điểm"
+            options={[
+              { value: "", label: "Chọn điểm" },
+              ...items.map((item) => ({
+                value: rowId(item),
+                label: placeName(item),
+              })),
+            ]}
+          />
+        </div>
+        <div className="tp-field">
+          <label htmlFor="tp-transfer-mode">Phương tiện</label>
+          <RoundedSelect
+            id="tp-transfer-mode"
+            name="mode"
+            label="Phương tiện"
+            defaultValue={String(editing?.mode ?? "DRIVE")}
+            options={[
+              { value: "DRIVE", label: "Ô tô" },
+              { value: "WALK", label: "Đi bộ" },
+              { value: "BICYCLE", label: "Xe đạp" },
+            ]}
+          />
+        </div>
         <button disabled={disabled || items.length < 2}>
           {editing ? "Cập nhật chặng riêng" : "Thêm chặng riêng"}
         </button>

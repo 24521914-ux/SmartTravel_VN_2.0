@@ -40,7 +40,10 @@ try {
   await portal.getByRole('button', { name: 'Tải lại thành viên' }).first().click(); checks.push('business member detail');
   const membership = await responseFor(`/businesses/${id}/members`, 'POST', () => portal.getByRole('button', { name: 'Xác nhận quyền chủ sở hữu', exact: true }).click());
   const memberId = membership.member_id ?? membership.id;
-  await responseFor(`/businesses/${id}/members/${memberId}`, 'PATCH', () => portal.getByRole('combobox', { name: /^Vai trò / }).selectOption('OWNER'));
+  await responseFor(`/businesses/${id}/members/${memberId}`, 'PATCH', async () => {
+    await portal.getByRole('combobox', { name: /^Vai trò / }).click();
+    await portal.getByRole('listbox').locator('[role="option"][data-value="OWNER"]').click();
+  });
   await responseFor(`/businesses/${id}/members/${memberId}`, 'DELETE', () => portal.getByRole('button', { name: 'Xóa membership', exact: true }).click(), 422);
   assert.equal(await portal.getByRole('button', { name: 'Tải lại thành viên', exact: true }).count(), 1, 'Owner membership must survive rejected deletion'); checks.push('owner membership confirm/update/delete forbidden');
   await portal.getByRole('tab', { name: /Xác minh/ }).click();
@@ -70,7 +73,9 @@ try {
   async function review(kind, requestId) {
     await page.goto(`${origin}/kiem-duyet`);
     await page.locator('.kyc-review-accordion summary').click();
-    await page.locator('#verify-kind').selectOption(kind); await page.locator('#verify-id').fill(requestId);
+    await page.locator('#verify-kind').click();
+    await page.getByRole('listbox').locator(`[role="option"][data-value="${kind}"]`).click();
+    await page.locator('#verify-id').fill(requestId);
     await page.locator('#verify-version').fill('1'); await page.locator('#verify-reason').fill('Synthetic integration evidence reviewed');
     await responseFor(`/${kind}/${requestId}/review`, 'POST', () => page.getByRole('button', { name: 'Lưu quyết định xác minh', exact: true }).click());
   }
