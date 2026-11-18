@@ -235,4 +235,37 @@ class CatalogDatabaseTests {
             assertThatThrownBy(()->context.getBean(OfferingRepository.class).update(UUID.randomUUID(),1,Map.of("name","forged"))).isInstanceOf(org.springframework.web.server.ResponseStatusException.class).satisfies(error->assertThat(((org.springframework.web.server.ResponseStatusException)error).getStatusCode().value()).isEqualTo(403));
         }finally{org.springframework.security.core.context.SecurityContextHolder.clearContext();}
     }
+    @Test void batchHydratedSearchAndTaxonomyListMatchSinglePlaceAndTaxonomyGet(){
+        var taxonomy=context.getBean(TaxonomyRepository.class);
+        UUID category=(UUID)taxonomy.create("categories",Map.of("name","Batch category fixture"),USER).get("category_id");
+        UUID tag=(UUID)taxonomy.create("tags",Map.of("name","Batch tag fixture"),USER).get("tag_id");
+        UUID amenity=(UUID)taxonomy.create("amenities",Map.of("name","Batch amenity fixture"),USER).get("amenity_id");
+        UUID unit=(UUID)taxonomy.create("geographic-units",Map.of("name","Batch unit fixture","level","DISTRICT","parent_id",GEO.toString(),"aliases",List.of("Batch alias")),USER).get("geographic_unit_id");
+        UUID dest=(UUID)taxonomy.create("destinations",Map.of("name","Batch dest fixture","geographic_unit_ids",List.of(unit.toString())),USER).get("destination_id");
+        var media=new vn.smarttravel.catalog.media.repository.MediaRepository(db);
+        UUID publicMedia=UUID.randomUUID(), privateMedia=UUID.randomUUID();
+        media.create(publicMedia,"places/batch/photo.png","sha-public","image/png",16,USER);media.review(publicMedia,OTHER,"APPROVED","ok");
+        media.create(privateMedia,"private/"+USER+"/secret.png","sha-priv","image/png",16,USER);media.review(privateMedia,OTHER,"APPROVED","ok");
+        var richInput=input("Batch rich place fixture");
+        richInput.put("geographic_unit_id",unit.toString());richInput.put("name_en","Batch rich EN");richInput.put("description","Rich description");
+        richInput.put("price_min",15000);richInput.put("price_max",30000);
+        richInput.put("category_ids",List.of(category.toString()));richInput.put("tag_ids",List.of(tag.toString()));richInput.put("amenity_ids",List.of(amenity.toString()));
+        richInput.put("opening_hours",List.of(Map.of("weekday",1,"open","08:00","close","17:30","overnight",false)));
+        richInput.put("media_keys",List.of("places/batch/photo.png"));
+        UUID rich=(UUID)places.create(richInput,USER).get("place_id");
+        places.update(rich,1,Map.of("status","PUBLISHED"),USER);
+        UUID plain=create("Batch plain place fixture");
+        places.update(plain,1,Map.of("status","PUBLISHED"),USER);
+        var found=places.search(Map.of("q","Batch","limit","20"));
+        var byId=new HashMap<UUID,Map<String,Object>>();
+        for(var row:found) byId.put((UUID)row.get("place_id"),vn.smarttravel.catalog.shared.web.Representations.place(row));
+        assertThat(byId.get(rich)).isEqualTo(vn.smarttravel.catalog.shared.web.Representations.place(places.place(rich,true)));
+        assertThat(byId.get(plain)).isEqualTo(vn.smarttravel.catalog.shared.web.Representations.place(places.place(plain,true)));
+        assertThat(byId.get(rich).get("destination_ids")).asInstanceOf(org.assertj.core.api.InstanceOfAssertFactories.LIST).containsExactly(dest);
+        assertThat(byId.get(rich).get("media_keys")).asInstanceOf(org.assertj.core.api.InstanceOfAssertFactories.LIST).containsExactly("places/batch/photo.png");
+        var destRow=taxonomy.list("destinations").stream().filter(r->dest.equals(r.get("destination_id"))).findFirst().orElseThrow();
+        assertThat(destRow.get("geographic_unit_ids")).isEqualTo(taxonomy.get("destinations",dest).get("geographic_unit_ids"));
+        var unitRow=taxonomy.list("geographic-units").stream().filter(r->unit.equals(r.get("geographic_unit_id"))).findFirst().orElseThrow();
+        assertThat(unitRow.get("aliases")).isEqualTo(taxonomy.get("geographic-units",unit).get("aliases"));
+    }
 }

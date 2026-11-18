@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Icon, Button, Badge } from '../../shared/ui';
+import { Icon, Button, Badge, RoundedSelect } from '../../shared/ui';
 import type { TravelClient, Resource, Page } from '../../shared/api';
 import { useToast } from '../../app/providers/ToastProvider';
 
@@ -166,8 +166,20 @@ export function AdminIngestionConsole({ travel, busy = false }: AdminIngestionCo
               Kích hoạt nhập dữ liệu: {String(selected.name ?? 'Nguồn dữ liệu địa điểm')}
             </h3>
 
-            <label htmlFor="import-mode">Chế độ nhập dữ liệu</label>
-            <select id="import-mode" value={mode} onChange={e => setMode(e.target.value)}><option value="INCREMENTAL">INCREMENTAL</option><option value="FULL">FULL</option><option value="REPLAY">REPLAY</option></select>
+            <div className="form-group">
+              <label htmlFor="import-mode">Chế độ nhập dữ liệu</label>
+              <RoundedSelect
+                id="import-mode"
+                label="Chế độ nhập dữ liệu"
+                value={mode}
+                onChange={setMode}
+                options={[
+                  { value: 'INCREMENTAL', label: 'INCREMENTAL' },
+                  { value: 'FULL', label: 'FULL' },
+                  { value: 'REPLAY', label: 'REPLAY' },
+                ]}
+              />
+            </div>
 
             <div style={{ display: 'flex', gap: '10px' }}>
               <Button type="submit" disabled={loading || busy} icon="refresh">
@@ -190,7 +202,7 @@ export function AdminIngestionConsole({ travel, busy = false }: AdminIngestionCo
                 <button type="button" disabled={loading} onClick={() => void refreshJob()}>Cập nhật trạng thái job</button>
                 <Button type="button" disabled={loading || busy} onClick={() => void act(async () => { setJob(await travel.mutate('ingestion', `/admin/import-jobs/${encodeURIComponent(String(job.job_id ?? job.id))}/retry`, undefined, 'POST', Number(job.version))); })}>Thử lại job lỗi</Button>
                 <Button type="button" disabled={loading || busy} onClick={() => void act(async () => { setJob(await travel.mutate('ingestion', `/admin/import-jobs/${encodeURIComponent(String(job.job_id ?? job.id))}/cancel`, undefined, 'POST', Number(job.version))); })}>Hủy job</Button>
-                <label>Chi tiết job<select value={jobView} onChange={e => setJobView(e.target.value)}><option value="items">Bản ghi</option><option value="errors">Lỗi xử lý</option><option value="candidates">Ứng viên ghép</option></select></label>
+                <div className="form-group"><label htmlFor="ingestion-job-view">Chi tiết job</label><RoundedSelect id="ingestion-job-view" label="Chi tiết job" value={jobView} onChange={setJobView} options={[{ value: 'items', label: 'Bản ghi' }, { value: 'errors', label: 'Lỗi xử lý' }, { value: 'candidates', label: 'Ứng viên ghép' }]} /></div>
                 <Button type="button" disabled={loading || busy} onClick={() => void act(async () => { const result = await travel.readAll('ingestion', `/admin/import-jobs/${encodeURIComponent(String(job.job_id ?? job.id))}/${jobView}`); setJobRows(result.items); })}>Tải chi tiết job</Button>
                 {jobRows.map((row, index) => <p key={String(row.item_id ?? row.id ?? index)}>{Object.entries(row).filter(([key]) => !['payload', 'raw_payload'].includes(key)).map(([key, value]) => `${key}: ${typeof value === 'object' ? JSON.stringify(value) : String(value)}`).join(' · ')}</p>)}
               </div>
@@ -199,7 +211,7 @@ export function AdminIngestionConsole({ travel, busy = false }: AdminIngestionCo
         )}
       </section>
       <details className="travel-panel"><summary>Quyết định ghép bản ghi nhập liệu</summary><form className="clay-form" onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void act(async () => { await travel.mutate('ingestion', `/admin/import-items/${encodeURIComponent(String(data.get('item_id')))}/decision`, { action: data.get('action'), place_id: String(data.get('place_id')).trim() || null, reason: data.get('reason') }, 'POST', Number(data.get('version'))); showToast('Đã lưu quyết định xử lý bản ghi.', 'success'); }); }}>
-        <label>Mã bản ghi<input name="item_id" required pattern="[0-9a-fA-F-]{36}" /></label><label>Phiên bản bản ghi<input name="version" type="number" required min="1" step="1" /></label><label>Quyết định<select name="action"><option value="MATCH">Ghép địa điểm hiện có</option><option value="CREATE">Tạo địa điểm mới</option><option value="REJECT">Từ chối bản ghi</option></select></label><label>Mã địa điểm khi ghép<input name="place_id" pattern="[0-9a-fA-F-]{36}" /></label><label>Lý do<input name="reason" required /></label><Button type="submit" disabled={loading || busy}>Lưu quyết định ghép</Button>
+        <label>Mã bản ghi<input name="item_id" required pattern="[0-9a-fA-F-]{36}" /></label><label>Phiên bản bản ghi<input name="version" type="number" required min="1" step="1" /></label><div className="form-group"><label htmlFor="ingestion-decision-action">Quyết định</label><RoundedSelect id="ingestion-decision-action" name="action" label="Quyết định" defaultValue="MATCH" options={[{ value: 'MATCH', label: 'Ghép địa điểm hiện có' }, { value: 'CREATE', label: 'Tạo địa điểm mới' }, { value: 'REJECT', label: 'Từ chối bản ghi' }]} /></div><label>Mã địa điểm khi ghép<input name="place_id" pattern="[0-9a-fA-F-]{36}" /></label><label>Lý do<input name="reason" required /></label><Button type="submit" disabled={loading || busy}>Lưu quyết định ghép</Button>
       </form></details>
     </div>
   );

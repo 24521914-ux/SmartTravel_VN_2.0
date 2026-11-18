@@ -74,13 +74,15 @@ try {
   await ingestion.getByRole('button', { name: 'Lưu nguồn dữ liệu', exact: true }).click(); await complete(ingestion); checks.push('source update');
   await ingestion.getByRole('button', { name: 'Thu hồi quyền sử dụng nguồn', exact: true }).click(); await complete(ingestion);
   await ingestion.getByRole('button', { name: 'Cho phép sử dụng nguồn', exact: true }).click(); await complete(ingestion); checks.push('source revoke/permit');
-  await ingestion.getByLabel('Chế độ nhập dữ liệu', { exact: true }).selectOption('FULL');
+  await ingestion.getByLabel('Chế độ nhập dữ liệu', { exact: true }).click();
+  await ingestion.getByRole('listbox').locator('[role="option"][data-value="FULL"]').click();
   await ingestion.getByRole('button', { name: 'Bắt đầu nhập dữ liệu', exact: true }).click(); await complete(ingestion);
   await ingestion.getByRole('button', { name: 'Cập nhật trạng thái job', exact: true }).click(); await complete(ingestion);
   for (let attempt = 0; attempt < 60 && !await ingestion.getByText('SUCCEEDED', { exact: true }).count(); attempt++) {
     assert.equal(await ingestion.getByText('FAILED', { exact: true }).count(), 0, 'Import job failed');
     const itemsResponse = page.waitForResponse(r => r.request().method() === 'GET' && /\/admin\/import-jobs\/[^/]+\/items$/.test(new URL(r.url()).pathname));
-    await ingestion.getByLabel('Chi tiết job', { exact: false }).selectOption('items');
+    await ingestion.getByLabel('Chi tiết job', { exact: false }).click();
+    await ingestion.getByRole('listbox').locator('[role="option"][data-value="items"]').click();
     await ingestion.getByRole('button', { name: 'Tải chi tiết job', exact: true }).click();
     const itemPage = await (await itemsResponse).json(); await complete(ingestion);
     for (const item of itemPage.items.filter(row => row.status === 'NEEDS_REVIEW')) {
@@ -90,7 +92,8 @@ try {
       if (await decision.getAttribute('open') === null) await decision.locator('summary').click();
       await decision.locator('input[name=item_id]').fill(item.item_id);
       await decision.locator('input[name=version]').fill(String(item.version));
-      await decision.locator('select[name=action]').selectOption('CREATE');
+      await decision.getByLabel('Quyết định', { exact: true }).click();
+      await decision.getByRole('listbox').locator('[role="option"][data-value="CREATE"]').click();
       await decision.locator('input[name=reason]').fill('Distinct synthetic run-specific place; operator approves creation');
       await decision.getByRole('button', { name: 'Lưu quyết định ghép', exact: true }).click(); await complete(ingestion);
     }
@@ -110,20 +113,34 @@ try {
   ];
   const created = [];
   for (const [kind, label, field] of resources) {
-    await catalog.getByLabel('Nhóm dữ liệu').selectOption(kind); await complete(catalog);
+    await catalog.getByLabel('Nhóm dữ liệu').click();
+    await catalog.getByRole('listbox').locator(`[role="option"][data-value="${kind}"]`).click();
+    await complete(catalog);
     await catalog.getByRole('button', { name: `Thêm ${label}`, exact: true }).click();
     await catalog.getByLabel(field, { exact: true }).fill(`Integration ${kind} ${suffix}`);
-    if (kind === 'geographic-units') await catalog.getByLabel(/^Cấp/).selectOption('PROVINCE');
-    if (kind === 'destinations') await catalog.getByLabel(/^Đơn vị hành chính/).selectOption({ label: `Integration geographic-units ${suffix}` });
+    if (kind === 'geographic-units') {
+      await catalog.getByLabel(/^Cấp/).click();
+      await catalog.getByRole('listbox').locator('[role="option"][data-value="PROVINCE"]').click();
+    }
+    if (kind === 'destinations') {
+      await catalog.getByLabel(/^Đơn vị hành chính/).click();
+      await catalog.getByRole('listbox').getByRole('option', { name: `Integration geographic-units ${suffix}`, exact: true }).click();
+      await page.keyboard.press('Escape');
+    }
     if (kind === 'places') {
       await catalog.getByLabel('Vĩ độ', { exact: true }).fill('10.7769');
       await catalog.getByLabel('Kinh độ', { exact: true }).fill('106.7009');
-      await catalog.getByLabel(/^Danh mục/).selectOption({ label: `Integration categories ${suffix}` });
-      await catalog.getByLabel(/^Đơn vị hành chính/).selectOption({ label: `Integration geographic-units ${suffix}` });
+      await catalog.getByLabel(/^Danh mục/).click();
+      await catalog.getByRole('listbox').getByRole('option', { name: `Integration categories ${suffix}`, exact: true }).click();
+      await page.keyboard.press('Escape');
+      await catalog.getByLabel(/^Đơn vị hành chính/).click();
+      await catalog.getByRole('listbox').getByRole('option', { name: `Integration geographic-units ${suffix}`, exact: true }).click();
     }
     if (kind === 'offerings') {
-      await catalog.getByLabel(/^Địa điểm/).selectOption({ label: `Integration places ${suffix}` });
-      await catalog.getByLabel(/^Loại dịch vụ/).selectOption('SERVICE');
+      await catalog.getByLabel(/^Địa điểm/).click();
+      await catalog.getByRole('listbox').getByRole('option', { name: `Integration places ${suffix}`, exact: true }).click();
+      await catalog.getByLabel(/^Loại dịch vụ/).click();
+      await catalog.getByRole('listbox').locator('[role="option"][data-value="SERVICE"]').click();
       await catalog.getByLabel('Giá (VND)', { exact: true }).fill('0');
     }
     await catalog.getByRole('button', { name: 'Lưu danh mục', exact: true }).click(); await complete(catalog);
@@ -140,7 +157,9 @@ try {
     created.push([kind, original]); checks.push(`${kind}: create/read/update`);
   }
   for (const [kind, name] of created.reverse()) {
-    await catalog.getByLabel('Nhóm dữ liệu').selectOption(kind); await complete(catalog);
+    await catalog.getByLabel('Nhóm dữ liệu').click();
+    await catalog.getByRole('listbox').locator(`[role="option"][data-value="${kind}"]`).click();
+    await complete(catalog);
     await findRecord(catalog, name);
     const beforeDeleting = page.waitForResponse(r => r.request().method() === 'GET' && new URL(r.url()).pathname.includes(`/admin/${kind}/`));
     const removing = page.waitForResponse(r => r.request().method() === 'DELETE' && new URL(r.url()).pathname.includes(`/admin/${kind}/`));
@@ -195,12 +214,14 @@ try {
   // P02 provisions an actual geographic boundary around Da Nang only.
   await contribution.getByLabel('Vĩ độ', { exact: true }).fill('16.047079');
   await contribution.getByLabel('Kinh độ', { exact: true }).fill('108.20623');
-  await contribution.getByLabel(/^Danh mục/).selectOption({ index: 1 });
+  await contribution.getByLabel(/^Danh mục/).click();
+  await contribution.getByRole('listbox').getByRole('option').nth(1).click();
   await contribution.getByRole('button', { name: 'Gửi đóng góp', exact: true }).click(); await complete(contribution);
   await page.getByRole('button', { name: 'Đăng xuất khỏi hệ thống' }).click(); await login('admin');
   await page.goto(`${origin}/kiem-duyet`);
   const moderation = page.locator('.moderation-console-layout'); await moderation.waitFor();
-  await moderation.getByLabel(/^Nội dung kiểm duyệt/).selectOption('contributions');
+  await moderation.getByLabel(/^Nội dung kiểm duyệt/).click();
+  await moderation.getByRole('listbox').locator('[role="option"][data-value="contributions"]').click();
   await moderation.locator('#moderation-reason').fill('Synthetic integration contribution is valid');
   const pending = moderation.locator('article').filter({ has: page.getByRole('heading', { name: appliedName, exact: true }) });
   await pending.getByRole('button', { name: 'Duyệt', exact: true }).click(); await complete(moderation);

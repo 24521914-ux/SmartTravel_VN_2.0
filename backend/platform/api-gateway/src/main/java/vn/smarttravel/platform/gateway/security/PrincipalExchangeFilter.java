@@ -1,5 +1,7 @@
 package vn.smarttravel.platform.gateway.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.netty.channel.ChannelOption;
 import java.time.Duration;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
@@ -7,19 +9,24 @@ import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
 
 /** Exchange once per request; no cache can keep a revoked session alive. */
 @Component
 public class PrincipalExchangeFilter implements GlobalFilter, Ordered {
     private static final org.slf4j.Logger log=org.slf4j.LoggerFactory.getLogger(PrincipalExchangeFilter.class);
+    private static final ObjectMapper JSON=new ObjectMapper();
     private final String uri;
     private final String credential;
-    private final WebClient client=WebClient.builder().build();
+    private final WebClient client=WebClient.builder()
+            .clientConnector(new ReactorClientHttpConnector(HttpClient.create().option(ChannelOption.CONNECT_TIMEOUT_MILLIS,1000)))
+            .build();
     public PrincipalExchangeFilter(@Value("${gateway.identity-exchange-uri:}") String uri,
             @Value("${gateway.exchange-secret:}") String credential) {
         this.uri=uri; this.credential=credential;
@@ -43,7 +50,7 @@ public class PrincipalExchangeFilter implements GlobalFilter, Ordered {
                             }
                             // Decode bytes locally: DEBUG codec logging must never print access_token.
                             return response.bodyToMono(byte[].class).map(bytes -> {
-                                try { return new com.fasterxml.jackson.databind.ObjectMapper().readTree(bytes); }
+                                try { return JSON.readTree(bytes); }
                                 catch (java.io.IOException error) { throw new ExchangeFailure(503,"INVALID_JSON",0); }
                             });
                         }).switchIfEmpty(Mono.error(new ExchangeFailure(503,"EMPTY_RESPONSE",0))).timeout(Duration.ofSeconds(3))

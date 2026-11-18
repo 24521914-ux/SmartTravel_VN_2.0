@@ -7,3 +7,4 @@ export * from './RatingStars';
 export * from './EmptyState';
 export * from './ErrorState';
 export * from './Badge';
+export * from './RoundedSelect';

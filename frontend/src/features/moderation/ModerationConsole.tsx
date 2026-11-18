@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Icon, Button } from '../../shared/ui';
+import { Icon, Button, RoundedSelect } from '../../shared/ui';
 import type { TravelClient, Resource, Page } from '../../shared/api';
 import { useToast } from '../../app/providers/ToastProvider';
 
@@ -77,21 +77,24 @@ export function ModerationConsole({ travel, busy = false }: ModerationConsolePro
       {error && <p role="alert">{error}</p>}
       {/* Moderation Controls Bar */}
       <section className="travel-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <label style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="field-inline" style={{ gap: '12px' }}>
+          <label htmlFor="moderation-mode-select" style={{ margin: 0 }}>
             <span>Nội dung kiểm duyệt:</span>
-            <select
-              value={mode}
-              disabled={loading || busy}
-              onChange={e => setMode(e.target.value as ModerationKind)}
-              style={{ width: 'auto' }}
-            >
-              <option value="reviews">Đánh giá người dùng</option>
-              <option value="places">Địa điểm đề xuất</option>
-              <option value="contributions">Đóng góp địa điểm</option>
-              <option value="reports">Báo cáo vi phạm</option>
-            </select>
           </label>
+          <RoundedSelect
+            id="moderation-mode-select"
+            fitContent
+            label="Nội dung kiểm duyệt:"
+            value={mode}
+            disabled={loading || busy}
+            onChange={val => setMode(val as ModerationKind)}
+            options={[
+              { value: 'reviews', label: 'Đánh giá người dùng' },
+              { value: 'places', label: 'Địa điểm đề xuất' },
+              { value: 'contributions', label: 'Đóng góp địa điểm' },
+              { value: 'reports', label: 'Báo cáo vi phạm' },
+            ]}
+          />
         </div>
 
         <button
@@ -119,14 +122,33 @@ export function ModerationConsole({ travel, busy = false }: ModerationConsolePro
             <label htmlFor="verify-id">Mã hồ sơ xác minh (UUID)</label>
             <input id="verify-id" name="verification" required placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
           </div>
-          <div className="form-group"><label htmlFor="verify-kind">Loại hồ sơ</label><select id="verify-kind" name="kind"><option value="business-verifications">Xác minh doanh nghiệp</option><option value="claims">Claim địa điểm</option><option value="change-requests">Yêu cầu sửa địa điểm</option></select></div>
+          <div className="form-group">
+            <label htmlFor="verify-kind">Loại hồ sơ</label>
+            <RoundedSelect
+              id="verify-kind"
+              name="kind"
+              label="Loại hồ sơ"
+              defaultValue="business-verifications"
+              options={[
+                { value: 'business-verifications', label: 'Xác minh doanh nghiệp' },
+                { value: 'claims', label: 'Claim địa điểm' },
+                { value: 'change-requests', label: 'Yêu cầu sửa địa điểm' },
+              ]}
+            />
+          </div>
           <div className="form-group"><label htmlFor="verify-version">Phiên bản hồ sơ</label><input id="verify-version" name="version" type="number" min="1" step="1" required /></div>
           <div className="form-group">
             <label htmlFor="verify-action">Quyết định</label>
-            <select id="verify-action" name="action">
-              <option value="APPROVE">Duyệt hồ sơ (APPROVE)</option>
-              <option value="REJECT">Từ chối (REJECT)</option>
-            </select>
+            <RoundedSelect
+              id="verify-action"
+              name="action"
+              label="Quyết định"
+              defaultValue="APPROVE"
+              options={[
+                { value: 'APPROVE', label: 'Duyệt hồ sơ (APPROVE)' },
+                { value: 'REJECT', label: 'Từ chối (REJECT)' },
+              ]}
+            />
           </div>
           <div className="form-group">
             <label htmlFor="verify-reason">Lý do nhận xét</label>

@@ -91,7 +91,8 @@ try {
   await navigate('Bộ sưu tập');
   const collectionName = `${name} collection`;
   await page.getByLabel('Tên bộ sưu tập', { exact: true }).fill(collectionName);
-  await page.getByLabel('Chế độ hiển thị', { exact: true }).selectOption('PUBLIC');
+  await page.getByLabel('Chế độ hiển thị', { exact: true }).click();
+  await page.getByRole('listbox', { name: 'Chế độ hiển thị' }).locator('[role="option"][data-value="PUBLIC"]').click();
   const collection = await action('POST', communityPath('/me/collections'), () => button('Tạo bộ sưu tập').click(), 201);
   const collectionId = collection.data.collection_id;
   await action('GET', communityPath(`/me/collections/${collectionId}`), () => button('Xem chi tiết', article(collectionName)).click());
@@ -104,13 +105,18 @@ try {
   assert.equal(await placePicker.isDisabled(), true, 'Place picker requires a province search');
   assert.equal(await detail.getByLabel('Ghi chú', { exact: true }).isDisabled(), true);
   assert.equal(await button('Tìm địa điểm', detail).isDisabled(), true);
-  const provinceIds = await provincePicker.locator('option').evaluateAll(nodes => nodes.map(node => node.value).filter(Boolean));
+  await provincePicker.click();
+  const provinceIds = await detail.getByRole('listbox').getByRole('option').evaluateAll(nodes => nodes.map(node => node.getAttribute('data-value')).filter(Boolean));
+  await page.keyboard.press('Escape');
   let places = [];
   for (const provinceId of provinceIds) {
-    await provincePicker.selectOption(provinceId);
+    await provincePicker.click();
+    await detail.getByRole('listbox').locator(`[role="option"][data-value="${provinceId}"]`).click();
     assert.equal(await placePicker.isDisabled(), true, 'Province changes invalidate previous place results');
     await button('Tìm địa điểm', detail).click(); await idle();
-    places = await placePicker.locator('option').evaluateAll(nodes => nodes.map(node => node.value).filter(Boolean));
+    await placePicker.click();
+    places = await detail.getByRole('listbox').getByRole('option').evaluateAll(nodes => nodes.map(node => node.getAttribute('data-value')).filter(Boolean));
+    await page.keyboard.press('Escape');
     if (places.length >= 2) break;
   }
   assert.ok(places.length >= 2, 'Need a province containing two actual Catalog places');
@@ -118,7 +124,8 @@ try {
   const collectionItemsPath = communityPath(`/collections/${collectionId}/items`);
   const collectionItemIds = [];
   for (let index = 0; index < 2; index++) {
-    await detail.getByLabel(/^Địa điểm/).selectOption(places[index]);
+    await detail.getByLabel(/^Địa điểm/).click();
+    await detail.getByRole('listbox').locator(`[role="option"][data-value="${places[index]}"]`).click();
     await detail.getByLabel('Ghi chú', { exact: true }).fill(`Stored collection note ${index}`);
     const item = await action('POST', collectionItemsPath, () => button('Thêm địa điểm vào bộ sưu tập', detail).click(), 201);
     collectionItemIds.push(item.data.item_id); assert.equal(item.data.place_id, places[index]);
@@ -142,7 +149,8 @@ try {
   assert.equal(otherShared.data.name, `${collectionName} edited`);
   await logout(); await login('u1'); await navigate('Bộ sưu tập');
   await button('Xem chi tiết', article(`${collectionName} edited`)).click(); await idle();
-  await detail.getByLabel(/^Chế độ hiển thị/).selectOption('PRIVATE');
+  await detail.getByLabel(/^Chế độ hiển thị/).click();
+  await detail.getByRole('listbox', { name: 'Chế độ hiển thị' }).locator('[role="option"][data-value="PRIVATE"]').click();
   await action('PATCH', communityPath(`/me/collections/${collectionId}`), () => button('Lưu bộ sưu tập', detail).click());
   await logout(); await login('u2'); await navigate('Bộ sưu tập');
   await page.getByLabel('Mã bộ sưu tập', { exact: true }).fill(collectionId);
@@ -194,7 +202,9 @@ try {
   assert.ok(reportId); assert.equal(report.data.status, 'COMPLETED');
   await logout(); await login('admin'); await navigate('Kiểm duyệt');
   const reportQueueResponse = page.waitForResponse(response => response.request().method() === 'GET' && new URL(response.url()).pathname === communityPath('/admin/reports'));
-  await page.getByLabel(/^Nội dung kiểm duyệt:/).selectOption('reports'); await idle();
+  await page.getByLabel(/^Nội dung kiểm duyệt:/).click();
+  await page.getByRole('listbox').locator('[role="option"][data-value="reports"]').click();
+  await idle();
   const reportQueue = (await (await reportQueueResponse).json()).items;
   const reportIndex = reportQueue.findIndex(row => (row.request_id ?? row.report_id ?? row.id) === reportId);
   assert.ok(reportIndex >= 0, 'Created report must appear in real moderation queue');

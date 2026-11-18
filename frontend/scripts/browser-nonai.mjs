@@ -100,7 +100,9 @@ try {
   }
   await page.goto(address);
   await idle();
-  assert.equal(await page.getByRole('navigation').getByRole('button', { name: 'Gợi ý', exact: true }).count(), 0);
+  await navigate('Gợi ý');
+  assert.equal(aiCalls.length, 0);
+  await navigate('Khám phá');
   await login('u1');
   await navigate('Thông báo'); await idle();
   const unread = page.getByRole('button', { name: 'Đánh dấu đã đọc', exact: true });

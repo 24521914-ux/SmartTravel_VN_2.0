@@ -45,6 +45,7 @@ export function AppHeader({
   const { theme, locale, toggleTheme, toggleLocale, text } = useAppPreferences();
   const tabs = [
     { id: 'Khám phá', label: text('Khám phá', 'Explore'), icon: 'compass' },
+    { id: 'Gợi ý', label: text('Gợi ý', 'Recommendations'), icon: 'sparkle' },
     { id: 'Bản đồ', label: text('Bản đồ', 'Map'), icon: 'map' },
     { id: 'Bộ sưu tập', label: text('Bộ sưu tập', 'Collections'), icon: 'layers' },
     { id: 'Chuyến đi', label: text('Chuyến đi', 'Trips'), icon: 'route' },
@@ -225,6 +226,7 @@ export function AppFooter({ onNavigate }: { onNavigate: (section: string) => voi
             <h2 style={{ fontSize: '0.9375rem', fontWeight: 700, marginBottom: '12px' }}>{text('Khám phá', 'Explore')}</h2>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.875rem' }}>
               <li><button type="button" className="btn-subtle" onClick={() => onNavigate('Khám phá')}>{text('Điểm đến nổi bật', 'Featured destinations')}</button></li>
+              <li><button type="button" className="btn-subtle" onClick={() => onNavigate('Gợi ý')}>{text('Gợi ý theo nhu cầu', 'Recommendations')}</button></li>
               <li><button type="button" className="btn-subtle" onClick={() => onNavigate('Bản đồ')}>{text('Bản đồ du lịch', 'Travel map')}</button></li>
               <li><button type="button" className="btn-subtle" onClick={() => onNavigate('Bộ sưu tập')}>{text('Bộ sưu tập', 'Collections')}</button></li>
               <li><button type="button" className="btn-subtle" onClick={() => onNavigate('Chuyến đi')}>{text('Lập lịch trình', 'Plan a trip')}</button></li>

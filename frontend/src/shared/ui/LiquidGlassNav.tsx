@@ -10,6 +10,7 @@ export interface TabItem {
 
 export const DEFAULT_TABS: TabItem[] = [
   { id: 'Khám phá', label: 'Khám phá', icon: 'compass' },
+  { id: 'Gợi ý', label: 'Gợi ý', icon: 'sparkle' },
   { id: 'Bản đồ', label: 'Bản đồ', icon: 'map' },
   { id: 'Bộ sưu tập', label: 'Bộ sưu tập', icon: 'layers' },
   { id: 'Chuyến đi', label: 'Chuyến đi', icon: 'route' },
@@ -40,7 +41,7 @@ export function LiquidGlassNav({
   const primaryContainerRef = useRef<HTMLDivElement>(null);
   const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number } | null>(null);
 
-  const primary = tabs.filter(t => ['Khám phá', 'Bản đồ', 'Bộ sưu tập', 'Chuyến đi'].includes(t.id));
+  const primary = tabs.filter(t => ['Khám phá', 'Gợi ý', 'Bản đồ', 'Bộ sưu tập', 'Chuyến đi'].includes(t.id));
   const secondary = tabs.filter(t => !primary.some(p => p.id === t.id));
 
   // Shared active indicator animation on primary tabs

@@ -13,7 +13,32 @@ public class TaxonomyRepository {
     public TaxonomyRepository(JdbcTemplate db,CatalogRepository events){this.db=db;this.events=events;}
     private String table(String kind){if(!Set.of("categories","tags","amenities","destinations","geographic-units").contains(kind))throw new ResponseStatusException(HttpStatus.NOT_FOUND);return kind.replace('-','_');}
     private String key(String kind){return switch(kind){case "categories"->"category_id";case "tags"->"tag_id";case "amenities"->"amenity_id";case "destinations"->"destination_id";default->"geographic_unit_id";};}
-    public List<Map<String,Object>> list(String kind){return db.queryForList("SELECT "+key(kind)+" FROM catalog."+table(kind)+" ORDER BY "+key(kind)).stream().map(row->get(kind,(UUID)row.get(key(kind)))).toList();}
+    public List<Map<String,Object>> list(String kind){
+        var rows = db.queryForList("SELECT * FROM catalog."+table(kind)+" ORDER BY "+key(kind));
+        if (rows.isEmpty()) return rows;
+        if (kind.equals("destinations") || kind.equals("geographic-units")) {
+            String keyCol = key(kind);
+            var byId = new LinkedHashMap<UUID, Map<String,Object>>();
+            String childField = kind.equals("destinations") ? "geographic_unit_ids" : "aliases";
+            for (var row : rows) {
+                row.put(childField, new ArrayList<>());
+                byId.put((UUID) row.get(keyCol), row);
+            }
+            UUID[] ids = byId.keySet().toArray(UUID[]::new);
+            if (kind.equals("destinations")) {
+                for (var r : CatalogRepository.queryUuidArray(db, "SELECT destination_id, geographic_unit_id FROM catalog.destination_geo WHERE destination_id = ANY(?) ORDER BY destination_id, geographic_unit_id", ids)) {
+                    @SuppressWarnings("unchecked") var list = (List<UUID>) byId.get((UUID) r.get("destination_id")).get("geographic_unit_ids");
+                    list.add((UUID) r.get("geographic_unit_id"));
+                }
+            } else {
+                for (var r : CatalogRepository.queryUuidArray(db, "SELECT geographic_unit_id, alias FROM catalog.geographic_aliases WHERE geographic_unit_id = ANY(?) ORDER BY geographic_unit_id, normalized_alias", ids)) {
+                    @SuppressWarnings("unchecked") var list = (List<String>) byId.get((UUID) r.get("geographic_unit_id")).get("aliases");
+                    list.add((String) r.get("alias"));
+                }
+            }
+        }
+        return rows;
+    }
     public Map<String,Object> get(String kind,UUID id){var rows=db.queryForList("SELECT * FROM catalog."+table(kind)+" WHERE "+key(kind)+"=?",id);if(rows.isEmpty())throw new ResponseStatusException(HttpStatus.NOT_FOUND);var row=rows.getFirst();if(kind.equals("destinations"))row.put("geographic_unit_ids",db.queryForList("SELECT geographic_unit_id FROM catalog.destination_geo WHERE destination_id=? ORDER BY geographic_unit_id",UUID.class,id));if(kind.equals("geographic-units"))row.put("aliases",db.queryForList("SELECT alias FROM catalog.geographic_aliases WHERE geographic_unit_id=? ORDER BY normalized_alias",String.class,id));return row;}
     private UUID optionalId(Object value){return value==null?null:UUID.fromString(value.toString());}
     private void parent(String kind,UUID id,UUID parent){

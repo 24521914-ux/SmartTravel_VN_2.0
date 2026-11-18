@@ -2,6 +2,8 @@ package vn.smarttravel.identity.security.service;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -11,6 +13,8 @@ import vn.smarttravel.identity.shared.exception.IdentityException;
 
 @Service
 public class CurrentUser {
+    public record VerifiedSession(UUID user, List<String> roles) {}
+
     private final AuthRepository repository;
 
     public CurrentUser(AuthRepository repository) { this.repository = repository; }
@@ -38,6 +42,20 @@ public class CurrentUser {
             UUID session = UUID.fromString(jwt.getClaimAsString("sid"));
             if (!live(repository.lockOwnedSession(session, user))) throw IdentityException.unauthorized();
             return user;
+        } catch (IllegalArgumentException | NullPointerException e) { throw IdentityException.unauthorized(); }
+    }
+
+    /** Read-only verification: shared locks allow parallel reads while synchronizing with FOR UPDATE mutators. */
+    public VerifiedSession requireActiveSession(Jwt jwt) {
+        try {
+            if (jwt.hasClaim("client_id")) throw IdentityException.unauthorized();
+            UUID user = UUID.fromString(jwt.getSubject());
+            UUID session = UUID.fromString(jwt.getClaimAsString("sid"));
+            var row = repository.verifyActiveSession(user, session);
+            if (!active(row) || !live(row)) throw IdentityException.unauthorized();
+            String csv = (String) row.get("roles_csv");
+            List<String> roles = (csv == null || csv.isBlank()) ? List.of() : Arrays.asList(csv.split(","));
+            return new VerifiedSession(user, roles);
         } catch (IllegalArgumentException | NullPointerException e) { throw IdentityException.unauthorized(); }
     }
 }

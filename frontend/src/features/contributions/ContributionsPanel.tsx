@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import type { Page, Resource, TravelClient } from '../../shared/api';
-import { ErrorState } from '../../shared/ui';
+import { ErrorState, RoundedSelect } from '../../shared/ui';
 
 export function ContributionsPanel({ travel }: { travel: TravelClient }) {
   const [rows, setRows] = useState<Resource[]>([]);
@@ -13,6 +13,7 @@ export function ContributionsPanel({ travel }: { travel: TravelClient }) {
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [category, setCategory] = useState('');
+  const [price, setPrice] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -37,12 +38,16 @@ export function ContributionsPanel({ travel }: { travel: TravelClient }) {
       if (latitude !== '') fields.latitude = Number(latitude);
       if (longitude !== '') fields.longitude = Number(longitude);
       if (category) fields.category_ids = [category];
+      if (price !== '') {
+        fields.price = Number(price);
+        fields.currency = 'VND';
+      }
       if (editing) await travel.mutate('community', `/contributions/${encodeURIComponent(String(editing.contribution_id ?? editing.id))}`, { fields }, 'PATCH', Number(editing.version));
       else {
         const place = type === 'EDIT' ? await travel.place(target) : null;
         await travel.mutate('community', '/contributions', { type, target_id: place ? target : null, expected_version: place ? Number(place.version) : 0, fields });
       }
-      setEditing(null); setName(''); setLatitude(''); setLongitude(''); await load();
+      setEditing(null); setName(''); setLatitude(''); setLongitude(''); setPrice(''); await load();
       setMessage('Đã gửi đóng góp, đang chờ kiểm duyệt. Dữ liệu địa điểm chỉ đổi sau khi được áp dụng.');
     });
   }
@@ -50,19 +55,20 @@ export function ContributionsPanel({ travel }: { travel: TravelClient }) {
     <h2>Đóng góp địa điểm</h2><p>Đề xuất địa điểm mới hoặc sửa thông tin. Theo dõi trạng thái kiểm duyệt và áp dụng ở bên dưới.</p>
     {error && <ErrorState message={error} onRetry={() => void run(() => load())} />}{message && <p role="status">{message}</p>}
     <form onSubmit={e => void submit(e)} style={{ display: 'grid', gap: 12 }}>
-      {!editing && <label>Loại đóng góp <select value={type} onChange={e => setType(e.target.value)}><option value="ADD">Thêm địa điểm</option><option value="EDIT">Sửa địa điểm</option></select></label>}
-      {!editing && type === 'EDIT' && <><label>Tìm địa điểm cần sửa <input type="search" onChange={e => setTarget('')} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void run(() => searchPlaces(e.currentTarget.value)); } }} /></label><button type="button" className="btn-secondary" onClick={e => { const input = e.currentTarget.parentElement?.querySelector<HTMLInputElement>('input[type="search"]'); void run(() => searchPlaces(input?.value ?? '')); }}>Tìm địa điểm đóng góp</button><label>Địa điểm <select required value={target} onChange={e => setTarget(e.target.value)}><option value="">Chọn địa điểm</option>{places.map(p => <option key={String(p.place_id ?? p.id)} value={String(p.place_id ?? p.id)}>{String(p.name)}</option>)}</select></label></>}
+      {!editing && <div className="form-group"><label htmlFor="contrib-type">Loại đóng góp</label><RoundedSelect id="contrib-type" label="Loại đóng góp" value={type} onChange={setType} options={[{ value: 'ADD', label: 'Thêm địa điểm' }, { value: 'EDIT', label: 'Sửa địa điểm' }]} /></div>}
+      {!editing && type === 'EDIT' && <><label>Tìm địa điểm cần sửa <input type="search" onChange={e => setTarget('')} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void run(() => searchPlaces(e.currentTarget.value)); } }} /></label><button type="button" className="btn-secondary" onClick={e => { const input = e.currentTarget.parentElement?.querySelector<HTMLInputElement>('input[type="search"]'); void run(() => searchPlaces(input?.value ?? '')); }}>Tìm địa điểm đóng góp</button><div className="form-group"><label htmlFor="contrib-target">Địa điểm</label><RoundedSelect id="contrib-target" label="Địa điểm" required value={target} onChange={setTarget} placeholder="Chọn địa điểm" options={[{ value: '', label: 'Chọn địa điểm' }, ...places.map(p => ({ value: String(p.place_id ?? p.id), label: String(p.name) }))]} /></div></>}
       <label>Tên địa điểm đề xuất <input required maxLength={1024} value={name} onChange={e => setName(e.target.value)} /></label>
       <label>Vĩ độ <input required={(editing?.type ?? type) === 'ADD'} type="number" min={-90} max={90} step="any" value={latitude} onChange={e => setLatitude(e.target.value)} /></label>
       <label>Kinh độ <input required={(editing?.type ?? type) === 'ADD'} type="number" min={-180} max={180} step="any" value={longitude} onChange={e => setLongitude(e.target.value)} /></label>
-      <label>Danh mục <select value={category} onChange={e => setCategory(e.target.value)}><option value="">Chưa chọn</option>{categories.map(c => <option key={String(c.category_id ?? c.id)} value={String(c.category_id ?? c.id)}>{String(c.name)}</option>)}</select></label>
+      <div className="form-group"><label htmlFor="contrib-category">Danh mục</label><RoundedSelect id="contrib-category" label="Danh mục" value={category} onChange={setCategory} placeholder="Chưa chọn" options={[{ value: '', label: 'Chưa chọn' }, ...categories.map(c => ({ value: String(c.category_id ?? c.id), label: String(c.name) }))]} /></div>
+      <label>Giá tham khảo (VND, để trống nếu chưa biết) <input type="number" min={0} step={1000} placeholder="Để trống nếu chưa có giá" value={price} onChange={e => setPrice(e.target.value)} /></label>
       <button className="btn-primary" disabled={busy || (!editing && type === 'EDIT' && !target)}>{editing ? 'Lưu đóng góp' : 'Gửi đóng góp'}</button>
       {editing && <button type="button" className="btn-subtle" onClick={() => { setEditing(null); setName(''); }}>Hủy chỉnh sửa</button>}
     </form>
     <h3>Đóng góp của tôi</h3><button className="btn-secondary" disabled={busy} onClick={() => void run(() => load())}>Cập nhật trạng thái đóng góp</button>
     {busy && <p role="status">Đang xử lý đóng góp...</p>}
     {rows.map(row => { const fields = row.fields as Resource | undefined; return <article className="travel-panel" key={String(row.contribution_id ?? row.id)} style={{ padding: 16 }}><h4>{String(fields?.name ?? row.contribution_id ?? row.id)}</h4><p>Trạng thái: {String(row.status)}</p>
-      {String(row.status) === 'PENDING' && <button className="btn-secondary" disabled={busy} onClick={() => { setEditing(row); setName(String(fields?.name ?? '')); setLatitude(String(fields?.latitude ?? '')); setLongitude(String(fields?.longitude ?? '')); setCategory(String((fields?.category_ids as string[] | undefined)?.[0] ?? '')); }}>Sửa đóng góp</button>}
+      {String(row.status) === 'PENDING' && <button className="btn-secondary" disabled={busy} onClick={() => { setEditing(row); setName(String(fields?.name ?? '')); setLatitude(String(fields?.latitude ?? '')); setLongitude(String(fields?.longitude ?? '')); setPrice(fields?.price == null ? '' : String(fields.price)); setCategory(String((fields?.category_ids as string[] | undefined)?.[0] ?? '')); }}>Sửa đóng góp</button>}
       {String(row.status) === 'PENDING' && <button className="btn-subtle" disabled={busy} onClick={() => void run(async () => { await travel.mutate('community', `/contributions/${encodeURIComponent(String(row.contribution_id ?? row.id))}/withdraw`, undefined, 'POST', Number(row.version)); await load(); setMessage('Đã rút đóng góp.'); })}>Rút đóng góp</button>}
     </article>; })}
     {!busy && !error && !rows.length && <p>Chưa có đóng góp nào.</p>}

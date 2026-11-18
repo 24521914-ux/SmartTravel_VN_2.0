@@ -20,33 +20,115 @@ public class CatalogRepository {
         return Normalizer.normalize(text, Normalizer.Form.NFD).replaceAll("\\p{M}", "")
                 .replace('đ','d').replace('Đ','D').toLowerCase(Locale.ROOT);
     }
+    private static final java.time.format.DateTimeFormatter HH_MM = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
     private String encode(Object value) { try { return json.writeValueAsString(value); } catch(Exception e) { throw new IllegalArgumentException("Invalid JSON", e); } }
     private UUID uuid(Object value) { return UUID.fromString(value.toString()); }
+    private static String formatTime(Object value) {
+        if (value instanceof java.sql.Time time) return time.toLocalTime().format(HH_MM);
+        return java.time.LocalTime.parse(value.toString()).format(HH_MM);
+    }
+    public static List<Map<String,Object>> queryUuidArray(JdbcTemplate db, String sql, UUID[] ids) {
+        return db.query(con -> {
+            var ps = con.prepareStatement(sql);
+            ps.setArray(1, con.createArrayOf("uuid", ids));
+            return ps;
+        }, new org.springframework.jdbc.core.ColumnMapRowMapper());
+    }
+    private static void normalizePlaceRow(Map<String,Object> row) {
+        row.remove("location"); row.remove("search_document"); row.remove("created_by"); row.remove("field_precedence");
+        row.put("name", row.get("name_vi")); row.put("latitude", row.get("lat")); row.put("longitude", row.get("lon"));
+        row.put("source_version", row.get("version")); row.put("price", row.get("price_min"));
+    }
+    private List<Map<String,Object>> hydratePlaces(List<Map<String,Object>> rows) {
+        if (rows.isEmpty()) return rows;
+        var byId = new LinkedHashMap<UUID, Map<String,Object>>();
+        var byGeo = new HashMap<UUID, List<Map<String,Object>>>();
+        for (var row : rows) {
+            normalizePlaceRow(row);
+            row.put("category_ids", new ArrayList<UUID>());
+            row.put("tag_ids", new ArrayList<UUID>());
+            row.put("amenity_ids", new ArrayList<UUID>());
+            row.put("opening_hours", new ArrayList<Map<String,Object>>());
+            row.put("media_keys", new ArrayList<String>());
+            row.put("destination_ids", new ArrayList<UUID>());
+            UUID placeId = (UUID) row.get("place_id");
+            byId.put(placeId, row);
+            if (row.get("geographic_unit_id") instanceof UUID geoId) {
+                byGeo.computeIfAbsent(geoId, k -> new ArrayList<>()).add(row);
+            }
+        }
+        UUID[] placeIds = byId.keySet().toArray(UUID[]::new);
+        for (var r : queryUuidArray(db, "SELECT place_id, category_id FROM catalog.place_categories WHERE place_id = ANY(?) ORDER BY place_id, category_id", placeIds)) {
+            @SuppressWarnings("unchecked") var list = (List<UUID>) byId.get((UUID) r.get("place_id")).get("category_ids");
+            list.add((UUID) r.get("category_id"));
+        }
+        for (var r : queryUuidArray(db, "SELECT place_id, tag_id FROM catalog.place_tags WHERE place_id = ANY(?) ORDER BY place_id, tag_id", placeIds)) {
+            @SuppressWarnings("unchecked") var list = (List<UUID>) byId.get((UUID) r.get("place_id")).get("tag_ids");
+            list.add((UUID) r.get("tag_id"));
+        }
+        for (var r : queryUuidArray(db, "SELECT place_id, amenity_id FROM catalog.place_amenities WHERE place_id = ANY(?) ORDER BY place_id, amenity_id", placeIds)) {
+            @SuppressWarnings("unchecked") var list = (List<UUID>) byId.get((UUID) r.get("place_id")).get("amenity_ids");
+            list.add((UUID) r.get("amenity_id"));
+        }
+        for (var r : queryUuidArray(db, "SELECT place_id, day_of_week weekday, to_char(open_time,'HH24:MI') open, to_char(close_time,'HH24:MI') close, end_day_offset=1 overnight FROM catalog.opening_hours WHERE place_id = ANY(?) ORDER BY place_id, day_of_week, open_time", placeIds)) {
+            UUID placeId = (UUID) r.remove("place_id");
+            @SuppressWarnings("unchecked") var list = (List<Map<String,Object>>) byId.get(placeId).get("opening_hours");
+            list.add(r);
+        }
+        for (var r : queryUuidArray(db, "SELECT p.place_id, m.object_key FROM catalog.place_media p JOIN catalog.media_assets m USING(media_id) WHERE p.place_id = ANY(?) AND m.moderation_status='APPROVED' AND m.object_key NOT LIKE 'private/%' ORDER BY p.place_id, p.sort_order", placeIds)) {
+            @SuppressWarnings("unchecked") var list = (List<String>) byId.get((UUID) r.get("place_id")).get("media_keys");
+            list.add((String) r.get("object_key"));
+        }
+        if (!byGeo.isEmpty()) {
+            UUID[] geoIds = byGeo.keySet().toArray(UUID[]::new);
+            for (var r : queryUuidArray(db, """
+                    WITH RECURSIVE ancestors AS (
+                      SELECT geographic_unit_id AS leaf_id, geographic_unit_id, parent_id
+                      FROM catalog.geographic_units WHERE geographic_unit_id = ANY(?)
+                      UNION
+                      SELECT a.leaf_id, u.geographic_unit_id, u.parent_id
+                      FROM catalog.geographic_units u JOIN ancestors a ON a.parent_id = u.geographic_unit_id
+                    )
+                    SELECT DISTINCT a.leaf_id, dg.destination_id
+                    FROM ancestors a JOIN catalog.destination_geo dg ON dg.geographic_unit_id = a.geographic_unit_id
+                    ORDER BY a.leaf_id, dg.destination_id
+                    """, geoIds)) {
+                UUID destId = (UUID) r.get("destination_id");
+                for (var row : byGeo.get((UUID) r.get("leaf_id"))) {
+                    @SuppressWarnings("unchecked") var list = (List<UUID>) row.get("destination_ids");
+                    list.add(destId);
+                }
+            }
+        }
+        return rows;
+    }
     public Map<String,Object> place(UUID id, boolean publicOnly) {
         var rows=db.queryForList("SELECT p.*, ST_Y(location::geometry) lat, ST_X(location::geometry) lon, r.review_count,r.rating_avg FROM catalog.places p LEFT JOIN catalog.place_rating_summary r USING(place_id) WHERE p.place_id=?"+(publicOnly?" AND p.status='PUBLISHED'":""),id);
         if(rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Place unavailable");
-        var result=rows.getFirst(); result.remove("location"); result.remove("search_document");
-        result.put("categories",db.queryForList("SELECT category_id FROM catalog.place_categories WHERE place_id=?",id));
-        result.put("amenities",db.queryForList("SELECT amenity_id FROM catalog.place_amenities WHERE place_id=?",id));
-        result.put("hours",db.queryForList("SELECT * FROM catalog.opening_hours WHERE place_id=? ORDER BY day_of_week,open_time",id));
-        result.put("hours_known",!((List<?>)result.get("hours")).isEmpty());
-        result.put("opening_exceptions",db.queryForList("SELECT * FROM catalog.opening_exceptions WHERE place_id=? ORDER BY local_date,open_time",id));
-        result.put("media",db.queryForList("SELECT m.media_id,m.object_key,pm.alt_text,pm.sort_order FROM catalog.place_media pm JOIN catalog.media_assets m USING(media_id) WHERE pm.place_id=? AND m.moderation_status='APPROVED' ORDER BY sort_order",id));
-        result.put("name",result.get("name_vi"));result.put("latitude",result.get("lat"));result.put("longitude",result.get("lon"));
-        result.put("category_ids",db.queryForList("SELECT category_id FROM catalog.place_categories WHERE place_id=? ORDER BY category_id",UUID.class,id));
+        var result=rows.getFirst();
+        normalizePlaceRow(result);
+        var categoryIds=db.queryForList("SELECT category_id FROM catalog.place_categories WHERE place_id=? ORDER BY category_id",UUID.class,id);
+        var amenityIds=db.queryForList("SELECT amenity_id FROM catalog.place_amenities WHERE place_id=? ORDER BY amenity_id",UUID.class,id);
+        var hours=db.queryForList("SELECT * FROM catalog.opening_hours WHERE place_id=? ORDER BY day_of_week,open_time",id);
+        var media=db.queryForList("SELECT m.media_id,m.object_key,pm.alt_text,pm.sort_order FROM catalog.place_media pm JOIN catalog.media_assets m USING(media_id) WHERE pm.place_id=? AND m.moderation_status='APPROVED' ORDER BY sort_order",id);
+        result.put("category_ids",categoryIds);
+        result.put("categories",categoryIds.stream().map(cid->Map.<String,Object>of("category_id",cid)).toList());
         result.put("tag_ids",db.queryForList("SELECT tag_id FROM catalog.place_tags WHERE place_id=? ORDER BY tag_id",UUID.class,id));
-        result.put("amenity_ids",db.queryForList("SELECT amenity_id FROM catalog.place_amenities WHERE place_id=? ORDER BY amenity_id",UUID.class,id));
-        result.put("opening_hours",result.get("hours"));result.remove("created_by");result.remove("field_precedence");
-        result.put("destination_ids",db.queryForList("WITH RECURSIVE ancestors AS (SELECT geographic_unit_id,parent_id FROM catalog.geographic_units WHERE geographic_unit_id=? UNION SELECT u.geographic_unit_id,u.parent_id FROM catalog.geographic_units u JOIN ancestors a ON a.parent_id=u.geographic_unit_id) SELECT DISTINCT destination_id FROM catalog.destination_geo WHERE geographic_unit_id IN (SELECT geographic_unit_id FROM ancestors) ORDER BY destination_id",UUID.class,result.get("geographic_unit_id")));
-        result.put("source_version",result.get("version"));result.put("price",result.get("price_min"));result.put("media_keys",db.queryForList("SELECT m.object_key FROM catalog.place_media p JOIN catalog.media_assets m USING(media_id) WHERE p.place_id=? AND m.moderation_status='APPROVED' AND m.object_key NOT LIKE 'private/%' ORDER BY sort_order",String.class,id));
-        result.put("opening_hours",db.queryForList("SELECT day_of_week weekday,to_char(open_time,'HH24:MI') open,to_char(close_time,'HH24:MI') close,end_day_offset=1 overnight FROM catalog.opening_hours WHERE place_id=? ORDER BY day_of_week,open_time",id));
-
+        result.put("amenity_ids",amenityIds);
+        result.put("amenities",amenityIds.stream().map(aid->Map.<String,Object>of("amenity_id",aid)).toList());
+        result.put("hours",hours);
+        result.put("hours_known",!hours.isEmpty());
+        result.put("opening_hours",hours.stream().map(h->{var item=new LinkedHashMap<String,Object>();item.put("weekday",h.get("day_of_week"));item.put("open",formatTime(h.get("open_time")));item.put("close",formatTime(h.get("close_time")));item.put("overnight",h.get("end_day_offset") instanceof Number n&&n.intValue()==1);return (Map<String,Object>)item;}).toList());
+        result.put("opening_exceptions",db.queryForList("SELECT * FROM catalog.opening_exceptions WHERE place_id=? ORDER BY local_date,open_time",id));
+        result.put("media",media);
+        result.put("media_keys",media.stream().map(m->Objects.toString(m.get("object_key"),"")).filter(k->!k.startsWith("private/")).toList());
+        result.put("destination_ids",result.get("geographic_unit_id")==null?List.of():db.queryForList("WITH RECURSIVE ancestors AS (SELECT geographic_unit_id,parent_id FROM catalog.geographic_units WHERE geographic_unit_id=? UNION SELECT u.geographic_unit_id,u.parent_id FROM catalog.geographic_units u JOIN ancestors a ON a.parent_id=u.geographic_unit_id) SELECT DISTINCT destination_id FROM catalog.destination_geo WHERE geographic_unit_id IN (SELECT geographic_unit_id FROM ancestors) ORDER BY destination_id",UUID.class,result.get("geographic_unit_id")));
         return result;
     }
     public List<Map<String,Object>> search(Map<String,String> filters) {
         int limit=Integer.parseInt(filters.getOrDefault("limit","20"));
         if(limit<1||limit>100) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid limit");
-        var sql=new StringBuilder("SELECT p.place_id,p.name_vi,p.address,p.status,p.version,p.price_min,p.price_max,p.currency,r.rating_avg,r.review_count,ST_Y(location::geometry) lat,ST_X(location::geometry) lon FROM catalog.places p LEFT JOIN catalog.place_rating_summary r USING(place_id) WHERE p.status='PUBLISHED'");
+        var sql=new StringBuilder("SELECT p.*,r.rating_avg,r.review_count,ST_Y(location::geometry) lat,ST_X(location::geometry) lon FROM catalog.places p LEFT JOIN catalog.place_rating_summary r USING(place_id) WHERE p.status='PUBLISHED'");
         var args=new ArrayList<Object>();
         if(filters.containsKey("q")&&(filters.get("q").isBlank()||filters.get("q").length()>1024))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid search text");if(filters.containsKey("type")){String type=filters.get("type");if(type.isBlank()||type.length()>1024)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid place type");sql.append(" AND (EXISTS(SELECT 1 FROM catalog.place_categories pc JOIN catalog.categories c USING(category_id) WHERE pc.place_id=p.place_id AND c.code=?) OR EXISTS(SELECT 1 FROM catalog.offerings o WHERE o.place_id=p.place_id AND o.item_type=? AND o.status='PUBLISHED'))");args.add(type);args.add(type.toUpperCase(Locale.ROOT));}if(filters.containsKey("q")) {sql.append(" AND (p.search_document @@ plainto_tsquery('simple',?) OR EXISTS(SELECT 1 FROM catalog.place_aliases a WHERE a.place_id=p.place_id AND a.normalized_alias LIKE ?))"); args.add(normalize(filters.get("q")));args.add("%"+normalize(filters.get("q"))+"%");}
         if(filters.containsKey("categoryId")){sql.append(" AND EXISTS(SELECT 1 FROM catalog.place_categories c WHERE c.place_id=p.place_id AND c.category_id=?)");args.add(uuid(filters.get("categoryId")));}
@@ -57,7 +139,7 @@ public class CatalogRepository {
         if(filters.containsKey("radiusM")) {double radius=Double.parseDouble(filters.get("radiusM"));double lat=Double.parseDouble(filters.get("lat"));double lon=Double.parseDouble(filters.get("lon"));if(!Double.isFinite(radius)||!Double.isFinite(lat)||!Double.isFinite(lon)||radius<=0||radius>100000||Math.abs(lat)>90||Math.abs(lon)>180) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid geo bounds");sql.append(" AND ST_DWithin(p.location,ST_SetSRID(ST_MakePoint(?,?),4326)::geography,?)");args.add(lon);args.add(lat);args.add(radius);}
         if(filters.containsKey("afterId")){sql.append(" AND p.place_id>?");args.add(uuid(filters.get("afterId")));}
         sql.append(" ORDER BY p.place_id LIMIT ?");args.add(limit+1);
-        var result=db.queryForList(sql.toString(),args.toArray());for(var row:result){row.put("name",row.get("name_vi"));row.put("latitude",row.get("lat"));row.put("longitude",row.get("lon"));row.put("price",row.get("price_min"));row.putAll(place((UUID)row.get("place_id"),true));row.put("category_ids",db.queryForList("SELECT category_id FROM catalog.place_categories WHERE place_id=? ORDER BY category_id",UUID.class,row.get("place_id")));row.put("tag_ids",db.queryForList("SELECT tag_id FROM catalog.place_tags WHERE place_id=? ORDER BY tag_id",UUID.class,row.get("place_id")));}return result;
+        return hydratePlaces(db.queryForList(sql.toString(),args.toArray()));
     }
     @Transactional
     public Map<String,Object> create(Map<String,Object> input,UUID actor) {vn.smarttravel.catalog.infrastructure.persistence.repository.UserMutationFence.acquire(db,actor);
@@ -127,15 +209,22 @@ public class CatalogRepository {
         if(!Set.of("categories","tags","amenities","destinations","geographic_units").contains(kind))throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         return db.queryForList("SELECT * FROM catalog."+kind+(kind.equals("categories")?" WHERE active":kind.equals("destinations")?" WHERE status='PUBLISHED'":""));
     }
-    public List<Map<String,Object>> adminList(){return db.queryForList("SELECT place_id FROM catalog.places ORDER BY place_id").stream().map(row->place((UUID)row.get("place_id"),false)).toList();}
+    public List<Map<String,Object>> adminList(){return hydratePlaces(db.queryForList("SELECT p.*, ST_Y(location::geometry) lat, ST_X(location::geometry) lon, r.review_count, r.rating_avg FROM catalog.places p LEFT JOIN catalog.place_rating_summary r USING(place_id) ORDER BY p.place_id"));}
     /** Internal ML lineage is read from this service's audited import versions, never another database. */
     public List<Map<String,Object>> featureSnapshot(){
-        return adminList().stream().map(row->{
-            var feature=new LinkedHashMap<>(vn.smarttravel.catalog.shared.web.Representations.place(row));
-            var lineage=db.queryForList("SELECT source_id FROM catalog.place_versions WHERE place_id=? AND source_id IS NOT NULL ORDER BY version_no DESC LIMIT 1",row.get("place_id"));
-            if(!lineage.isEmpty())feature.put("source_id",lineage.getFirst().get("source_id"));
-            return (Map<String,Object>)feature;
+        var list = adminList();
+        if (list.isEmpty()) return list;
+        UUID[] ids = list.stream().map(row -> (UUID) row.get("place_id")).toArray(UUID[]::new);
+        var sources = new HashMap<UUID, Object>();
+        for (var r : queryUuidArray(db, "SELECT DISTINCT ON (place_id) place_id, source_id FROM catalog.place_versions WHERE place_id = ANY(?) AND source_id IS NOT NULL ORDER BY place_id, version_no DESC", ids)) {
+            sources.put((UUID) r.get("place_id"), r.get("source_id"));
+        }
+        return list.stream().map(row -> {
+            var feature = new LinkedHashMap<>(vn.smarttravel.catalog.shared.web.Representations.place(row));
+            Object sourceId = sources.get(row.get("place_id"));
+            if (sourceId != null) feature.put("source_id", sourceId);
+            return (Map<String,Object>) feature;
         }).toList();
     }
-    public List<Map<String,Object>> candidates(Map<String,Object> body){return db.queryForList("SELECT place_id FROM catalog.places WHERE status='PUBLISHED' AND (search_document @@ plainto_tsquery('simple',?) OR ST_DWithin(location,ST_SetSRID(ST_MakePoint(?,?),4326)::geography,1000)) ORDER BY place_id LIMIT 100",normalize(body.get("name").toString()),body.get("longitude"),body.get("latitude")).stream().map(row->place((UUID)row.get("place_id"),true)).toList();}
+    public List<Map<String,Object>> candidates(Map<String,Object> body){return hydratePlaces(db.queryForList("SELECT p.*, ST_Y(location::geometry) lat, ST_X(location::geometry) lon, r.review_count, r.rating_avg FROM catalog.places p LEFT JOIN catalog.place_rating_summary r USING(place_id) WHERE p.status='PUBLISHED' AND (p.search_document @@ plainto_tsquery('simple',?) OR ST_DWithin(p.location,ST_SetSRID(ST_MakePoint(?,?),4326)::geography,1000)) ORDER BY p.place_id LIMIT 100",normalize(body.get("name").toString()),body.get("longitude"),body.get("latitude")));}
 }

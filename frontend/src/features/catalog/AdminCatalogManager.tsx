@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { Page, Resource, TravelClient } from '../../shared/api';
-import { ErrorState } from '../../shared/ui';
+import { ErrorState, RoundedSelect } from '../../shared/ui';
 import { PlaceLocationEditor } from './PlaceLocationEditor';
 
 type Field = { key: string; label: string; kind?: 'number' | 'boolean' | 'list' | 'reference'; options?: string[]; source?: string; multiple?: boolean; min?: number; max?: number };
@@ -90,7 +90,7 @@ export function AdminCatalogManager({ travel }: { travel: TravelClient }) {
   }
   return <section className="travel-panel" aria-label="Quản lý danh mục du lịch" style={{ padding: 24, marginTop: 24 }}>
     <h2>Danh mục du lịch</h2>
-    <label>Nhóm dữ liệu <select value={kind} disabled={busy} onChange={e => setKind(e.target.value)}>{Object.entries(definitions).map(([key, d]) => <option key={key} value={key}>{d.label}</option>)}</select></label>
+    <div className="form-group"><label htmlFor="admin-catalog-kind">Nhóm dữ liệu</label><RoundedSelect id="admin-catalog-kind" label="Nhóm dữ liệu" value={kind} disabled={busy} onChange={setKind} options={Object.entries(definitions).map(([key, d]) => ({ value: key, label: d.label }))} /></div>
     <button className="btn-secondary" disabled={busy} onClick={() => void run(() => edit())}>Thêm {definition.label.toLowerCase()}</button>
     <button className="btn-subtle" disabled={busy} onClick={() => void run(() => load())}>Tải lại danh mục</button>
     {error && <ErrorState message={error} />}{message && <p role="status">{message}</p>}{busy && <p role="status">Đang xử lý danh mục...</p>}
@@ -99,14 +99,43 @@ export function AdminCatalogManager({ travel }: { travel: TravelClient }) {
       {kind === 'places' && <PlaceLocationEditor key={selected ? rowId(selected, definition.id) : 'new-place'} name={String(values.name ?? '')} address={String(values.address ?? '')} latitude={values.latitude} longitude={values.longitude}
         area={String(references['geographic-units']?.find(row => rowId(row, 'id') === values.geographic_unit_id)?.name ?? '')}
         onChange={location => setValues(previous => ({ ...previous, ...location }))} />}
-      {definition.fields.map(field => <label key={field.key}>{field.label}
-        {field.kind === 'boolean' ? <input type="checkbox" checked={Boolean(values[field.key])} onChange={e => setValues(v => ({ ...v, [field.key]: e.target.checked }))} />
-        : field.options ? <select required value={String(values[field.key] ?? '')} onChange={e => setValues(v => ({ ...v, [field.key]: e.target.value }))}><option value="">Chọn {field.label.toLowerCase()}</option>{field.options.map(o => <option key={o}>{o}</option>)}</select>
-        : field.source ? <select multiple={field.multiple} value={field.multiple ? (values[field.key] as string[] ?? []) : String(values[field.key] ?? '')} onChange={e => { const value = field.multiple ? Array.from(e.target.selectedOptions, o => o.value) : e.target.value; setValues(v => ({ ...v, [field.key]: value })); }}>
-          {!field.multiple && <option value="">Chưa chọn</option>}{(references[field.source] ?? []).filter(r => !(field.key === 'parent_id' && selected && rowId(r, definitions[field.source!].id) === rowId(selected, definition.id))).map(r => { const id = rowId(r, definitions[field.source!].id); return <option key={id} value={id}>{String(r.name ?? id)}</option>; })}</select>
-        : field.kind === 'list' ? <textarea value={(values[field.key] as string[] ?? []).join('\n')} onChange={e => setValues(v => ({ ...v, [field.key]: e.target.value.split('\n').filter(Boolean) }))} />
-        : <input required={field.key === 'name'} type={field.kind === 'number' ? 'number' : 'text'} step="any" min={field.min} max={field.max} maxLength={1024} value={String(values[field.key] ?? '')} onChange={e => { const value = field.kind === 'number' && e.target.value !== '' ? Number(e.target.value) : e.target.value; setValues(v => ({ ...v, [field.key]: value })); }} />}
-      </label>)}
+      {definition.fields.map(field => {
+        const fieldId = `catalog-field-${field.key}`;
+        if (field.options || field.source) {
+          const refOptions = field.options
+            ? [
+                { value: '', label: `Chọn ${field.label.toLowerCase()}` },
+                ...field.options.map(o => ({ value: o, label: o })),
+              ]
+            : [
+                ...(field.multiple ? [] : [{ value: '', label: 'Chưa chọn' }]),
+                ...(references[field.source!] ?? [])
+                  .filter(r => !(field.key === 'parent_id' && selected && rowId(r, definitions[field.source!].id) === rowId(selected, definition.id)))
+                  .map(r => {
+                    const id = rowId(r, definitions[field.source!].id);
+                    return { value: id, label: String(r.name ?? id) };
+                  }),
+              ];
+          return <div className="form-group" key={field.key}><label htmlFor={fieldId}>{field.label}</label>
+            <RoundedSelect
+              id={fieldId}
+              label={field.label}
+              multiple={Boolean(field.multiple)}
+              required={Boolean(field.options)}
+              placeholder={field.options ? `Chọn ${field.label.toLowerCase()}` : 'Chưa chọn'}
+              value={field.multiple ? (values[field.key] as string[] ?? []) : String(values[field.key] ?? '')}
+              onChange={val => setValues(v => ({ ...v, [field.key]: val }))}
+              onMultiChange={vals => setValues(v => ({ ...v, [field.key]: vals }))}
+              options={refOptions}
+            />
+          </div>;
+        }
+        return <label key={field.key}>{field.label}
+          {field.kind === 'boolean' ? <input type="checkbox" checked={Boolean(values[field.key])} onChange={e => setValues(v => ({ ...v, [field.key]: e.target.checked }))} />
+          : field.kind === 'list' ? <textarea value={(values[field.key] as string[] ?? []).join('\n')} onChange={e => setValues(v => ({ ...v, [field.key]: e.target.value.split('\n').filter(Boolean) }))} />
+          : <input required={field.key === 'name'} type={field.kind === 'number' ? 'number' : 'text'} step="any" min={field.min} max={field.max} maxLength={1024} value={String(values[field.key] ?? '')} onChange={e => { const value = field.kind === 'number' && e.target.value !== '' ? Number(e.target.value) : e.target.value; setValues(v => ({ ...v, [field.key]: value })); }} />}
+        </label>;
+      })}
       <button className="btn-primary" disabled={busy}>Lưu danh mục</button><button type="button" className="btn-subtle" onClick={() => setEditing(false)}>Hủy chỉnh sửa</button>
     </form>}
     <div className="travel-grid">{rows.map(row => <article className="travel-panel" key={rowId(row, definition.id)} style={{ padding: 16 }}><h3>{String(row.name)}</h3><p>{String(row.status ?? (row.active === false ? 'Ngừng hoạt động' : ''))}</p>

@@ -1,5 +1,6 @@
 export const SECTION_PATHS = {
   'Khám phá': '/kham-pha',
+  'Gợi ý': '/goi-y',
   'Bản đồ': '/ban-do',
   'Bộ sưu tập': '/bo-suu-tap',
   'Chuyến đi': '/chuyen-di',

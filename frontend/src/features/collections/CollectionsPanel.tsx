@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Icon, Button, Badge, ErrorState } from '../../shared/ui';
+import { Icon, Button, Badge, ErrorState, RoundedSelect } from '../../shared/ui';
 import type { TravelClient, Resource } from '../../shared/api';
 import { useToast } from '../../app/providers/ToastProvider';
 import '../trips/integration-layout.css';
@@ -237,14 +237,16 @@ export function CollectionsPanel({ travel, busy = false }: CollectionsPanelProps
 
           <div className="form-group" style={{ margin: 0 }}>
             <label htmlFor="collection-visibility-select">Chế độ hiển thị</label>
-            <select
+            <RoundedSelect
               id="collection-visibility-select"
+              label="Chế độ hiển thị"
               value={visibility}
-              onChange={e => setVisibility(e.target.value as 'PUBLIC' | 'PRIVATE')}
-            >
-              <option value="PRIVATE">Riêng tư</option>
-              <option value="PUBLIC">Công khai</option>
-            </select>
+              onChange={val => setVisibility(val as 'PUBLIC' | 'PRIVATE')}
+              options={[
+                { value: 'PRIVATE', label: 'Riêng tư' },
+                { value: 'PUBLIC', label: 'Công khai' },
+              ]}
+            />
           </div>
 
           <Button type="submit" disabled={loading || busy} icon="plus">
@@ -275,21 +277,64 @@ export function CollectionsPanel({ travel, busy = false }: CollectionsPanelProps
 
           <form key={id(selected)} onSubmit={updateCollection} className="form-grid">
             <label>Tên mới<input name="name" defaultValue={String(selected.name)} required /></label>
-            <label>Chế độ hiển thị<select name="visibility" defaultValue={String(selected.visibility)}><option value="PRIVATE">Riêng tư</option><option value="PUBLIC">Công khai</option></select></label>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label htmlFor="collection-edit-visibility">Chế độ hiển thị</label>
+              <RoundedSelect
+                id="collection-edit-visibility"
+                name="visibility"
+                label="Chế độ hiển thị"
+                defaultValue={String(selected.visibility)}
+                options={[
+                  { value: 'PRIVATE', label: 'Riêng tư' },
+                  { value: 'PUBLIC', label: 'Công khai' },
+                ]}
+              />
+            </div>
             <Button type="submit" disabled={loading || busy}>Lưu bộ sưu tập</Button>
           </form>
           <form onSubmit={event => { event.preventDefault(); void findPlaces(); }}>
-            <label>Tỉnh/thành cho bộ sưu tập
-              <select value={provinceId} disabled={loading || busy || searching} onChange={event => { resetPlaceSearch(); setProvinceId(event.target.value); }} required>
-                <option value="">Chọn tỉnh/thành</option>
-                {provinces.map(province => <option key={String(province.geographic_unit_id ?? province.id)} value={String(province.geographic_unit_id ?? province.id)}>{String(province.name_vi ?? province.name)}</option>)}
-              </select>
-            </label>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label htmlFor="collection-province-select">Tỉnh/thành cho bộ sưu tập</label>
+              <RoundedSelect
+                id="collection-province-select"
+                label="Tỉnh/thành cho bộ sưu tập"
+                value={provinceId}
+                disabled={loading || busy || searching}
+                onChange={val => { resetPlaceSearch(); setProvinceId(val); }}
+                required
+                placeholder="Chọn tỉnh/thành"
+                options={[
+                  { value: '', label: 'Chọn tỉnh/thành' },
+                  ...provinces.map(province => ({
+                    value: String(province.geographic_unit_id ?? province.id),
+                    label: String(province.name_vi ?? province.name),
+                  })),
+                ]}
+              />
+            </div>
             <Button type="submit" disabled={loading || busy || searching || !provinceId}>{searching ? 'Đang tìm địa điểm…' : 'Tìm địa điểm'}</Button>
           </form>
           <p role="status">{searching ? 'Đang tải địa điểm trong tỉnh/thành đã chọn…' : searched ? places.length > 0 ? `Tìm thấy ${places.length} địa điểm trong tỉnh/thành đã chọn.` : 'Chưa có địa điểm trong tỉnh/thành này. Vui lòng chọn tỉnh/thành khác.' : provinceId ? 'Bấm “Tìm địa điểm” để xem các địa điểm trong tỉnh/thành đã chọn.' : 'Vui lòng chọn tỉnh/thành trước khi chọn địa điểm.'}</p>
           <form onSubmit={addPlace} className="form-grid">
-            <label>Địa điểm<select value={placeId} disabled={loading || busy || searching || !provinceId || !searched || !places.length} onChange={event => { setPlaceId(event.target.value); setNote(''); }} required><option value="">{!provinceId ? 'Chọn tỉnh/thành trước' : 'Chọn địa điểm'}</option>{places.map(place => <option key={String(place.id ?? place.place_id)} value={String(place.id ?? place.place_id)}>{String(place.name)}</option>)}</select></label>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label htmlFor="collection-place-select">Địa điểm</label>
+              <RoundedSelect
+                id="collection-place-select"
+                label="Địa điểm"
+                value={placeId}
+                disabled={loading || busy || searching || !provinceId || !searched || !places.length}
+                onChange={val => { setPlaceId(val); setNote(''); }}
+                required
+                placeholder={!provinceId ? 'Chọn tỉnh/thành trước' : 'Chọn địa điểm'}
+                options={[
+                  { value: '', label: !provinceId ? 'Chọn tỉnh/thành trước' : 'Chọn địa điểm' },
+                  ...places.map(place => ({
+                    value: String(place.id ?? place.place_id),
+                    label: String(place.name),
+                  })),
+                ]}
+              />
+            </div>
             <label>Ghi chú<input value={note} disabled={loading || busy || searching || !placeId} onChange={event => setNote(event.target.value)} /></label>
             <Button type="submit" disabled={loading || busy || searching || !searched || !placeId}>Thêm địa điểm vào bộ sưu tập</Button>
           </form>

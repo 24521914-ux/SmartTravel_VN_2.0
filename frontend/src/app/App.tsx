@@ -7,6 +7,7 @@ import { travelClient, apiClient } from '../api/session';
 import type { Resource } from '../shared/api';
 import { isSection, resolveRoute, SECTION_PATHS } from './routes';
 import '../features/trips/trip-auth-gate.css';
+const RecommendationSection = lazy(() => import('../features/recommendations/RecommendationSection').then(m => ({ default: m.RecommendationSection })));
 const MapPanel = lazy(() => import('../features/places/MapPanel').then(m => ({ default: m.MapPanel })));
 const CollectionsPanel = lazy(() => import('../features/collections/CollectionsPanel').then(m => ({ default: m.CollectionsPanel })));
 const TripPlanner = lazy(() => import('../features/trips/TripPlanner').then(m => ({ default: m.TripPlanner })));
@@ -79,7 +80,7 @@ export function AppContent() {
         </section>}
         {activeSection && activeSection !== 'Khám phá' && (activeSection !== 'Tài khoản' || isAuthenticated) && <div style={{ marginBottom: '24px' }}>
           <h1 style={{ fontSize: '2.1rem', fontWeight: 800, color: 'var(--color-text-primary)' }}>
-            {text(activeSection, ({ 'Bản đồ': 'Map', 'Bộ sưu tập': 'Collections', 'Chuyến đi': 'Trips', 'Tài khoản': 'Account', 'Thông báo': 'Notifications', 'Đóng góp': 'Contribute', 'Doanh nghiệp': 'Business', 'Kiểm duyệt': 'Moderation', 'Quản trị': 'Administration' } as Record<string, string>)[activeSection] ?? activeSection)}
+            {text(activeSection, ({ 'Gợi ý': 'Recommendations', 'Bản đồ': 'Map', 'Bộ sưu tập': 'Collections', 'Chuyến đi': 'Trips', 'Tài khoản': 'Account', 'Thông báo': 'Notifications', 'Đóng góp': 'Contribute', 'Doanh nghiệp': 'Business', 'Kiểm duyệt': 'Moderation', 'Quản trị': 'Administration' } as Record<string, string>)[activeSection] ?? activeSection)}
           </h1>
         </div>}
 
@@ -90,6 +91,13 @@ export function AppContent() {
             travel={travelClient}
             onNavigate={handleNavigate}
             onNavigateToTrip={place => { setSuggestedPlace(place ?? null); handleNavigate('Chuyến đi'); }}
+          />
+        )}
+
+        {activeSection === 'Gợi ý' && (
+          <RecommendationSection
+            travel={travelClient}
+            onNavigate={handleNavigate}
           />
         )}
 
