@@ -4,7 +4,7 @@
 
 - [ ] Tích hợp source hiện tại vào cloud `main` — **PARTIAL** · Codex, PR #5 merge `ded22c8`, CI 11/11 PASS trên `4229b54`; TypeScript/Vite build và contract17/0/0/0 PASS (Node, API giả lập), P02 browser9 nhóm PASS qua Gateway/DB/broker thật trong CI. Giữ UI tài khoản, bộ sưu tập theo tỉnh, timeline và client cloud. Chưa full browser cloud; trạng thái API/bằng chứng và giới hạn xem [progress_be.md](progress_be.md).
 
-Cập nhật: **13/11/2026 14:50** (GMT+7)
+Cập nhật: **18/11/2026 11:42** (GMT+7)
 
 
 Kiểm lại 05/11/2026: backend local đã cập nhật image Identity và kiểm API đăng ký/đăng nhập thật; chi tiết bằng chứng tại [progress_be.md](progress_be.md). FE end-to-end thật chưa chạy lại; giữ PARTIAL.
@@ -234,6 +234,7 @@ Chạy từ thư mục gốc repo; Node 24.
 
 | Thời điểm | Thay đổi | PR / commit |
 |---|---|---|
+| 18/11/2026 11:42 | Thêm màn Gợi ý (`/goi-y` `RecommendationSection`), hợp nhất dữ liệu 200 địa điểm OSM + URL ảnh Cloudinary (`osmCatalog.ts`, ẩn 29 điểm demo cũ), và chuẩn hóa `RoundedSelect` bo tròn dùng chung cho toàn bộ select/filter (`/chuyen-di`, `/bo-suu-tap`, `/dong-gop`, `/tai-khoan`, modal thêm vào chuyến đi, quản trị/kiểm duyệt). `npm --prefix frontend run build` PASS (`4647` modules); `test:contracts` `17/0/0/0`; `browser-collection-province` `5/0/0/0`; kiểm tra live Playwright gợi ý/bộ lọc bo tròn PASS; `browser-filters` `21/24` PASS (`3` FAIL do cơ chế lọc cục bộ OpenData ở `ExploreSection`); 8 script browser DB-mutation còn lại đã cập nhật selector nhưng chưa chạy lại toàn bộ end-to-end. Giữ PARTIAL | Nhánh PR `feature/recommendations-cloudinary-rounded-ui` |
 | 13/11/2026 14:49 | Merge source workspace, giữ giao diện/timeline/tài khoản local và client cloud; 11/11 CI PASS trên `4229b54`, P02 browser9 nhóm PASS run43387717255. Không nâng số API/gate; chưa full cloud browser | [PR #5](https://github.com/24521914-ux/SmartTravel_VN_2.0/pull/5), merge `ded22c89899530d0dbc4663f1392b223d0f4adac` |
 | 06/11/2026 19:44 | Merge cấu hình mặc định dùng cloud; 11 checks PASS trên head `0b14e46`: P00 run 42190791704, P01 42190791670, P02 42190791665, P03 42190791684. Giữ trạng thái task/gate; F-41 OPEN vì chưa chứng minh nguyên nhân gốc | [PR #3](https://github.com/24521914-ux/SmartTravel_VN_2.0/pull/3), merge `32e14e902795740828269605fd70838665a75c56` |
 | 03/11/2026 00:52 | Trang Chuyến đi khi chưa đăng nhập thành bố cục hai cột tích hợp: CTA đăng nhập bên trái, ảnh Vịnh Hạ Long và nội dung cảm hứng bên phải; VI/EN, theme token, mobile xếp dọc. Build PASS; chưa kiểm browser trực quan | Nhánh feature/explore-ui-demo-content, HEAD ca83db7 (checkout dirty) |
