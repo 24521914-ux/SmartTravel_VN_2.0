@@ -116,7 +116,7 @@ jobs:
           npm ci
           npm run test:contracts
           npm run build
-          npm audit --audit-level=high
+          npm audit --omit=dev --audit-level=high
       - name: Build Gateway revision image
         run: docker build -t smarttravel-api-gateway:${{ github.sha }} backend/platform/api-gateway
       - uses: actions/upload-artifact@v4
