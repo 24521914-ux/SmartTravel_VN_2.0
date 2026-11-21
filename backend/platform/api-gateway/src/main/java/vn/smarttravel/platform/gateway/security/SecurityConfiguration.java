@@ -44,8 +44,11 @@ public class SecurityConfiguration {
                                 "/api/identity/api/v1/auth/refresh","/api/identity/api/v1/auth/logout",
                                 "/api/identity/api/v1/auth/verify-email","/api/identity/api/v1/auth/resend-verification","/api/identity/api/v1/auth/forgot-password",
                                 "/api/identity/api/v1/auth/reset-password",
-                                "/api/intelligence/api/v1/recommendations","/api/intelligence/api/v1/interactions/batch").permitAll()
+                                "/api/intelligence/api/v1/recommendations","/api/intelligence/api/v1/recommendations/rank",
+                                "/api/intelligence/api/v1/recommendations/impressions","/api/intelligence/api/v1/recommendations/feedback",
+                                "/api/intelligence/api/v1/interactions/batch").permitAll()
                         .pathMatchers(HttpMethod.GET,"/api/identity/api/v1/preference-options",
+                                "/api/intelligence/api/v1/recommendations/stats",
                                 "/api/catalog/api/v1/media/*",
                                 "/api/catalog/api/v1/places","/api/catalog/api/v1/places/*",
                                 "/api/catalog/api/v1/geographic-units","/api/catalog/api/v1/destinations",
