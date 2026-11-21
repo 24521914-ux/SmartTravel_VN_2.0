@@ -5,7 +5,6 @@ import java.util.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import vn.smarttravel.intelligence.ranking.repository.RankingDataRepository;
 import vn.smarttravel.intelligence.ranking.service.RankingServingService;
 
 /**
@@ -16,11 +15,9 @@ import vn.smarttravel.intelligence.ranking.service.RankingServingService;
 public class RankingController {
 
     private final RankingServingService serving;
-    private final RankingDataRepository data;
 
-    public RankingController(RankingServingService serving, RankingDataRepository data) {
+    public RankingController(RankingServingService serving) {
         this.serving = serving;
-        this.data = data;
     }
 
     private static UUID userId(Authentication auth) {
@@ -35,7 +32,7 @@ public class RankingController {
 
     @GetMapping("/stats")
     public Map<String, Object> stats() {
-        return data.loadPublicStats();
+        return serving.loadPublicStats();
     }
 
     @PostMapping("/impressions")

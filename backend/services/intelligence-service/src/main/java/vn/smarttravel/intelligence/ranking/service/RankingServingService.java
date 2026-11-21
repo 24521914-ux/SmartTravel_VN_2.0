@@ -7,7 +7,6 @@ import java.sql.Timestamp;
 import java.time.*;
 import java.util.*;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -16,6 +15,8 @@ import vn.smarttravel.intelligence.ranking.domain.*;
 import vn.smarttravel.intelligence.ranking.domain.RankingModels.*;
 import vn.smarttravel.intelligence.ranking.repository.RankingDataRepository;
 import vn.smarttravel.intelligence.ranking.repository.RankingDataRepository.ActiveDeployment;
+import vn.smarttravel.intelligence.ranking.repository.RankingServingRepository;
+import vn.smarttravel.intelligence.ranking.repository.RankingServingRepository.ResultRow;
 import vn.smarttravel.intelligence.recommendations.client.DependencyClient;
 import vn.smarttravel.intelligence.shared.http.RecommendationDeadline;
 
@@ -44,20 +45,20 @@ public class RankingServingService {
             "EVENING", new int[]{1080, 1380}
     );
 
-    private final JdbcTemplate db;
+    private final RankingServingRepository servingRepo;
     private final RankingDataRepository data;
     private final ProjectionService projections;
     private final DependencyClient dependencies;
     private final HybridRankingEngine engine;
 
     public RankingServingService(
-            JdbcTemplate db,
+            RankingServingRepository servingRepo,
             RankingDataRepository data,
             ProjectionService projections,
             DependencyClient dependencies,
             OpenMeteoWeatherAdapter weatherAdapter
     ) {
-        this.db = db;
+        this.servingRepo = servingRepo;
         this.data = data;
         this.projections = projections;
         this.dependencies = dependencies;
@@ -71,11 +72,15 @@ public class RankingServingService {
         );
     }
 
+    public Map<String, Object> loadPublicStats() {
+        return data.loadPublicStats();
+    }
+
     @Transactional
     public Map<String, Object> rankPublic(UUID userId, JsonNode input) {
         long startNanos = System.nanoTime();
         try (var budget = RecommendationDeadline.start()) {
-            db.execute("SET LOCAL lock_timeout='500ms'; SET LOCAL statement_timeout='2500ms'");
+            servingRepo.setRequestTimeouts();
             if (userId != null) projections.userLock(userId);
 
             // Pin active deployment ONCE per request so config/cohort/CF never mix mid-request
@@ -129,15 +134,7 @@ public class RankingServingService {
             String mode = output.fallbackUsed() ? "FALLBACK" : "BASIC";
             List<Map<String, Object>> publicResults = new ArrayList<>(verified.size());
             if (verified.isEmpty()) {
-                db.update("""
-                        INSERT INTO intelligence.recommendation_requests(
-                          request_id, user_id, session_id, mode, algorithm_version, model_version_id,
-                          criteria, top_n, latency_ms, fallback_reason,
-                          ranking_config_version_id, deployment_id, degraded, degraded_reasons,
-                          candidate_count, returned_count, is_admin_test, scorer_availability,
-                          effective_weights_summary, empty_reason, debug_payload
-                        ) VALUES (?,?,?,?,?,NULL,?::jsonb,?,?,?,?,?,?,?::jsonb,?,?,false,?::jsonb,?::jsonb,?,?::jsonb)
-                        """,
+                servingRepo.insertEmptyRecommendationRequest(
                         requestId,
                         user.personalizationConsent() ? user.userId() : null,
                         sessionId,
@@ -152,37 +149,14 @@ public class RankingServingService {
                         output.degraded() || partial,
                         json(output.degradedReasons()),
                         output.passedHardFilters(),
-                        0,
                         json(scorerAvailability),
                         json(avgWeights),
                         emptyReason,
                         json(debugPayload)
                 );
             } else {
-                StringBuilder valuesSql = new StringBuilder();
-                List<Object> params = new ArrayList<>(20 + verified.size() * 6);
-                params.add(requestId);
-                params.add(user.personalizationConsent() ? user.userId() : null);
-                params.add(sessionId);
-                params.add(mode);
-                params.add("hybrid-v1:" + deployment.config().versionTag());
-                params.add(json(input));
-                params.add(request.topN());
-                params.add(latencyMs);
-                params.add(output.fallbackReason());
-                params.add(deployment.configVersionId());
-                params.add(deployment.deploymentId());
-                params.add(output.degraded() || partial);
-                params.add(json(output.degradedReasons()));
-                params.add(output.passedHardFilters());
-                params.add(verified.size());
-                params.add(json(scorerAvailability));
-                params.add(json(avgWeights));
-                params.add(emptyReason);
-                params.add(json(debugPayload));
-
-                for (int i = 0; i < verified.size(); i++) {
-                    RankedCandidate rc = verified.get(i);
+                List<ResultRow> resultRows = new ArrayList<>(verified.size());
+                for (RankedCandidate rc : verified) {
                     Map<String, Object> explanationStore = new LinkedHashMap<>();
                     explanationStore.put("reason_codes", rc.reasonCodes());
                     explanationStore.put("reasons_vi", rc.reasonsVi());
@@ -190,30 +164,36 @@ public class RankingServingService {
                     explanationStore.put("summary_vi", rc.summaryVi());
                     explanationStore.put("summary_en", rc.summaryEn());
 
-                    if (i > 0) valuesSql.append(',');
-                    valuesSql.append("((SELECT request_id FROM req),?,?,?,?::jsonb,?)");
-                    params.add(rc.place().placeId());
-                    params.add(rc.rank());
-                    params.add(rc.finalScore());
-                    params.add(json(explanationStore));
-                    params.add(rc.place().catalogVersion());
-
+                    resultRows.add(new ResultRow(
+                            rc.place().placeId(),
+                            rc.rank(),
+                            rc.finalScore(),
+                            json(explanationStore),
+                            rc.place().catalogVersion()
+                    ));
                     publicResults.add(toPublicItem(rc));
                 }
-                db.update("""
-                        WITH req AS (
-                          INSERT INTO intelligence.recommendation_requests(
-                            request_id, user_id, session_id, mode, algorithm_version, model_version_id,
-                            criteria, top_n, latency_ms, fallback_reason,
-                            ranking_config_version_id, deployment_id, degraded, degraded_reasons,
-                            candidate_count, returned_count, is_admin_test, scorer_availability,
-                            effective_weights_summary, empty_reason, debug_payload
-                          ) VALUES (?,?,?,?,?,NULL,?::jsonb,?,?,?,?,?,?,?::jsonb,?,?,false,?::jsonb,?::jsonb,?,?::jsonb)
-                          RETURNING request_id
-                        )
-                        INSERT INTO intelligence.recommendation_results(request_id, place_id, rank, score, explanation, catalog_version)
-                        VALUES """ + valuesSql,
-                        params.toArray()
+                servingRepo.insertRecommendationRequestAndResults(
+                        requestId,
+                        user.personalizationConsent() ? user.userId() : null,
+                        sessionId,
+                        mode,
+                        "hybrid-v1:" + deployment.config().versionTag(),
+                        json(input),
+                        request.topN(),
+                        latencyMs,
+                        output.fallbackReason(),
+                        deployment.configVersionId(),
+                        deployment.deploymentId(),
+                        output.degraded() || partial,
+                        json(output.degradedReasons()),
+                        output.passedHardFilters(),
+                        verified.size(),
+                        json(scorerAvailability),
+                        json(avgWeights),
+                        emptyReason,
+                        json(debugPayload),
+                        resultRows
                 );
             }
 
@@ -297,12 +277,7 @@ public class RankingServingService {
     @Transactional(readOnly = true)
     public Map<String, Object> getRequestDebug(UUID adminId, UUID requestId) {
         projections.guardActor(adminId);
-        var rows = db.queryForList("""
-                SELECT request_id, created_at, algorithm_version, latency_ms, fallback_reason,
-                       degraded, candidate_count, returned_count, debug_payload
-                FROM intelligence.recommendation_requests
-                WHERE request_id = ?
-                """, requestId);
+        var rows = servingRepo.findRequestDebug(requestId);
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "REQUEST_NOT_FOUND");
         var row = rows.getFirst();
         Map<String, Object> out = new LinkedHashMap<>();
@@ -346,25 +321,14 @@ public class RankingServingService {
                 require(!viewedAt.isAfter(Instant.now().plusSeconds(60)) && !viewedAt.isBefore(Instant.now().minus(Duration.ofDays(7))), "INVALID_VIEWED_AT");
 
                 // Verify item belonged to the actual persisted recommendation_results and read authoritative rank
-                var resRows = db.queryForList("""
-                        SELECT r.rank, q.is_admin_test
-                        FROM intelligence.recommendation_results r
-                        JOIN intelligence.recommendation_requests q ON q.request_id = r.request_id
-                        WHERE r.request_id = ? AND r.place_id = ?
-                        """, reqId, placeId);
+                var resRows = servingRepo.findResultRankAndAdminFlag(reqId, placeId);
                 require(!resRows.isEmpty(), "RESULT_ITEM_NOT_FOUND");
                 int authoritativeRank = ((Number) resRows.getFirst().get("rank")).intValue();
                 boolean isAdminTest = Boolean.TRUE.equals(resRows.getFirst().get("is_admin_test"));
 
-                int inserted = db.update("""
-                        INSERT INTO intelligence.recommendation_impressions(
-                          impression_id, idempotency_key, request_id, place_id, rank,
-                          user_id, session_id, consent_version, is_admin_test, viewed_at
-                        ) VALUES (?,?,?,?,?,?,?,?,?,?)
-                        ON CONFLICT (idempotency_key) DO NOTHING
-                        """,
+                int inserted = servingRepo.insertImpression(
                         UUID.randomUUID(), idemKey, reqId, placeId, authoritativeRank,
-                        persistedUserId, sessionId, consentVersion, isAdminTest, Timestamp.from(viewedAt)
+                        persistedUserId, sessionId, consentVersion, isAdminTest, viewedAt
                 );
                 if (inserted > 0) accepted++; else duplicates++;
             } catch (ResponseStatusException ex) {
@@ -387,12 +351,7 @@ public class RankingServingService {
         Instant occurredAt = body.hasNonNull("occurred_at") ? time(body, "occurred_at") : Instant.now();
         UUID sessionId = parseOptionalUuid(body.path("session_id")).orElse(null);
 
-        var resRows = db.queryForList("""
-                SELECT r.rank, q.is_admin_test
-                FROM intelligence.recommendation_results r
-                JOIN intelligence.recommendation_requests q ON q.request_id = r.request_id
-                WHERE r.request_id = ? AND r.place_id = ?
-                """, reqId, placeId);
+        var resRows = servingRepo.findResultRankAndAdminFlag(reqId, placeId);
         require(!resRows.isEmpty(), "RESULT_ITEM_NOT_FOUND");
         int authoritativeRank = ((Number) resRows.getFirst().get("rank")).intValue();
         boolean isAdminTest = Boolean.TRUE.equals(resRows.getFirst().get("is_admin_test"));
@@ -401,15 +360,9 @@ public class RankingServingService {
         Long consentVersion = profile.map(p -> p.path("consent_version").asLong()).orElse(null);
         UUID persistedUserId = profile.isPresent() ? userId : null;
 
-        int inserted = db.update("""
-                INSERT INTO intelligence.recommendation_feedback(
-                  feedback_id, idempotency_key, request_id, place_id, rank, action_type,
-                  user_id, session_id, consent_version, is_admin_test, occurred_at
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
-                ON CONFLICT (idempotency_key) DO NOTHING
-                """,
+        int inserted = servingRepo.insertFeedback(
                 UUID.randomUUID(), idemKey, reqId, placeId, authoritativeRank, action,
-                persistedUserId, sessionId, consentVersion, isAdminTest, Timestamp.from(occurredAt)
+                persistedUserId, sessionId, consentVersion, isAdminTest, occurredAt
         );
         return Map.of("recorded", inserted > 0, "duplicate", inserted == 0, "authoritative_rank", authoritativeRank);
     }

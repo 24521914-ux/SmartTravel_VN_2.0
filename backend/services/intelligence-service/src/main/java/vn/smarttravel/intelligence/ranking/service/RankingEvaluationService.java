@@ -3,11 +3,9 @@ package vn.smarttravel.intelligence.ranking.service;
 import static vn.smarttravel.intelligence.shared.util.IntelligenceSupport.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.*;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -20,6 +18,7 @@ import vn.smarttravel.intelligence.ranking.eval.RankingEvaluator.*;
 import vn.smarttravel.intelligence.ranking.eval.WeightTuner;
 import vn.smarttravel.intelligence.ranking.eval.WeightTuner.*;
 import vn.smarttravel.intelligence.ranking.repository.RankingDataRepository;
+import vn.smarttravel.intelligence.ranking.repository.RankingEvaluationRepository;
 
 /**
  * Dataset management (create, CSV/JSONL import/export, relevance labeling 0..3, freeze, split validation),
@@ -28,7 +27,7 @@ import vn.smarttravel.intelligence.ranking.repository.RankingDataRepository;
 @Service
 public class RankingEvaluationService {
 
-    private final JdbcTemplate db;
+    private final RankingEvaluationRepository evalRepo;
     private final RankingDataRepository data;
     private final RankingServingService serving;
     private final ArtifactStore artifacts;
@@ -38,14 +37,14 @@ public class RankingEvaluationService {
     private final WeightTuner tuner = new WeightTuner();
 
     public RankingEvaluationService(
-            JdbcTemplate db,
+            RankingEvaluationRepository evalRepo,
             RankingDataRepository data,
             RankingServingService serving,
             ArtifactStore artifacts,
             ProjectionService projections,
             RankingBackgroundExecutor bgExecutor
     ) {
-        this.db = db;
+        this.evalRepo = evalRepo;
         this.data = data;
         this.serving = serving;
         this.artifacts = artifacts;
@@ -56,15 +55,7 @@ public class RankingEvaluationService {
     // ── Datasets & Labeling ──────────────────────────────────────────────────────
 
     public List<Map<String, Object>> listDatasets() {
-        return db.queryForList("""
-                SELECT eval_dataset_id, name, dataset_kind, provenance_tier, status,
-                       feature_snapshot_ref, cutoff_at, description, query_count, row_count,
-                       labeled_count, unlabeled_count, insufficient_info_count,
-                       split_counts, checksum, created_at, frozen_at
-                FROM intelligence.eval_datasets
-                ORDER BY created_at DESC
-                LIMIT 50
-                """).stream().map(r -> {
+        return evalRepo.listDatasets().stream().map(r -> {
             Map<String, Object> m = new LinkedHashMap<>(r);
             m.put("split_counts", read(r.get("split_counts")));
             return m;
@@ -86,36 +77,17 @@ public class RankingEvaluationService {
         Instant cutoff = body.hasNonNull("cutoff_at") ? time(body, "cutoff_at") : Instant.now();
 
         UUID id = UUID.randomUUID();
-        db.update("""
-                INSERT INTO intelligence.eval_datasets(
-                  eval_dataset_id, name, dataset_kind, provenance_tier, status,
-                  feature_snapshot_ref, cutoff_at, description, created_by
-                ) VALUES (?,?,?,?,'DRAFT',?,?,?,?)
-                """,
-                id, name, kind, tier, snapRef, Timestamp.from(cutoff), desc, actor
-        );
+        evalRepo.insertDataset(id, name, kind, tier, snapRef, cutoff, desc, actor);
         projections.audit(actor, "eval_dataset", id.toString(), "CREATE", Map.of("name", name, "tier", tier, "kind", kind));
         return getDatasetDetail(id);
     }
 
     public Map<String, Object> getDatasetDetail(UUID id) {
-        var rows = db.queryForList("SELECT * FROM intelligence.eval_datasets WHERE eval_dataset_id = ?", id);
+        var rows = evalRepo.findDatasetById(id);
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "EVAL_DATASET_NOT_FOUND");
         Map<String, Object> ds = new LinkedHashMap<>(rows.getFirst());
         ds.put("split_counts", read(ds.get("split_counts")));
-        var judgments = db.queryForList("""
-                SELECT j.judgment_id, j.query_id, j.scenario_group, j.request_payload, j.place_id,
-                       j.relevance_grade, j.judgment_status, j.annotator, j.provenance, j.split,
-                       j.feature_snapshot_ref, j.judged_at, j.notes,
-                       pf.features AS place_features
-                FROM intelligence.eval_judgments j
-                LEFT JOIN intelligence.place_features pf ON pf.place_id = j.place_id
-                WHERE j.eval_dataset_id = ?
-                ORDER BY j.split, j.query_id,
-                         CASE j.judgment_status WHEN 'UNLABELED' THEN 0 WHEN 'LABELED' THEN 1 ELSE 2 END,
-                         j.place_id
-                LIMIT 600
-                """, id).stream().map(r -> {
+        var judgments = evalRepo.listDatasetJudgmentsWithPlaceFeatures(id).stream().map(r -> {
             Map<String, Object> m = new LinkedHashMap<>(r);
             m.put("request_payload", read(r.get("request_payload")));
             Object pfRaw = m.remove("place_features");
@@ -179,10 +151,7 @@ public class RankingEvaluationService {
         if (body.has("request_payload") && body.path("request_payload").isObject()) {
             reqPayload = body.path("request_payload");
         } else {
-            var existingReq = db.queryForList(
-                    "SELECT request_payload, notes FROM intelligence.eval_judgments WHERE eval_dataset_id = ? AND query_id = ? LIMIT 1",
-                    datasetId, queryId
-            );
+            var existingReq = evalRepo.findExistingQueryPayload(datasetId, queryId);
             reqPayload = !existingReq.isEmpty()
                     ? read(existingReq.getFirst().get("request_payload"))
                     : read("{\"topN\":10,\"currency\":\"VND\"}");
@@ -195,26 +164,11 @@ public class RankingEvaluationService {
         // Group-split leakage prevention: scenario_group cannot span multiple splits
         enforceScenarioSplitIntegrity(datasetId, scenarioGroup, split);
 
-        db.update("""
-                INSERT INTO intelligence.eval_judgments(
-                  judgment_id, eval_dataset_id, query_id, scenario_group, request_payload,
-                  place_id, relevance_grade, judgment_status, annotator, provenance, split, notes
-                ) VALUES (?,?,?,?,?::jsonb,?,?,?,?,?,?,?)
-                ON CONFLICT (eval_dataset_id, query_id, place_id) DO UPDATE SET
-                  scenario_group = excluded.scenario_group,
-                  request_payload = excluded.request_payload,
-                  relevance_grade = excluded.relevance_grade,
-                  judgment_status = excluded.judgment_status,
-                  annotator = excluded.annotator,
-                  provenance = excluded.provenance,
-                  split = excluded.split,
-                  notes = excluded.notes,
-                  judged_at = now()
-                """,
-                UUID.randomUUID(), datasetId, queryId, scenarioGroup, json(reqPayload),
+        evalRepo.upsertJudgment(
+                datasetId, queryId, scenarioGroup, json(reqPayload),
                 placeId, grade, status, annotator, provenance, split, notes
         );
-        refreshDatasetCounts(datasetId);
+        evalRepo.refreshDatasetCounts(datasetId);
         return getDatasetDetail(datasetId);
     }
 
@@ -294,20 +248,8 @@ public class RankingEvaluationService {
 
                 JsonNode reqPayload = row.has("request_payload") && row.path("request_payload").isObject()
                         ? row.path("request_payload") : read("{\"topN\":10,\"currency\":\"VND\"}");
-                db.update("""
-                        INSERT INTO intelligence.eval_judgments(
-                          judgment_id, eval_dataset_id, query_id, scenario_group, request_payload,
-                          place_id, relevance_grade, annotator, provenance, split, notes
-                        ) VALUES (?,?,?,?,?::jsonb,?,?,?,?,?,?)
-                        ON CONFLICT (eval_dataset_id, query_id, place_id) DO UPDATE SET
-                          relevance_grade = excluded.relevance_grade,
-                          request_payload = excluded.request_payload,
-                          split = excluded.split,
-                          annotator = excluded.annotator,
-                          provenance = excluded.provenance,
-                          judged_at = now()
-                        """,
-                        UUID.randomUUID(), datasetId, qid, group, json(reqPayload),
+                evalRepo.upsertImportedJudgment(
+                        datasetId, qid, group, json(reqPayload),
                         placeId, grade,
                         row.path("annotator").asText("import"),
                         row.path("provenance").asText(format + "_IMPORT"),
@@ -319,19 +261,14 @@ public class RankingEvaluationService {
             }
         }
 
-        refreshDatasetCounts(datasetId);
+        evalRepo.refreshDatasetCounts(datasetId);
         projections.audit(actor, "eval_dataset", datasetId.toString(), "IMPORT", Map.of("format", format, "imported", imported, "errors", validationErrors.size()));
         return Map.of("imported", imported, "validation_errors", validationErrors, "dataset", getDatasetDetail(datasetId));
     }
 
     public Map<String, Object> exportDataset(UUID datasetId, String format) {
         String fmt = format == null ? "JSONL" : format.toUpperCase(Locale.ROOT);
-        var rows = db.queryForList("""
-                SELECT query_id, scenario_group, place_id, relevance_grade, judgment_status, split, annotator, provenance, request_payload, notes
-                FROM intelligence.eval_judgments
-                WHERE eval_dataset_id = ?
-                ORDER BY split, query_id, place_id
-                """, datasetId);
+        var rows = evalRepo.listJudgmentsForExport(datasetId);
         StringBuilder sb = new StringBuilder();
         if ("CSV".equals(fmt)) {
             sb.append("query_id,scenario_group,place_id,relevance_grade,judgment_status,split,annotator,provenance,request_json\n");
@@ -365,10 +302,7 @@ public class RankingEvaluationService {
     public Map<String, Object> freezeDataset(UUID actor, UUID datasetId) {
         projections.guardActor(actor);
         assertDatasetDraft(datasetId);
-        Integer labeledRows = Optional.ofNullable(db.queryForObject(
-                "SELECT COUNT(*) FROM intelligence.eval_judgments WHERE eval_dataset_id = ? AND judgment_status = 'LABELED'",
-                Integer.class, datasetId
-        )).orElse(0);
+        int labeledRows = evalRepo.countLabeledJudgments(datasetId);
         require(labeledRows >= 1, "NO_LABELED_ROWS_CANNOT_FREEZE");
 
         var export = exportDataset(datasetId, "JSONL");
@@ -378,11 +312,7 @@ public class RankingEvaluationService {
         String content = String.valueOf(export.get("content"));
         String key = artifacts.write(json(Map.of("eval_dataset_id", datasetId, "jsonl", content)));
         String checksum = hash(content);
-        db.update("""
-                UPDATE intelligence.eval_datasets
-                SET status = 'FROZEN', checksum = ?, artifact_object_key = ?, frozen_at = now(), mutation_version = mutation_version + 1
-                WHERE eval_dataset_id = ?
-                """, checksum, key, datasetId);
+        evalRepo.freezeDataset(datasetId, checksum, key);
         projections.audit(actor, "eval_dataset", datasetId.toString(), "FREEZE",
                 Map.of("checksum", checksum, "rows", rowCount, "labeled_rows", labeledRows));
         return getDatasetDetail(datasetId);
@@ -408,13 +338,9 @@ public class RankingEvaluationService {
                 : 8;
 
         UUID datasetId = UUID.randomUUID();
-        db.update("""
-                INSERT INTO intelligence.eval_datasets(
-                  eval_dataset_id, name, dataset_kind, provenance_tier, status,
-                  feature_snapshot_ref, cutoff_at, description, created_by
-                ) VALUES (?,?,'JUDGMENT','HUMAN_LABELED','DRAFT',?,?,?,?)
-                """,
-                datasetId, name, "real-db-pool-" + Instant.now().toEpochMilli(), Timestamp.from(Instant.now()),
+        evalRepo.insertDataset(
+                datasetId, name, "JUDGMENT", "HUMAN_LABELED",
+                "real-db-pool-" + Instant.now().toEpochMilli(), Instant.now(),
                 "Tập ứng viên tạo từ địa điểm thật trong DB, nhãn để trống (UNLABELED) cho người chấm 0–3 hoặc 'Không đủ thông tin'. Không dùng điểm Hybrid để chọn/chấm; tách nhóm VALIDATION/TEST chống rò rỉ.",
                 actor
         );
@@ -423,12 +349,10 @@ public class RankingEvaluationService {
         Map<UUID, List<PlaceSnapshot>> byCat = new LinkedHashMap<>();
         Map<UUID, List<PlaceSnapshot>> byDest = new LinkedHashMap<>();
         List<PlaceSnapshot> withPrice = new ArrayList<>();
-        List<PlaceSnapshot> withCoords = new ArrayList<>();
         for (PlaceSnapshot p : allPlaces) {
             for (UUID c : p.categoryIds()) byCat.computeIfAbsent(c, k -> new ArrayList<>()).add(p);
             for (UUID d : p.destinationIds()) byDest.computeIfAbsent(d, k -> new ArrayList<>()).add(p);
             if (p.effectivePrice() != null) withPrice.add(p);
-            if (p.latitude() != null && p.longitude() != null) withCoords.add(p);
         }
 
         List<UUID> topCats = byCat.entrySet().stream()
@@ -563,7 +487,6 @@ public class RankingEvaluationService {
             List<HardConstraintFilter.FilteredCandidate> poolList = new ArrayList<>(filtered.passed());
             LinkedHashSet<PlaceSnapshot> selected = new LinkedHashSet<>();
 
-            // Stratum 1: distance ascending (if origin present)
             if (parsedReq.hasOrigin()) {
                 poolList.stream()
                         .filter(fc -> fc.distanceKm() != null)
@@ -572,18 +495,15 @@ public class RankingEvaluationService {
                         .limit(Math.max(2, candidatesPerQuery / 2))
                         .forEach(fc -> selected.add(fc.place()));
             }
-            // Stratum 2: places with known price / rating (to give annotator rich signals alongside unrated items)
             poolList.stream()
                     .filter(fc -> fc.place().effectivePrice() != null || fc.place().approvedRatingCount() > 0)
                     .sorted(Comparator.comparing(fc -> fc.place().name(), String.CASE_INSENSITIVE_ORDER))
                     .limit(Math.max(2, candidatesPerQuery / 3))
                     .forEach(fc -> selected.add(fc.place()));
-            // Stratum 3: evenly strided deterministic sample across all hard-filtered candidates (avoids head-bias)
             int step = Math.max(1, poolList.size() / candidatesPerQuery);
             for (int idx = 0; idx < poolList.size() && selected.size() < candidatesPerQuery; idx += step) {
                 selected.add(poolList.get(idx).place());
             }
-            // Top up if needed
             for (var fc : poolList) {
                 if (selected.size() >= candidatesPerQuery) break;
                 selected.add(fc.place());
@@ -591,22 +511,17 @@ public class RankingEvaluationService {
 
             if (selected.size() < 2) continue;
             insertedQueries++;
+            String reqPayloadJson = json(spec.requestPayload());
             for (PlaceSnapshot cand : selected) {
-                db.update("""
-                        INSERT INTO intelligence.eval_judgments(
-                          judgment_id, eval_dataset_id, query_id, scenario_group, request_payload,
-                          place_id, relevance_grade, judgment_status, annotator, provenance, split, notes
-                        ) VALUES (?,?,?,?,?::jsonb,?,NULL,'UNLABELED','pending-human','HUMAN_REVIEW_PENDING',?,?)
-                        ON CONFLICT (eval_dataset_id, query_id, place_id) DO NOTHING
-                        """,
-                        UUID.randomUUID(), datasetId, spec.queryId(), spec.scenarioGroup(),
-                        json(spec.requestPayload()), cand.placeId(), spec.split(), spec.intentNote()
+                evalRepo.insertUnlabeledJudgmentIfAbsent(
+                        datasetId, spec.queryId(), spec.scenarioGroup(),
+                        reqPayloadJson, cand.placeId(), spec.split(), spec.intentNote()
                 );
             }
         }
 
         require(insertedQueries >= 2, "INSUFFICIENT_ELIGIBLE_QUERIES_IN_CATALOG");
-        refreshDatasetCounts(datasetId);
+        evalRepo.refreshDatasetCounts(datasetId);
         projections.audit(actor, "eval_dataset", datasetId.toString(), "CREATE_HUMAN_LABELING_POOL",
                 Map.of("queries", insertedQueries, "candidates_per_query", candidatesPerQuery));
         return getDatasetDetail(datasetId);
@@ -624,13 +539,9 @@ public class RankingEvaluationService {
 
         UUID datasetId = UUID.randomUUID();
         String name = "Functional Synthetic Fixture (" + Instant.now().toEpochMilli() + ")";
-        db.update("""
-                INSERT INTO intelligence.eval_datasets(
-                  eval_dataset_id, name, dataset_kind, provenance_tier, status,
-                  feature_snapshot_ref, cutoff_at, description, created_by
-                ) VALUES (?,?,'JUDGMENT','SYNTHETIC_FIXTURE','DRAFT',?,?,?,?)
-                """,
-                datasetId, name, "projection-snapshot", Timestamp.from(Instant.now()),
+        evalRepo.insertDataset(
+                datasetId, name, "JUDGMENT", "SYNTHETIC_FIXTURE",
+                "projection-snapshot", Instant.now(),
                 "SYNTHETIC FIXTURE FOR FUNCTIONAL TESTING ONLY. Do NOT treat metrics from this dataset as production quality evidence.",
                 actor
         );
@@ -659,44 +570,25 @@ public class RankingEvaluationService {
                 req.put("origin", Map.of("latitude", anchor.latitude(), "longitude", anchor.longitude()));
             }
             List<PlaceSnapshot> pool = entry.getValue().subList(0, Math.min(8, entry.getValue().size()));
+            String reqJson = json(req);
             for (int i = 0; i < pool.size(); i++) {
                 // Deterministic fixture grades (0..3) based purely on catalog index parity — never from model score
                 int grade = i == 0 ? 3 : (i <= 2 ? 2 : (i <= 4 ? 1 : 0));
-                db.update("""
-                        INSERT INTO intelligence.eval_judgments(
-                          judgment_id, eval_dataset_id, query_id, scenario_group, request_payload,
-                          place_id, relevance_grade, annotator, provenance, split, notes
-                        ) VALUES (?,?,?,?,?::jsonb,?,?,?,?,?,?)
-                        ON CONFLICT (eval_dataset_id, query_id, place_id) DO NOTHING
-                        """,
-                        UUID.randomUUID(), datasetId, queryId, "scenario-" + qIdx, json(req),
-                        pool.get(i).placeId(), grade, "synthetic-seeder", "SYNTHETIC_FIXTURE", split,
-                        "Functional fixture row (not human judgment)"
+                evalRepo.insertSyntheticJudgmentIfAbsent(
+                        datasetId, queryId, "scenario-" + qIdx, reqJson,
+                        pool.get(i).placeId(), grade, split
                 );
             }
             if (qIdx >= 6) break;
         }
-        refreshDatasetCounts(datasetId);
+        evalRepo.refreshDatasetCounts(datasetId);
         return freezeDataset(actor, datasetId);
     }
 
     // ── Offline Evaluation Runs ──────────────────────────────────────────────────
 
     public List<Map<String, Object>> listEvaluationRuns() {
-        return db.queryForList("""
-                SELECT r.eval_run_id, r.eval_dataset_id, d.name AS dataset_name,
-                       r.config_version_id, c.version_tag AS config_version_tag,
-                       r.cf_artifact_id, r.baseline_mode, r.split, r.status,
-                       r.provenance_tier, r.code_revision, r.dataset_checksum,
-                       r.metrics, r.slice_metrics, r.methodology,
-                       r.query_evaluated, r.query_excluded, r.judged_coverage,
-                       r.error_message, r.started_at, r.ended_at, r.created_at
-                FROM intelligence.evaluation_runs r
-                JOIN intelligence.eval_datasets d ON d.eval_dataset_id = r.eval_dataset_id
-                LEFT JOIN intelligence.ranking_config_versions c ON c.config_version_id = r.config_version_id
-                ORDER BY r.created_at DESC
-                LIMIT 50
-                """).stream().map(r -> {
+        return evalRepo.listEvaluationRuns().stream().map(r -> {
             Map<String, Object> m = new LinkedHashMap<>(r);
             m.put("metrics", read(r.get("metrics")));
             m.put("slice_metrics", read(r.get("slice_metrics")));
@@ -709,7 +601,7 @@ public class RankingEvaluationService {
     public Map<String, Object> startEvaluation(UUID actor, JsonNode body) {
         projections.guardActor(actor);
         UUID datasetId = uuid(body, "eval_dataset_id");
-        var dsRows = db.queryForList("SELECT * FROM intelligence.eval_datasets WHERE eval_dataset_id = ?", datasetId);
+        var dsRows = evalRepo.findDatasetById(datasetId);
         if (dsRows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "EVAL_DATASET_NOT_FOUND");
         var ds = dsRows.getFirst();
         require(!"REVOKED".equals(ds.get("status")), "DATASET_REVOKED");
@@ -726,12 +618,7 @@ public class RankingEvaluationService {
         String codeRevision = body.path("code_revision").asText("hybrid-ranking-v1");
 
         UUID runId = UUID.randomUUID();
-        db.update("""
-                INSERT INTO intelligence.evaluation_runs(
-                  eval_run_id, eval_dataset_id, config_version_id, cf_artifact_id, cohort_snapshot_id,
-                  baseline_mode, split, status, provenance_tier, code_revision, dataset_checksum, created_by
-                ) VALUES (?,?,?,?,?,?,?,'QUEUED',?,?,?,?)
-                """,
+        evalRepo.insertEvaluationRun(
                 runId, datasetId, configId, cfId, active.cohortSnapshotId(),
                 mode.name(), split, ds.get("provenance_tier"), codeRevision, ds.get("checksum"), actor
         );
@@ -743,7 +630,7 @@ public class RankingEvaluationService {
 
     private void executeEvaluationRun(UUID runId, UUID datasetId, UUID configId, UUID cfId, BaselineMode mode, String split) {
         try {
-            if (db.update("UPDATE intelligence.evaluation_runs SET status='RUNNING', started_at=now() WHERE eval_run_id=? AND status='QUEUED'", runId) == 0) return;
+            if (evalRepo.markEvaluationRunRunning(runId) == 0) return;
 
             RankingConfig cfg = data.loadConfig(configId).orElse(RankingConfig.baseline());
             CohortStats cohorts = data.loadLatestCohortStats().orElse(CohortStats.empty());
@@ -753,23 +640,18 @@ public class RankingEvaluationService {
             List<JudgmentQuery> queries = loadJudgmentQueries(datasetId, split, cfg);
 
             if (bgExecutor.isCancelled(runId)) {
-                db.update("UPDATE intelligence.evaluation_runs SET status='CANCELLED', ended_at=now() WHERE eval_run_id=?", runId);
+                evalRepo.markEvaluationRunCancelled(runId);
                 return;
             }
 
             EvaluationReport report = evaluator.evaluate(queries, catalog, cfg, cohorts, cf, mode, inactiveCats);
-            db.update("""
-                    UPDATE intelligence.evaluation_runs
-                    SET status='SUCCEEDED', metrics=?::jsonb, slice_metrics=?::jsonb, methodology=?::jsonb,
-                        query_evaluated=?, query_excluded=?, judged_coverage=?, ended_at=now()
-                    WHERE eval_run_id=? AND status='RUNNING'
-                    """,
+            evalRepo.markEvaluationRunSucceeded(
+                    runId,
                     json(report.metrics()), json(report.slices()), json(report.methodology()),
-                    report.queriesEvaluated(), report.queriesExcluded(), report.judgedCoverage(), runId
+                    report.queriesEvaluated(), report.queriesExcluded(), report.judgedCoverage()
             );
         } catch (Exception ex) {
-            db.update("UPDATE intelligence.evaluation_runs SET status='FAILED', error_message=?, ended_at=now() WHERE eval_run_id=?",
-                    ex.getMessage(), runId);
+            evalRepo.markEvaluationRunFailed(runId, ex.getMessage());
         }
     }
 
@@ -777,12 +659,12 @@ public class RankingEvaluationService {
     public Map<String, Object> cancelEvaluation(UUID actor, UUID runId) {
         projections.guardActor(actor);
         bgExecutor.requestCancel(runId);
-        db.update("UPDATE intelligence.evaluation_runs SET status='CANCELLED', ended_at=now() WHERE eval_run_id=? AND status IN ('QUEUED','RUNNING')", runId);
+        evalRepo.markEvaluationRunCancelledIfActive(runId);
         return getEvaluationRun(runId);
     }
 
     public Map<String, Object> getEvaluationRun(UUID runId) {
-        var rows = db.queryForList("SELECT * FROM intelligence.evaluation_runs WHERE eval_run_id = ?", runId);
+        var rows = evalRepo.findEvaluationRunById(runId);
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "EVAL_RUN_NOT_FOUND");
         Map<String, Object> m = new LinkedHashMap<>(rows.getFirst());
         m.put("metrics", read(m.get("metrics")));
@@ -794,15 +676,7 @@ public class RankingEvaluationService {
     // ── Weight Tuning Jobs (Validation Split Only, Never Auto-Activate) ──────────
 
     public List<Map<String, Object>> listTuningJobs() {
-        return db.queryForList("""
-                SELECT t.*, d.name AS dataset_name, d.provenance_tier,
-                       c.version_tag AS base_config_tag
-                FROM intelligence.tuning_jobs t
-                JOIN intelligence.eval_datasets d ON d.eval_dataset_id = t.eval_dataset_id
-                JOIN intelligence.ranking_config_versions c ON c.config_version_id = t.base_config_version_id
-                ORDER BY t.created_at DESC
-                LIMIT 30
-                """).stream().map(r -> {
+        return evalRepo.listTuningJobs().stream().map(r -> {
             Map<String, Object> m = new LinkedHashMap<>(r);
             m.put("search_space", read(r.get("search_space")));
             m.put("guardrails", read(r.get("guardrails")));
@@ -811,14 +685,7 @@ public class RankingEvaluationService {
     }
 
     public List<Map<String, Object>> listTuningTrials(UUID jobId) {
-        return db.queryForList("""
-                SELECT trial_id, trial_no, candidate_weights, candidate_sub_params,
-                       ndcg_at_10, precision_at_10, hard_violations, catalog_coverage,
-                       p95_latency_ms, guardrails_passed, metrics, created_at
-                FROM intelligence.tuning_trials
-                WHERE tuning_job_id = ?
-                ORDER BY trial_no ASC
-                """, jobId).stream().map(r -> {
+        return evalRepo.listTuningTrials(jobId).stream().map(r -> {
             Map<String, Object> m = new LinkedHashMap<>(r);
             m.put("candidate_weights", read(r.get("candidate_weights")));
             m.put("candidate_sub_params", read(r.get("candidate_sub_params")));
@@ -831,7 +698,7 @@ public class RankingEvaluationService {
     public Map<String, Object> startTuning(UUID actor, JsonNode body) {
         projections.guardActor(actor);
         UUID datasetId = uuid(body, "eval_dataset_id");
-        var dsRows = db.queryForList("SELECT * FROM intelligence.eval_datasets WHERE eval_dataset_id = ?", datasetId);
+        var dsRows = evalRepo.findDatasetById(datasetId);
         if (dsRows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "EVAL_DATASET_NOT_FOUND");
         var ds = dsRows.getFirst();
         String tier = String.valueOf(ds.get("provenance_tier"));
@@ -839,10 +706,7 @@ public class RankingEvaluationService {
         if ("SYNTHETIC_FIXTURE".equals(tier)) {
             require(allowDemo, "SYNTHETIC_DATASET_BLOCKED_FOR_QUALITY_TUNING");
         }
-        Integer valLabeledQueries = Optional.ofNullable(db.queryForObject(
-                "SELECT COUNT(DISTINCT query_id) FROM intelligence.eval_judgments WHERE eval_dataset_id = ? AND split = 'VALIDATION' AND judgment_status = 'LABELED'",
-                Integer.class, datasetId
-        )).orElse(0);
+        int valLabeledQueries = evalRepo.countValidationLabeledQueries(datasetId);
         require(valLabeledQueries >= 1, "VALIDATION_SPLIT_REQUIRED_FOR_TUNING");
 
         var active = data.loadActiveDeployment();
@@ -861,13 +725,7 @@ public class RankingEvaluationService {
         );
 
         UUID jobId = UUID.randomUUID();
-        db.update("""
-                INSERT INTO intelligence.tuning_jobs(
-                  tuning_job_id, eval_dataset_id, base_config_version_id, split, strategy,
-                  seed, max_trials, status, search_space, guardrails, is_demo_run,
-                  dataset_checksum, code_revision, created_by
-                ) VALUES (?,?,?,'VALIDATION',?,?,?,'QUEUED',?::jsonb,?::jsonb,?,?,?,?)
-                """,
+        evalRepo.insertTuningJob(
                 jobId, datasetId, baseConfigId, strategy.name(), seed, maxTrials,
                 json(Map.of("outer_weights", List.of("basic", "content", "collaborative", "context"), "sub_params", List.of("rating_m", "distance_scale_km"))),
                 json(Map.of("max_hard_violations", 0, "min_catalog_coverage", guardrails.minCatalogCoverage(), "max_p95_latency_ms", guardrails.maxP95LatencyMs())),
@@ -884,7 +742,7 @@ public class RankingEvaluationService {
             Strategy strategy, long seed, int maxTrials, Guardrails guardrails, boolean isDemo
     ) {
         try {
-            if (db.update("UPDATE intelligence.tuning_jobs SET status='RUNNING', started_at=now() WHERE tuning_job_id=? AND status='QUEUED'", jobId) == 0) return;
+            if (evalRepo.markTuningJobRunning(jobId) == 0) return;
 
             RankingConfig baseCfg = data.loadConfig(baseConfigId).orElse(RankingConfig.baseline());
             CohortStats cohorts = data.loadLatestCohortStats().orElse(CohortStats.empty());
@@ -902,25 +760,19 @@ public class RankingEvaluationService {
                     tr -> {
                         UUID tid = UUID.randomUUID();
                         trialIds.put(tr.trialNo(), tid);
-                        db.update("""
-                                INSERT INTO intelligence.tuning_trials(
-                                  trial_id, tuning_job_id, trial_no, candidate_weights, candidate_sub_params,
-                                  ndcg_at_10, precision_at_10, hard_violations, catalog_coverage,
-                                  p95_latency_ms, guardrails_passed, metrics
-                                ) VALUES (?,?,?,?::jsonb,?::jsonb,?,?,?,?,?,?,?::jsonb)
-                                """,
+                        evalRepo.insertTuningTrial(
                                 tid, jobId, tr.trialNo(),
                                 json(Map.of("basic", tr.wBasic(), "content", tr.wContent(), "collaborative", tr.wCollaborative(), "context", tr.wContext())),
                                 json(Map.of("rating_m", tr.ratingM(), "distance_scale_km", tr.distanceScaleKm())),
                                 tr.ndcgAt10(), tr.precisionAt10(), tr.hardViolations(), tr.catalogCoverage(),
                                 tr.p95LatencyMs(), tr.guardrailsPassed(), json(tr.metrics())
                         );
-                        db.update("UPDATE intelligence.tuning_jobs SET completed_trials = ? WHERE tuning_job_id = ?", tr.trialNo(), jobId);
+                        evalRepo.updateTuningJobProgress(jobId, tr.trialNo());
                     }
             );
 
             if (result.cancelled()) {
-                db.update("UPDATE intelligence.tuning_jobs SET status='CANCELLED', ended_at=now() WHERE tuning_job_id=?", jobId);
+                evalRepo.markTuningJobCancelled(jobId);
                 return;
             }
 
@@ -956,12 +808,7 @@ public class RankingEvaluationService {
                 sMap.put("unknown_price_policy", baseCfg.unknownPricePolicy().name());
 
                 String csum = hash(json(Map.of("weights", wMap, "sub_params", sMap, "scorer_versions", baseCfg.scorerVersions())));
-                db.update("""
-                        INSERT INTO intelligence.ranking_config_versions(
-                          config_version_id, version_tag, name, description, weights, sub_params,
-                          scorer_versions, lifecycle_status, quality_status, config_checksum, created_by
-                        ) VALUES (?,?,?,?,?::jsonb,?::jsonb,?::jsonb,'DRAFT','QUALITY_PENDING',?,?)
-                        """,
+                evalRepo.insertTunedDraftConfig(
                         draftConfigId, tag,
                         (isDemo ? "[DEMO FIXTURE] " : "") + "Tuned Candidate #" + best.trialNo(),
                         "Generated by tuning job " + jobId + " on VALIDATION split (NDCG@10=" + best.ndcgAt10() + "). Requires holdout review & admin activation.",
@@ -969,14 +816,9 @@ public class RankingEvaluationService {
                 );
             }
 
-            db.update("""
-                    UPDATE intelligence.tuning_jobs
-                    SET status='SUCCEEDED', best_trial_id=?, best_config_version_id=?, ended_at=now()
-                    WHERE tuning_job_id=?
-                    """, bestTrialId, draftConfigId, jobId);
+            evalRepo.markTuningJobSucceeded(jobId, bestTrialId, draftConfigId);
         } catch (Exception ex) {
-            db.update("UPDATE intelligence.tuning_jobs SET status='FAILED', error_message=?, ended_at=now() WHERE tuning_job_id=?",
-                    ex.getMessage(), jobId);
+            evalRepo.markTuningJobFailed(jobId, ex.getMessage());
         }
     }
 
@@ -984,12 +826,12 @@ public class RankingEvaluationService {
     public Map<String, Object> cancelTuning(UUID actor, UUID jobId) {
         projections.guardActor(actor);
         bgExecutor.requestCancel(jobId);
-        db.update("UPDATE intelligence.tuning_jobs SET status='CANCELLED', ended_at=now() WHERE tuning_job_id=? AND status IN ('QUEUED','RUNNING')", jobId);
+        evalRepo.markTuningJobCancelledIfActive(jobId);
         return getTuningJob(jobId);
     }
 
     public Map<String, Object> getTuningJob(UUID jobId) {
-        var rows = db.queryForList("SELECT * FROM intelligence.tuning_jobs WHERE tuning_job_id = ?", jobId);
+        var rows = evalRepo.findTuningJobById(jobId);
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "TUNING_JOB_NOT_FOUND");
         Map<String, Object> m = new LinkedHashMap<>(rows.getFirst());
         m.put("search_space", read(m.get("search_space")));
@@ -1001,10 +843,7 @@ public class RankingEvaluationService {
 
     private List<JudgmentQuery> loadJudgmentQueries(UUID datasetId, String split, RankingConfig cfg) {
         // Strictly load ONLY LABELED rows; UNLABELED and INSUFFICIENT_INFO are NEVER coerced to grade 0.
-        String sql = "ALL".equals(split)
-                ? "SELECT query_id, scenario_group, split, request_payload, place_id, relevance_grade FROM intelligence.eval_judgments WHERE eval_dataset_id = ? AND judgment_status = 'LABELED' AND relevance_grade IS NOT NULL ORDER BY query_id, place_id"
-                : "SELECT query_id, scenario_group, split, request_payload, place_id, relevance_grade FROM intelligence.eval_judgments WHERE eval_dataset_id = ? AND split = ? AND judgment_status = 'LABELED' AND relevance_grade IS NOT NULL ORDER BY query_id, place_id";
-        var rows = "ALL".equals(split) ? db.queryForList(sql, datasetId) : db.queryForList(sql, datasetId, split);
+        var rows = evalRepo.listLabeledJudgments(datasetId, split);
 
         Map<String, JsonNode> reqByQuery = new LinkedHashMap<>();
         Map<String, String> groupByQuery = new LinkedHashMap<>();
@@ -1029,49 +868,16 @@ public class RankingEvaluationService {
     }
 
     private void assertDatasetDraft(UUID datasetId) {
-        var rows = db.queryForList("SELECT status FROM intelligence.eval_datasets WHERE eval_dataset_id = ?", datasetId);
+        var rows = evalRepo.findDatasetStatus(datasetId);
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "EVAL_DATASET_NOT_FOUND");
         require("DRAFT".equals(rows.getFirst().get("status")), "DATASET_ALREADY_FROZEN_OR_REVOKED");
     }
 
     private void enforceScenarioSplitIntegrity(UUID datasetId, String scenarioGroup, String split) {
-        var existing = db.queryForList(
-                "SELECT DISTINCT split FROM intelligence.eval_judgments WHERE eval_dataset_id = ? AND scenario_group = ?",
-                datasetId, scenarioGroup
-        );
+        var existing = evalRepo.listDistinctSplitsForScenarioGroup(datasetId, scenarioGroup);
         for (var row : existing) {
             require(split.equals(row.get("split")), "SCENARIO_GROUP_SPLIT_LEAKAGE:" + scenarioGroup);
         }
-    }
-
-    private void refreshDatasetCounts(UUID datasetId) {
-        var counts = db.queryForMap("""
-                SELECT
-                  COUNT(*) AS total_rows,
-                  COUNT(DISTINCT query_id) AS total_queries,
-                  COALESCE(SUM(CASE WHEN judgment_status = 'LABELED' THEN 1 ELSE 0 END), 0) AS labeled_cnt,
-                  COALESCE(SUM(CASE WHEN judgment_status = 'UNLABELED' THEN 1 ELSE 0 END), 0) AS unlabeled_cnt,
-                  COALESCE(SUM(CASE WHEN judgment_status = 'INSUFFICIENT_INFO' THEN 1 ELSE 0 END), 0) AS insuff_cnt
-                FROM intelligence.eval_judgments
-                WHERE eval_dataset_id = ?
-                """, datasetId);
-        var splits = db.queryForList("SELECT split, COUNT(DISTINCT query_id) AS qcnt FROM intelligence.eval_judgments WHERE eval_dataset_id = ? GROUP BY split", datasetId);
-        Map<String, Integer> splitMap = new LinkedHashMap<>();
-        for (var s : splits) splitMap.put(String.valueOf(s.get("split")), ((Number) s.get("qcnt")).intValue());
-        db.update("""
-                UPDATE intelligence.eval_datasets
-                SET query_count = ?, row_count = ?, labeled_count = ?, unlabeled_count = ?,
-                    insufficient_info_count = ?, split_counts = ?::jsonb
-                WHERE eval_dataset_id = ?
-                """,
-                ((Number) counts.get("total_queries")).intValue(),
-                ((Number) counts.get("total_rows")).intValue(),
-                ((Number) counts.get("labeled_cnt")).intValue(),
-                ((Number) counts.get("unlabeled_cnt")).intValue(),
-                ((Number) counts.get("insuff_cnt")).intValue(),
-                json(splitMap),
-                datasetId
-        );
     }
 
     private static List<String> splitCsvLine(String line) {

@@ -8,7 +8,6 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -19,6 +18,7 @@ import vn.smarttravel.intelligence.ranking.domain.*;
 import vn.smarttravel.intelligence.ranking.domain.ItemBasedCfBuilder.InteractionRecord;
 import vn.smarttravel.intelligence.ranking.domain.RankingModels.*;
 import vn.smarttravel.intelligence.ranking.repository.RankingDataRepository;
+import vn.smarttravel.intelligence.ranking.repository.RankingGovernanceRepository;
 
 /**
  * Governance service for ranking config versions, cohort stat snapshots, Item-based CF builds,
@@ -27,7 +27,7 @@ import vn.smarttravel.intelligence.ranking.repository.RankingDataRepository;
 @Service
 public class RankingGovernanceService {
 
-    private final JdbcTemplate db;
+    private final RankingGovernanceRepository govRepo;
     private final RankingDataRepository data;
     private final ArtifactStore artifacts;
     private final ProjectionService projections;
@@ -37,14 +37,14 @@ public class RankingGovernanceService {
     private final ItemBasedCfBuilder cfBuilder = new ItemBasedCfBuilder();
 
     public RankingGovernanceService(
-            JdbcTemplate db,
+            RankingGovernanceRepository govRepo,
             RankingDataRepository data,
             ArtifactStore artifacts,
             ProjectionService projections,
             SnapshotRebuild snapshotRebuild,
             RankingBackgroundExecutor bgExecutor
     ) {
-        this.db = db;
+        this.govRepo = govRepo;
         this.data = data;
         this.artifacts = artifacts;
         this.projections = projections;
@@ -56,13 +56,7 @@ public class RankingGovernanceService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> listConfigs() {
-        return db.queryForList("""
-                SELECT config_version_id, version_tag, name, description, weights, sub_params,
-                       scorer_versions, lifecycle_status, quality_status, config_checksum,
-                       mutation_version, created_at, updated_at
-                FROM intelligence.ranking_config_versions
-                ORDER BY created_at DESC
-                """).stream().map(this::formatConfigRow).toList();
+        return govRepo.listConfigs().stream().map(this::formatConfigRow).toList();
     }
 
     @Transactional
@@ -91,14 +85,7 @@ public class RankingGovernanceService {
         validateConfigInvariants(id, versionTag, weights, subParams, scorerVersions);
 
         String checksum = hash(json(Map.of("weights", weights, "sub_params", subParams, "scorer_versions", scorerVersions)));
-        db.update("""
-                INSERT INTO intelligence.ranking_config_versions(
-                  config_version_id, version_tag, name, description, weights, sub_params,
-                  scorer_versions, lifecycle_status, quality_status, config_checksum, created_by
-                ) VALUES (?,?,?,?,?::jsonb,?::jsonb,?::jsonb,'DRAFT','UNVALIDATED',?,?)
-                """,
-                id, versionTag, name, description, json(weights), json(subParams), json(scorerVersions), checksum, actor
-        );
+        govRepo.insertConfig(id, versionTag, name, description, json(weights), json(subParams), json(scorerVersions), checksum, actor);
         projections.audit(actor, "ranking_config", id.toString(), "CREATE", Map.of("version_tag", versionTag, "checksum", checksum));
         return getConfig(id);
     }
@@ -106,7 +93,7 @@ public class RankingGovernanceService {
     @Transactional
     public Map<String, Object> updateDraftConfig(UUID actor, UUID id, JsonNode body) {
         projections.guardActor(actor);
-        var rows = db.queryForList("SELECT * FROM intelligence.ranking_config_versions WHERE config_version_id = ? FOR UPDATE", id);
+        var rows = govRepo.findConfigForUpdate(id);
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "CONFIG_NOT_FOUND");
         var row = rows.getFirst();
         require("DRAFT".equals(row.get("lifecycle_status")), "ONLY_DRAFT_EDITABLE");
@@ -127,15 +114,7 @@ public class RankingGovernanceService {
         validateConfigInvariants(id, String.valueOf(row.get("version_tag")), weights, subParams, scorerVersions);
 
         String checksum = hash(json(Map.of("weights", weights, "sub_params", subParams, "scorer_versions", scorerVersions)));
-        db.update("""
-                UPDATE intelligence.ranking_config_versions
-                SET name = ?, description = ?, weights = ?::jsonb, sub_params = ?::jsonb,
-                    config_checksum = ?, quality_status = 'UNVALIDATED',
-                    mutation_version = mutation_version + 1, updated_at = now()
-                WHERE config_version_id = ?
-                """,
-                name, desc, json(weights), json(subParams), checksum, id
-        );
+        govRepo.updateDraftConfig(id, name, desc, json(weights), json(subParams), checksum);
         projections.audit(actor, "ranking_config", id.toString(), "UPDATE", Map.of("checksum", checksum));
         return getConfig(id);
     }
@@ -143,7 +122,7 @@ public class RankingGovernanceService {
     @Transactional
     public Map<String, Object> validateConfig(UUID actor, UUID id, JsonNode body) {
         projections.guardActor(actor);
-        var rows = db.queryForList("SELECT * FROM intelligence.ranking_config_versions WHERE config_version_id = ? FOR UPDATE", id);
+        var rows = govRepo.findConfigForUpdate(id);
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "CONFIG_NOT_FOUND");
         var row = rows.getFirst();
         RankingConfig cfg = data.mapConfig(row); // Validates all bounds/weights
@@ -151,7 +130,7 @@ public class RankingGovernanceService {
         String qualityStatus = String.valueOf(row.get("quality_status"));
         if (body != null && body.hasNonNull("evaluation_run_id")) {
             UUID evalRunId = uuid(body, "evaluation_run_id");
-            var evalRows = db.queryForList("SELECT status, split, provenance_tier, query_evaluated, judged_coverage, metrics FROM intelligence.evaluation_runs WHERE eval_run_id = ?", evalRunId);
+            var evalRows = govRepo.findEvaluationRunForValidation(evalRunId);
             require(!evalRows.isEmpty() && "SUCCEEDED".equals(evalRows.getFirst().get("status")), "EVALUATION_NOT_SUCCEEDED");
             var evalRow = evalRows.getFirst();
             String tier = String.valueOf(evalRow.get("provenance_tier"));
@@ -177,20 +156,14 @@ public class RankingGovernanceService {
         }
 
         String nextLifecycle = "ACTIVE".equals(row.get("lifecycle_status")) ? "ACTIVE" : "VALIDATED";
-        db.update("""
-                UPDATE intelligence.ranking_config_versions
-                SET lifecycle_status = ?, quality_status = ?, mutation_version = mutation_version + 1, updated_at = now()
-                WHERE config_version_id = ?
-                """,
-                nextLifecycle, qualityStatus, id
-        );
+        govRepo.updateConfigValidation(id, nextLifecycle, qualityStatus);
         data.invalidateCaches();
         projections.audit(actor, "ranking_config", id.toString(), "VALIDATE", Map.of("quality_status", qualityStatus, "version_tag", cfg.versionTag()));
         return getConfig(id);
     }
 
     public Map<String, Object> getConfig(UUID id) {
-        var rows = db.queryForList("SELECT * FROM intelligence.ranking_config_versions WHERE config_version_id = ?", id);
+        var rows = govRepo.findConfigById(id);
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "CONFIG_NOT_FOUND");
         return formatConfigRow(rows.getFirst());
     }
@@ -242,18 +215,13 @@ public class RankingGovernanceService {
         CohortStatEntry global = stats.entries().get("global");
         UUID id = UUID.randomUUID();
 
-        db.update("""
-                INSERT INTO intelligence.cohort_stat_snapshots(
-                  snapshot_id, version_tag, global_rating_prior, global_rating_sample,
-                  global_pop_p95, global_pop_sample, cohort_stats, window_days, min_sample, checksum, computed_at, created_by
-                ) VALUES (?,?,?,?,?,?,?::jsonb,?,?,?,?,?)
-                """,
+        govRepo.insertCohortSnapshot(
                 id, versionTag,
                 global != null ? global.ratingPriorMu() : null,
                 global != null ? global.ratingSampleSize() : 0,
                 global != null ? global.popularityP95Ref() : null,
                 global != null ? global.popularitySampleSize() : 0,
-                statsJson, windowDays, minSample, checksum, Timestamp.from(now), actor
+                statsJson, windowDays, minSample, checksum, now, actor
         );
         projections.audit(actor, "cohort_snapshot", id.toString(), "RECOMPUTE", Map.of("cohorts", stats.entries().size(), "checksum", checksum));
         data.invalidateCaches();
@@ -271,13 +239,7 @@ public class RankingGovernanceService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> listCohortSnapshots() {
-        return db.queryForList("""
-                SELECT snapshot_id, version_tag, global_rating_prior, global_rating_sample,
-                       global_pop_p95, global_pop_sample, window_days, min_sample, checksum, computed_at
-                FROM intelligence.cohort_stat_snapshots
-                ORDER BY computed_at DESC
-                LIMIT 20
-                """);
+        return govRepo.listCohortSnapshots();
     }
 
     // ── Item-based CF Builder & Artifacts ────────────────────────────────────────
@@ -295,13 +257,7 @@ public class RankingGovernanceService {
 
         UUID jobId = UUID.randomUUID();
         Map<String, Object> params = Map.of("lambda", lambda, "top_k", topK, "is_demo_fixture", demoFixture);
-        db.update("""
-                INSERT INTO intelligence.cf_build_jobs(
-                  job_id, status, params, code_revision, cutoff_at, created_by
-                ) VALUES (?,'QUEUED',?::jsonb,?,?,?)
-                """,
-                jobId, json(params), codeRevision, Timestamp.from(cutoff), actor
-        );
+        govRepo.insertCfBuildJob(jobId, json(params), codeRevision, cutoff, actor);
         projections.audit(actor, "cf_build_job", jobId.toString(), "ENQUEUE", params);
 
         AtomicBoolean cancelled = bgExecutor.registerAndSubmit(jobId, () -> executeCfBuildJob(jobId, actor, cutoff, lambda, topK, demoFixture));
@@ -311,7 +267,7 @@ public class RankingGovernanceService {
 
     private void executeCfBuildJob(UUID jobId, UUID actor, Instant cutoff, double lambda, int topK, boolean demoFixture) {
         try {
-            int claimed = db.update("UPDATE intelligence.cf_build_jobs SET status='RUNNING', started_at=now(), progress_pct=10 WHERE job_id=? AND status='QUEUED'", jobId);
+            int claimed = govRepo.claimCfBuildJob(jobId);
             if (claimed == 0) return;
 
             if (bgExecutor.isCancelled(jobId)) {
@@ -320,27 +276,9 @@ public class RankingGovernanceService {
             }
 
             // Read ONLY consented positive/removal interactions up to cutoff
-            List<InteractionRecord> records = new ArrayList<>();
-            db.query("""
-                    SELECT i.user_id, i.place_id, i.event_type, i.occurred_at
-                    FROM intelligence.interactions i
-                    JOIN intelligence.user_feature_profiles u ON u.user_id = i.user_id
-                    WHERE u.personalization_enabled = true
-                      AND i.user_id IS NOT NULL
-                      AND i.place_id IS NOT NULL
-                      AND i.event_type IN ('FAVORITE_ADDED','FAVORITE_REMOVED','TRIP_ITEM_ADDED')
-                      AND i.occurred_at <= ?
-                    ORDER BY i.occurred_at ASC, i.interaction_id ASC
-                    """, rs -> {
-                records.add(new InteractionRecord(
-                        rs.getObject(1, UUID.class),
-                        rs.getObject(2, UUID.class),
-                        rs.getString(3),
-                        rs.getTimestamp(4).toInstant()
-                ));
-            }, Timestamp.from(cutoff));
+            List<InteractionRecord> records = govRepo.loadConsentedInteractionsUntil(cutoff);
 
-            db.update("UPDATE intelligence.cf_build_jobs SET progress_pct=50 WHERE job_id=? AND status='RUNNING'", jobId);
+            govRepo.updateCfJobProgress(jobId, 50);
             if (bgExecutor.isCancelled(jobId)) {
                 markCfCancelled(jobId);
                 return;
@@ -384,41 +322,20 @@ public class RankingGovernanceService {
                     "completed_at", Instant.now().toString()
             )));
 
-            db.update("""
-                    INSERT INTO intelligence.cf_artifacts(
-                      artifact_id, job_id, version_tag, artifact_object_key, checksum, dataset_checksum,
-                      params, cutoff_at, user_count, item_count, edge_count,
-                      lifecycle_status, quality_status, is_demo_fixture, created_by
-                    ) VALUES (?,?,?,?,?,?,?::jsonb,?,?,?,?,'DRAFT','UNVALIDATED',?,?)
-                    """,
+            govRepo.insertCfArtifact(
                     artifactId, jobId, versionTag, artifactKey, artifactChecksum, datasetChecksum,
-                    json(Map.of("lambda", lambda, "top_k", topK)), Timestamp.from(cutoff),
+                    json(Map.of("lambda", lambda, "top_k", topK)), cutoff,
                     buildRes.userCount(), buildRes.itemCount(), buildRes.edgeCount(),
                     demoFixture, actor
             );
-
-            db.update("""
-                    UPDATE intelligence.cf_build_jobs
-                    SET status='SUCCEEDED', progress_pct=100, dataset_checksum=?, artifact_id=?,
-                        logs_object_key=?, ended_at=now(), mutation_version=mutation_version+1
-                    WHERE job_id=? AND status='RUNNING'
-                    """,
-                    datasetChecksum, artifactId, logsKey, jobId
-            );
+            govRepo.markCfJobSucceeded(jobId, datasetChecksum, artifactId, logsKey);
         } catch (Exception ex) {
-            db.update("""
-                    UPDATE intelligence.cf_build_jobs
-                    SET status='FAILED', error_code='CF_BUILD_FAILED', error_message=?,
-                        ended_at=now(), mutation_version=mutation_version+1
-                    WHERE job_id=? AND status IN ('QUEUED','RUNNING')
-                    """,
-                    ex.getMessage(), jobId
-            );
+            govRepo.markCfJobFailed(jobId, ex.getMessage());
         }
     }
 
     private void markCfCancelled(UUID jobId) {
-        db.update("UPDATE intelligence.cf_build_jobs SET status='CANCELLED', ended_at=now(), mutation_version=mutation_version+1 WHERE job_id=? AND status IN ('QUEUED','RUNNING')", jobId);
+        govRepo.markCfJobCancelled(jobId);
     }
 
     @Transactional
@@ -431,23 +348,23 @@ public class RankingGovernanceService {
     }
 
     public Map<String, Object> getCfJob(UUID jobId) {
-        var rows = db.queryForList("SELECT * FROM intelligence.cf_build_jobs WHERE job_id = ?", jobId);
+        var rows = govRepo.findCfJobById(jobId);
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "CF_JOB_NOT_FOUND");
         return rows.getFirst();
     }
 
     public List<Map<String, Object>> listCfJobs() {
-        return db.queryForList("SELECT * FROM intelligence.cf_build_jobs ORDER BY created_at DESC LIMIT 30");
+        return govRepo.listCfJobs();
     }
 
     public List<Map<String, Object>> listCfArtifacts() {
-        return db.queryForList("SELECT * FROM intelligence.cf_artifacts ORDER BY created_at DESC LIMIT 30");
+        return govRepo.listCfArtifacts();
     }
 
     @Transactional
     public Map<String, Object> validateCfArtifact(UUID actor, UUID artifactId, JsonNode body) {
         projections.guardActor(actor);
-        var rows = db.queryForList("SELECT * FROM intelligence.cf_artifacts WHERE artifact_id = ? FOR UPDATE", artifactId);
+        var rows = govRepo.findCfArtifactForUpdate(artifactId);
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "CF_ARTIFACT_NOT_FOUND");
         var row = rows.getFirst();
         require(!"REVOKED".equals(row.get("lifecycle_status")), "ARTIFACT_REVOKED");
@@ -461,25 +378,15 @@ public class RankingGovernanceService {
         String quality = Boolean.TRUE.equals(row.get("is_demo_fixture")) ? "QUALITY_PENDING"
                 : (body != null && body.hasNonNull("quality_status") ? body.path("quality_status").asText("QUALITY_PENDING") : "QUALITY_PENDING");
 
-        db.update("UPDATE intelligence.cf_artifacts SET lifecycle_status='VALIDATED', quality_status=?, mutation_version=mutation_version+1 WHERE artifact_id=?", quality, artifactId);
+        govRepo.updateCfArtifactValidated(artifactId, quality);
         projections.audit(actor, "cf_artifact", artifactId.toString(), "VALIDATE", Map.of("items", items, "edges", edges, "quality_status", quality));
-        return db.queryForList("SELECT * FROM intelligence.cf_artifacts WHERE artifact_id = ?", artifactId).getFirst();
+        return govRepo.findCfArtifactById(artifactId).getFirst();
     }
 
     // ── Deployments: Transaction-Safe Activate & Rollback ────────────────────────
 
     public List<Map<String, Object>> listDeployments() {
-        return db.queryForList("""
-                SELECT d.deployment_id, d.use_case, d.config_version_id, c.version_tag AS config_version_tag,
-                       c.name AS config_name, d.cohort_snapshot_id, d.cf_artifact_id,
-                       d.scorer_versions, d.feature_schema_version, d.evaluation_run_id,
-                       d.quality_status, d.is_demo_activation, d.activated_by, d.activated_at,
-                       d.deactivated_at, d.reason
-                FROM intelligence.ranking_deployments d
-                JOIN intelligence.ranking_config_versions c ON c.config_version_id = d.config_version_id
-                ORDER BY d.activated_at DESC
-                LIMIT 50
-                """);
+        return govRepo.listDeployments();
     }
 
     @Transactional
@@ -491,9 +398,9 @@ public class RankingGovernanceService {
         boolean allowDemo = body.path("allow_demo_activation").asBoolean(false);
 
         // Transaction-level advisory lock guarantees single active deployment per use_case under concurrency
-        db.queryForObject("SELECT pg_advisory_xact_lock(hashtextextended('deploy:place_ranking', 0))", Object.class);
+        govRepo.acquireDeploymentLock();
 
-        var cfgRows = db.queryForList("SELECT * FROM intelligence.ranking_config_versions WHERE config_version_id = ? FOR UPDATE", configId);
+        var cfgRows = govRepo.findConfigForUpdate(configId);
         if (cfgRows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "CONFIG_NOT_FOUND");
         var cfgRow = cfgRows.getFirst();
         String lifecycle = String.valueOf(cfgRow.get("lifecycle_status"));
@@ -506,12 +413,12 @@ public class RankingGovernanceService {
 
         UUID cohortId = body.hasNonNull("cohort_snapshot_id") && !body.path("cohort_snapshot_id").asText().isBlank()
                 ? uuid(body, "cohort_snapshot_id")
-                : db.query("SELECT snapshot_id FROM intelligence.cohort_stat_snapshots ORDER BY computed_at DESC LIMIT 1", (rs, i) -> rs.getObject(1, UUID.class)).stream().findFirst().orElse(null);
+                : govRepo.findLatestCohortSnapshotId();
 
         UUID cfId = body.hasNonNull("cf_artifact_id") && !body.path("cf_artifact_id").asText().isBlank()
                 ? uuid(body, "cf_artifact_id") : null;
         if (cfId != null) {
-            var cfRows = db.queryForList("SELECT * FROM intelligence.cf_artifacts WHERE artifact_id = ?", cfId);
+            var cfRows = govRepo.findCfArtifactById(cfId);
             require(!cfRows.isEmpty(), "CF_ARTIFACT_NOT_FOUND");
             var cfRow = cfRows.getFirst();
             require(Set.of("VALIDATED", "ACTIVE").contains(String.valueOf(cfRow.get("lifecycle_status"))), "CF_ARTIFACT_NOT_VALIDATED");
@@ -523,31 +430,17 @@ public class RankingGovernanceService {
                 ? uuid(body, "evaluation_run_id") : null;
 
         // Deactivate previous active deployment
-        db.update("""
-                UPDATE intelligence.ranking_config_versions
-                SET lifecycle_status = 'INACTIVE', updated_at = now()
-                WHERE config_version_id IN (
-                  SELECT config_version_id FROM intelligence.ranking_deployments
-                  WHERE use_case = 'place_ranking' AND deactivated_at IS NULL
-                ) AND config_version_id <> ?
-                """, configId);
-        db.update("UPDATE intelligence.ranking_deployments SET deactivated_at = now() WHERE use_case = 'place_ranking' AND deactivated_at IS NULL");
+        govRepo.deactivateActiveDeployments(configId);
 
         UUID deploymentId = UUID.randomUUID();
-        db.update("""
-                INSERT INTO intelligence.ranking_deployments(
-                  deployment_id, use_case, config_version_id, cohort_snapshot_id, cf_artifact_id,
-                  scorer_versions, feature_schema_version, evaluation_run_id,
-                  quality_status, is_demo_activation, activated_by, reason
-                ) VALUES (?,'place_ranking',?,?,?,?::jsonb,1,?,?,?,?,?)
-                """,
+        govRepo.insertDeployment(
                 deploymentId, configId, cohortId, cfId,
                 cfgRow.get("scorer_versions").toString(), evalRunId,
                 quality, allowDemo && !"PASSED".equals(quality), actor, reason
         );
-        db.update("UPDATE intelligence.ranking_config_versions SET lifecycle_status='ACTIVE', updated_at=now() WHERE config_version_id=?", configId);
+        govRepo.markConfigActive(configId);
         if (cfId != null) {
-            db.update("UPDATE intelligence.cf_artifacts SET lifecycle_status='ACTIVE' WHERE artifact_id=?", cfId);
+            govRepo.markCfArtifactActive(cfId);
         }
 
         projections.publish("intelligence.model.deployed.v1", "ranking_deployment", deploymentId.toString(), 1,
@@ -565,8 +458,8 @@ public class RankingGovernanceService {
         String reason = body.path("reason").asText("").trim();
         require(!reason.isBlank() && reason.length() <= 1024, "REASON_REQUIRED");
 
-        db.queryForObject("SELECT pg_advisory_xact_lock(hashtextextended('deploy:place_ranking', 0))", Object.class);
-        var targetRows = db.queryForList("SELECT * FROM intelligence.ranking_deployments WHERE deployment_id = ?", targetDeploymentId);
+        govRepo.acquireDeploymentLock();
+        var targetRows = govRepo.findDeploymentById(targetDeploymentId);
         if (targetRows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "DEPLOYMENT_NOT_FOUND");
         var target = targetRows.getFirst();
 
@@ -574,35 +467,21 @@ public class RankingGovernanceService {
         UUID cohortId = (UUID) target.get("cohort_snapshot_id");
         UUID cfId = (UUID) target.get("cf_artifact_id");
         if (cfId != null) {
-            var cfRows = db.queryForList("SELECT lifecycle_status, artifact_object_key, checksum FROM intelligence.cf_artifacts WHERE artifact_id = ?", cfId);
+            var cfRows = govRepo.findCfArtifactSummary(cfId);
             require(!cfRows.isEmpty() && !"REVOKED".equals(cfRows.getFirst().get("lifecycle_status")), "TARGET_CF_ARTIFACT_REVOKED");
             artifacts.read(String.valueOf(cfRows.getFirst().get("artifact_object_key")), String.valueOf(cfRows.getFirst().get("checksum")));
         }
 
-        db.update("""
-                UPDATE intelligence.ranking_config_versions
-                SET lifecycle_status = 'INACTIVE', updated_at = now()
-                WHERE config_version_id IN (
-                  SELECT config_version_id FROM intelligence.ranking_deployments
-                  WHERE use_case = 'place_ranking' AND deactivated_at IS NULL
-                ) AND config_version_id <> ?
-                """, configId);
-        db.update("UPDATE intelligence.ranking_deployments SET deactivated_at = now() WHERE use_case = 'place_ranking' AND deactivated_at IS NULL");
+        govRepo.deactivateActiveDeployments(configId);
 
         UUID newDepId = UUID.randomUUID();
-        db.update("""
-                INSERT INTO intelligence.ranking_deployments(
-                  deployment_id, use_case, config_version_id, cohort_snapshot_id, cf_artifact_id,
-                  scorer_versions, feature_schema_version, evaluation_run_id,
-                  quality_status, is_demo_activation, activated_by, reason
-                ) VALUES (?,'place_ranking',?,?,?,?::jsonb,1,?,?,?,?,?)
-                """,
+        govRepo.insertDeployment(
                 newDepId, configId, cohortId, cfId,
                 target.get("scorer_versions").toString(), target.get("evaluation_run_id"),
                 target.get("quality_status"), target.get("is_demo_activation"),
                 actor, "ROLLBACK to " + targetDeploymentId + ": " + reason
         );
-        db.update("UPDATE intelligence.ranking_config_versions SET lifecycle_status='ACTIVE', updated_at=now() WHERE config_version_id=?", configId);
+        govRepo.markConfigActive(configId);
         data.invalidateCaches();
         projections.audit(actor, "ranking_deployment", newDepId.toString(), "ROLLBACK", Map.of("target_deployment_id", targetDeploymentId, "reason", reason));
         return Map.of("deployment_id", newDepId, "rolled_back_from", targetDeploymentId, "config_version_id", configId, "status", "ACTIVE");
@@ -614,102 +493,29 @@ public class RankingGovernanceService {
     public Map<String, Object> operationalAnalytics(int windowHours) {
         int hours = Math.max(1, Math.min(windowHours, 720));
 
-        var reqSummary = db.queryForMap("""
-                SELECT
-                  COUNT(*) AS total_requests,
-                  COALESCE(SUM(CASE WHEN returned_count = 0 THEN 1 ELSE 0 END), 0) AS empty_requests,
-                  COALESCE(SUM(CASE WHEN degraded THEN 1 ELSE 0 END), 0) AS degraded_requests,
-                  COALESCE(SUM(CASE WHEN fallback_reason IS NOT NULL THEN 1 ELSE 0 END), 0) AS fallback_requests,
-                  COALESCE(AVG(candidate_count), 0) AS avg_candidates,
-                  COALESCE(AVG(returned_count), 0) AS avg_returned,
-                  COALESCE(PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY latency_ms), 0) AS p50_ms,
-                  COALESCE(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY latency_ms), 0) AS p95_ms,
-                  COALESCE(PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY latency_ms), 0) AS p99_ms
-                FROM intelligence.recommendation_requests
-                WHERE NOT is_admin_test
-                  AND created_at >= now() - (? || ' hours')::interval
-                """, hours);
-
-        var fallbackByReason = db.queryForList("""
-                SELECT COALESCE(fallback_reason, 'NONE') AS reason, COUNT(*) AS count
-                FROM intelligence.recommendation_requests
-                WHERE NOT is_admin_test AND fallback_reason IS NOT NULL
-                  AND created_at >= now() - (? || ' hours')::interval
-                GROUP BY fallback_reason
-                ORDER BY count DESC
-                """, hours);
-
-        var emptyByReason = db.queryForList("""
-                SELECT COALESCE(empty_reason, 'UNKNOWN') AS reason, COUNT(*) AS count
-                FROM intelligence.recommendation_requests
-                WHERE NOT is_admin_test AND returned_count = 0
-                  AND created_at >= now() - (? || ' hours')::interval
-                GROUP BY empty_reason
-                ORDER BY count DESC
-                """, hours);
-
-        // Average scorer availability & effective weights across real requests
-        var scorerStats = db.queryForMap("""
-                SELECT
-                  COALESCE(AVG((scorer_availability->>'basic')::double precision), 0) AS basic_avail,
-                  COALESCE(AVG((scorer_availability->>'content')::double precision), 0) AS content_avail,
-                  COALESCE(AVG((scorer_availability->>'collaborative')::double precision), 0) AS cf_avail,
-                  COALESCE(AVG((scorer_availability->>'context')::double precision), 0) AS context_avail,
-                  COALESCE(AVG((effective_weights_summary->>'basic')::double precision), 0) AS eff_w_basic,
-                  COALESCE(AVG((effective_weights_summary->>'content')::double precision), 0) AS eff_w_content,
-                  COALESCE(AVG((effective_weights_summary->>'collaborative')::double precision), 0) AS eff_w_cf,
-                  COALESCE(AVG((effective_weights_summary->>'context')::double precision), 0) AS eff_w_context
-                FROM intelligence.recommendation_requests
-                WHERE NOT is_admin_test AND returned_count > 0
-                  AND created_at >= now() - (? || ' hours')::interval
-                """, hours);
+        var reqSummary = govRepo.loadRequestSummary(hours);
+        var fallbackByReason = govRepo.loadFallbackByReason(hours);
+        var emptyByReason = govRepo.loadEmptyByReason(hours);
+        var scorerStats = govRepo.loadScorerStats(hours);
 
         // Real impression & feedback CTR (deduplicated by idempotency_key, excluding admin tests)
-        Long impressions = db.queryForObject("""
-                SELECT COUNT(*) FROM intelligence.recommendation_impressions
-                WHERE NOT is_admin_test AND received_at >= now() - (? || ' hours')::interval
-                """, Long.class, hours);
-        var feedbackCounts = db.queryForList("""
-                SELECT action_type, COUNT(*) AS count
-                FROM intelligence.recommendation_feedback
-                WHERE NOT is_admin_test AND received_at >= now() - (? || ' hours')::interval
-                GROUP BY action_type
-                """, hours);
+        long impCount = govRepo.countVerifiedImpressions(hours);
+        var feedbackCounts = govRepo.loadFeedbackCounts(hours);
         Map<String, Long> fbMap = new LinkedHashMap<>();
         for (var r : feedbackCounts) fbMap.put(String.valueOf(r.get("action_type")), ((Number) r.get("count")).longValue());
 
-        long impCount = impressions != null ? impressions : 0L;
         long clicks = fbMap.getOrDefault("CLICK", 0L);
         long accepts = fbMap.getOrDefault("ACCEPT", 0L);
         long skips = fbMap.getOrDefault("SKIP", 0L);
-        long addToTripServer = Optional.ofNullable(db.queryForObject("""
-                SELECT COUNT(*) FROM intelligence.interactions
-                WHERE event_type = 'TRIP_ITEM_ADDED'
-                  AND context->>'recommendation_request_id' IS NOT NULL
-                  AND occurred_at >= now() - (? || ' hours')::interval
-                """, Long.class, hours)).orElse(0L);
+        long addToTripServer = govRepo.countAddToTripAttributed(hours);
 
         // Catalog coverage & exposure of new/unrated items
-        Long publishedCount = Optional.ofNullable(db.queryForObject(
-                "SELECT COUNT(*) FROM intelligence.place_features WHERE status = 'PUBLISHED'", Long.class)).orElse(0L);
-        Long uniqueRecommended = Optional.ofNullable(db.queryForObject("""
-                SELECT COUNT(DISTINCT rr.place_id)
-                FROM intelligence.recommendation_results rr
-                JOIN intelligence.recommendation_requests rq ON rq.request_id = rr.request_id
-                WHERE NOT rq.is_admin_test AND rq.created_at >= now() - (? || ' hours')::interval
-                """, Long.class, hours)).orElse(0L);
-        Long unratedExposed = Optional.ofNullable(db.queryForObject("""
-                SELECT COUNT(DISTINCT rr.place_id)
-                FROM intelligence.recommendation_results rr
-                JOIN intelligence.recommendation_requests rq ON rq.request_id = rr.request_id
-                JOIN intelligence.place_features pf ON pf.place_id = rr.place_id
-                WHERE NOT rq.is_admin_test
-                  AND rq.created_at >= now() - (? || ' hours')::interval
-                  AND COALESCE((pf.features->>'rating_count')::bigint, 0) = 0
-                """, Long.class, hours)).orElse(0L);
+        long publishedCount = govRepo.countPublishedPlaces();
+        long uniqueRecommended = govRepo.countUniqueRecommendedPlaces(hours);
+        long unratedExposed = govRepo.countUnratedExposedPlaces(hours);
 
         // Projection freshness & CF freshness
-        Timestamp latestProj = db.queryForObject("SELECT MAX(as_of) FROM intelligence.place_features WHERE status='PUBLISHED'", Timestamp.class);
+        Timestamp latestProj = govRepo.findLatestProjectionAsOf();
         long projAgeSec = latestProj != null ? Math.max(0, java.time.Duration.between(latestProj.toInstant(), Instant.now()).getSeconds()) : -1;
 
         var activeDep = data.loadActiveDeployment();
