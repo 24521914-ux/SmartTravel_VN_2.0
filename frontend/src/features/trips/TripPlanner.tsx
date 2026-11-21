@@ -648,6 +648,7 @@ export function TripPlanner({
               : "Mọi thay đổi được lưu tự động";
   return (
     <div className="tp-planner">
+      <h1 className="tp-sr-only">Chuyến đi</h1>
       <div className="tp-shell">
         <div className="tp-command-bar">
           <div className="tp-command-left">
@@ -718,9 +719,9 @@ export function TripPlanner({
 
         {!trip && !newTrip && (
           <header className="tp-empty-masthead">
-            <h1 className="tp-trip-title" aria-label="Chuyến đi">
+            <h2 className="tp-trip-title">
               Chuyến đi của bạn
-            </h1>
+            </h2>
             {!!trips.length && (
               <div className="tp-quick-trips">
                 {trips.slice(0, 4).map((row) => (
@@ -907,9 +908,9 @@ export function TripPlanner({
           <header className="tp-overview">
             <div className="tp-overview-main">
               <div className="tp-title-line">
-                <h1 className="tp-trip-title" aria-label="Chuyến đi">
+                <h2 className="tp-trip-title">
                   {String(trip.name)}
-                </h1>
+                </h2>
                 <span className="tp-state-chip">
                   {states[String(trip.state)] ?? String(trip.state)}
                 </span>
