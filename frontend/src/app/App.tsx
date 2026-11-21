@@ -6,6 +6,7 @@ import { Icon } from '../shared/ui/Icon';
 import { travelClient, apiClient } from '../api/session';
 import type { Resource } from '../shared/api';
 import { isSection, resolveRoute, SECTION_PATHS } from './routes';
+import { aiEnabled } from '../shared/config/features';
 import '../features/trips/trip-auth-gate.css';
 const RecommendationSection = lazy(() => import('../features/recommendations/RecommendationSection').then(m => ({ default: m.RecommendationSection })));
 const MapPanel = lazy(() => import('../features/places/MapPanel').then(m => ({ default: m.MapPanel })));
@@ -167,7 +168,7 @@ export function AppContent() {
         )}
 
         {activeSection === 'Quản trị' && (
-          <><AdminRankingDashboard travel={travelClient} /><AdminIngestionConsole travel={travelClient} /><AdminCatalogManager travel={travelClient} /><AdminMediaPanel apiClient={apiClient} /><AdminUsersPanel travel={travelClient} /></>
+          <>{aiEnabled && <AdminRankingDashboard travel={travelClient} />}<AdminIngestionConsole travel={travelClient} /><AdminCatalogManager travel={travelClient} /><AdminMediaPanel apiClient={apiClient} /><AdminUsersPanel travel={travelClient} /></>
         )}
         {activeSection === 'Đóng góp' && <ContributionsPanel travel={travelClient} />}
         </Suspense>

@@ -3,6 +3,7 @@ import { useAppPreferences } from '../../app/providers/AppPreferences';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { ApiError, type Resource, type TravelClient } from '../../shared/api';
 import { EmptyState, ErrorState, Icon } from '../../shared/ui';
+import { aiEnabled } from '../../shared/config/features';
 import { InteractiveMap, validCoordinates, type MapPoint } from '../places/InteractiveMap';
 import { PlaceDetailPage } from '../places/PlaceDetailPage';
 import { AddToTripModal } from './AddToTripModal';
@@ -186,9 +187,9 @@ export function RecommendationSection({ travel, onNavigate, busy: externalBusy =
   // Real backend ranking state
   const [rankingResponse, setRankingResponse] = useState<RankingResponse | null>(null);
   const [rankingStats, setRankingStats] = useState<RankingStats | null>(null);
-  const [rankingLoading, setRankingLoading] = useState(true);
+  const [rankingLoading, setRankingLoading] = useState(aiEnabled);
   const [rankingError, setRankingError] = useState('');
-  const [serviceDeferred, setServiceDeferred] = useState(false);
+  const [serviceDeferred, setServiceDeferred] = useState(!aiEnabled);
 
   // User state
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
@@ -240,7 +241,7 @@ export function RecommendationSection({ travel, onNavigate, busy: externalBusy =
         travel.readAll('catalog', '/tags').catch(() => ({ items: [] as Resource[] })),
         travel.readAll('catalog', '/geographic-units').catch(() => ({ items: [] as Resource[] })),
         travel.readAll('catalog', '/destinations').catch(() => ({ items: [] as Resource[] })),
-        fetchRankingStats(travel).catch(() => null),
+        aiEnabled ? fetchRankingStats(travel).catch(() => null) : Promise.resolve(null),
       ]);
 
       setCatalogPlaces((placesRes.items ?? []).filter(p => !isTestFixture(p)));
@@ -414,6 +415,12 @@ export function RecommendationSection({ travel, onNavigate, busy: externalBusy =
 
   // Execute real backend ranking with debounce + race-condition cancellation
   const executeRanking = useCallback(async (targetFilters: RecommendationFilterState) => {
+    if (!aiEnabled) {
+      setServiceDeferred(true);
+      setRankingResponse(null);
+      setRankingLoading(false);
+      return;
+    }
     const seq = ++requestSeqRef.current;
     setRankingLoading(true);
     setRankingError('');
@@ -446,6 +453,11 @@ export function RecommendationSection({ travel, onNavigate, busy: externalBusy =
   // Debounce backend ranking calls when filters/options change (prevents request storms)
   useEffect(() => {
     syncNonSensitiveFiltersToUrl(filters);
+    if (!aiEnabled) {
+      setServiceDeferred(true);
+      setRankingLoading(false);
+      return;
+    }
     // Validate budget range before hitting backend
     const minB = filters.minPrice.trim() ? Number(filters.minPrice) : null;
     const maxB = filters.maxPrice.trim() ? Number(filters.maxPrice) : null;
@@ -986,12 +998,21 @@ export function RecommendationSection({ travel, onNavigate, busy: externalBusy =
           )}
 
           {serviceDeferred ? (
-            <ErrorState
-              message={text(
-                'Dịch vụ xếp hạng gợi ý đang tạm tắt trên Gateway (FEATURE_DEFERRED). Hãy bật AI_ENABLED=true trên Gateway để kích hoạt.',
-                'The recommendation ranking service is currently disabled on the Gateway (FEATURE_DEFERRED).',
+            <EmptyState
+              title={text('Dịch vụ gợi ý đang tạm tắt', 'Recommendations are currently paused')}
+              description={text(
+                'Hệ thống đang chạy ở chế độ không bật AI. Hãy bật VITE_AI_ENABLED=true trên frontend và AI_ENABLED=true trên Gateway để kích hoạt xếp hạng gợi ý.',
+                'The application is running in non-AI mode. Enable VITE_AI_ENABLED=true and Gateway AI_ENABLED=true to activate recommendation ranking.',
               )}
-              onRetry={() => void executeRanking(filters)}
+              action={
+                <button
+                  type="button"
+                  className="rec-btn-primary"
+                  onClick={() => onNavigate('Khám phá')}
+                >
+                  {text('Khám phá danh mục điểm đến', 'Browse destinations')}
+                </button>
+              }
             />
           ) : rankingError ? (
             <ErrorState message={rankingError} onRetry={() => void executeRanking(filters)} />
