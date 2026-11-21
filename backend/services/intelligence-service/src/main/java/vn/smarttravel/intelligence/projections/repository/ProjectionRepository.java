@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 @org.springframework.stereotype.Repository
 public class ProjectionRepository {
     private final JdbcTemplate db;
-    private static final Set<String> PLACE_FIELDS=Set.of("name","category_ids","destination_id","destination_ids","geographic_unit_id","tag_ids","amenity_ids","tags","amenities","latitude","longitude","price","currency","source_id","popularity","rating_count","rating_sum","schema_version");
+    private static final Set<String> PLACE_FIELDS=Set.of("name","name_en","address","description","category_ids","destination_id","destination_ids","geographic_unit_id","tag_ids","amenity_ids","tags","amenities","structured_tags","absent_tags","latitude","longitude","price","price_min","price_max","price_basis","currency","opening_hours","space_type","indoor_outdoor","environment","offering_type","created_at","source_id","popularity","rating_count","rating_sum","rating_avg","review_count","schema_version");
     public ProjectionRepository(JdbcTemplate db) {this.db=db;}
     public void userLock(UUID user) { db.queryForObject("select pg_advisory_xact_lock(hashtextextended(?,0))",Object.class,"user:"+user); }
     public void guardActor(UUID user){
@@ -86,7 +86,7 @@ public class ProjectionRepository {
     }
     public int rebuild(UUID actor,JsonNode snapshot){return rebuild(actor,"catalog",snapshot);}
     public int rebuild(UUID actor,String source,JsonNode snapshot){
-        require(snapshot.path("items").isArray()&&snapshot.path("items").size()<=100,"INVALID_SNAPSHOT");Instant asOf=time(snapshot,"as_of");
+        require(snapshot.path("items").isArray()&&snapshot.path("items").size()<=5000,"INVALID_SNAPSHOT");Instant asOf=time(snapshot,"as_of");
         for(var p:snapshot.path("items")){
             if(source.equals("interaction")){require(p.path("event_type").asText().equals("trip.item.added.v1"),"INVALID_INTERACTION_SNAPSHOT");consume(p);continue;}
             long version=p.path(source.equals("policy")?"source_version":"version").asLong();require(version>0,"INVALID_VERSION");

@@ -24,7 +24,7 @@ public class SecurityConfiguration {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
-                        .requestMatchers("/api/v1/recommendations").permitAll()
+                        .requestMatchers("/api/v1/recommendations", "/api/v1/recommendations/**").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasAuthority("SCOPE_intelligence:admin")
                         .requestMatchers("/internal/v1/**").access((authentication,context)->{
                             var principal=authentication.get();boolean workload=principal instanceof org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken token && token.getToken().getClaimAsString("client_id")!=null && !token.getToken().getClaimAsString("client_id").isBlank() && !token.getToken().hasClaim("sid");
