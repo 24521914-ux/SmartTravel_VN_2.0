@@ -102,6 +102,19 @@ public class CatalogRepository {
         }
         return rows;
     }
+    public Map<String,Object> validateBatch(List<UUID> ids) {
+        var rows = queryUuidArray(db, "SELECT place_id, status, version FROM catalog.places WHERE place_id = ANY(?)", ids.toArray(UUID[]::new));
+        var byId = new HashMap<UUID, Map<String,Object>>(rows.size());
+        for (var row : rows) byId.put((UUID) row.get("place_id"), row);
+        var items = new ArrayList<Map<String,Object>>(rows.size());
+        var missing = new ArrayList<UUID>();
+        for (UUID id : ids) {
+            var row = byId.get(id);
+            if (row == null) missing.add(id);
+            else items.add(Map.of("place_id", id, "public", "PUBLISHED".equals(row.get("status")), "version", row.get("version")));
+        }
+        return Map.of("items", items, "missing_ids", missing);
+    }
     public Map<String,Object> place(UUID id, boolean publicOnly) {
         var rows=db.queryForList("SELECT p.*, ST_Y(location::geometry) lat, ST_X(location::geometry) lon, r.review_count,r.rating_avg FROM catalog.places p LEFT JOIN catalog.place_rating_summary r USING(place_id) WHERE p.place_id=?"+(publicOnly?" AND p.status='PUBLISHED'":""),id);
         if(rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Place unavailable");
