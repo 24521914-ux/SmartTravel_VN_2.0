@@ -1,0 +1,5 @@
+query_id,scenario_group,place_id,relevance_grade,split,annotator,provenance,request_json
+q-dn-quiet-01,group-dn-quiet,00000000-0000-4000-8000-000000000001,3,VALIDATION,annotator-1,HUMAN_LABELED,"{""topN"":10,""currency"":""VND"",""soft_preferences"":{""quiet"":1.0},""max_budget"":150000}"
+q-dn-quiet-01,group-dn-quiet,00000000-0000-4000-8000-000000000002,2,VALIDATION,annotator-1,HUMAN_LABELED,"{""topN"":10,""currency"":""VND"",""soft_preferences"":{""quiet"":1.0},""max_budget"":150000}"
+q-dn-quiet-01,group-dn-quiet,00000000-0000-4000-8000-000000000003,0,VALIDATION,annotator-1,HUMAN_LABELED,"{""topN"":10,""currency"":""VND"",""soft_preferences"":{""quiet"":1.0},""max_budget"":150000}"
+q-hn-heritage-01,group-hn-heritage,00000000-0000-4000-8000-000000000004,3,TEST,annotator-1,HUMAN_LABELED,"{""topN"":10,""currency"":""VND"",""soft_preferences"":{""heritage"":1.0}}"
