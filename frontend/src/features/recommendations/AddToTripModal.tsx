@@ -9,6 +9,7 @@ import { placeIdOf, placeImageCandidates } from '../places/media';
 export interface AddToTripModalProps {
   place: Resource | null;
   travel: TravelClient;
+  recommendationRequestId?: string | null;
   onClose: () => void;
   onNavigateToAccount: () => void;
   onOpenTrip: () => void;
@@ -34,6 +35,7 @@ const formatDateLabel = (value: unknown) => {
 export function AddToTripModal({
   place,
   travel,
+  recommendationRequestId = null,
   onClose,
   onNavigateToAccount,
   onOpenTrip,
@@ -265,7 +267,7 @@ export function AddToTripModal({
         {
           place_id: placeId,
           locked: false,
-          recommendation_request_id: null,
+          recommendation_request_id: recommendationRequestId,
           duration_minutes: Number(durationMinutes),
           note: note.trim(),
         },
