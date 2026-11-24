@@ -1001,8 +1001,8 @@ export function RecommendationSection({ travel, onNavigate, busy: externalBusy =
             <EmptyState
               title={text('Dịch vụ gợi ý đang tạm tắt', 'Recommendations are currently paused')}
               description={text(
-                'Hệ thống đang chạy ở chế độ không bật AI. Hãy bật VITE_AI_ENABLED=true trên frontend và AI_ENABLED=true trên Gateway để kích hoạt xếp hạng gợi ý.',
-                'The application is running in non-AI mode. Enable VITE_AI_ENABLED=true and Gateway AI_ENABLED=true to activate recommendation ranking.',
+                'Tính năng xếp hạng gợi ý đang tạm tắt (VITE_AI_ENABLED=false trên frontend hoặc AI_ENABLED=false trên Gateway). Hãy bật AI_ENABLED=true trên Gateway và bỏ VITE_AI_ENABLED=false để sử dụng.',
+                'Recommendation ranking is currently paused (VITE_AI_ENABLED=false on frontend or AI_ENABLED=false on Gateway).',
               )}
               action={
                 <button
