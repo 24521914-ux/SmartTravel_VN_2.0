@@ -21,8 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # AI suites stay deferred until the user resumes that scope.
-        service: [identity, catalog, community, trip, ingestion]
+        service: [identity, catalog, community, trip, ingestion, intelligence]
     steps:
       - name: Record database host kernel
         run: uname -sr
