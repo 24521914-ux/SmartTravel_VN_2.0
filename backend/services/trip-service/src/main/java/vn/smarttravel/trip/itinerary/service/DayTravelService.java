@@ -47,6 +47,7 @@ public class DayTravelService {
         store.invalidateTravelLeg(mode,coordinates,UUID.randomUUID(),"SELF_MANAGED".equals(mode)?"SELF_MANAGED":"PENDING",leg);
     }
 
+    @Transactional(readOnly=true)
     public Map<String,Object> list(UUID trip,UUID user,UUID day) {
         var owner=store.owner(trip,user,false);
         store.requireTravelDay(trip,day);

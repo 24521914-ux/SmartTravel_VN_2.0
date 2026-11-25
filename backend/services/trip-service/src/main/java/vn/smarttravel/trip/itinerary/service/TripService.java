@@ -20,24 +20,23 @@ public class TripService {
     private final org.springframework.transaction.support.TransactionTemplate transaction;
     public Map<String,Object> paginate(Map<String,Object>page,int limit,String cursor){return s.paginate(page,limit,cursor);}
     public TripService(TripStore s,CatalogAdapter catalog,RoutingAdapter routing,DayTravelService travel,org.springframework.transaction.PlatformTransactionManager manager) {this.s=s;this.catalog=catalog;this.routing=routing;this.travel=travel;this.transaction=new org.springframework.transaction.support.TransactionTemplate(manager);}
-    public Object interactionsSnapshot(){return s.interactionsSnapshot();}
-    public List<String> warnings(UUID trip,UUID user){s.owner(trip,user,false);return s.warnings(trip);}
-    public Map<String,Object> list(UUID user,int limit,String cursor) {
-        s.guardUser(user);require(limit>0&&limit<=100,400,"INVALID_LIMIT");UUID after=cursor==null?new UUID(0,0):id(cursor);
+    @Transactional(readOnly=true) public Object interactionsSnapshot(){return s.interactionsSnapshot();}
+    @Transactional(readOnly=true) public List<String> warnings(UUID trip,UUID user){s.owner(trip,user,false);return s.warnings(trip);}
+    @Transactional(readOnly=true) public List<String> tripWarnings(UUID trip){return s.warnings(trip);}
+    @Transactional(readOnly=true) public Map<String,Object> list(UUID user,int limit,String cursor) {
+        s.guardUser(user,false);require(limit>0&&limit<=100,400,"INVALID_LIMIT");UUID after=cursor==null?new UUID(0,0):id(cursor);
         var rows=s.queryForList(SELECT_TRIPS_14,user,after,limit+1);
         var result=s.page(rows.stream().limit(limit).map(s::tripResponse).toList(),1);
         if(rows.size()>limit)result.put("next_cursor",rows.get(limit-1).get("trip_id").toString());return result;
     }
     public Map<String,Object> create(UUID user,Map<String,Object>b) {
-        s.guardUser(user);
-        require(s.queryForObject(SELECT_USER_TOMBSTONES_15,Long.class,user)==0,403,"USER_DELETED");
-        require(s.queryForObject(SELECT_USER_STATUS_16,Long.class,user)==0,403,"USER_INACTIVE");
+        s.guardUser(user,true);
         validateTrip(b); UUID trip=UUID.randomUUID();
         s.update(INSERT_TRIPS_17,trip,user,text(b,"name",1024),date(b.get("start_date")),date(b.get("end_date")),b.getOrDefault("budget",0));
         s.event(trip,1,"trip.changed.v1",map("trip_id",trip,"user_id",user,"change_kind","CREATED","version",1));return get(trip,user);
     }
     private void validateTrip(Map<String,Object>b) {require("Asia/Ho_Chi_Minh".equals(b.get("timezone"))&&"VND".equals(b.get("currency")),400,"INVALID_TIMEZONE_CURRENCY");require(!date(b.get("end_date")).isBefore(date(b.get("start_date"))),422,"INVALID_DATE_RANGE");if(b.containsKey("budget"))require(Double.parseDouble(b.get("budget").toString())>=0,400,"INVALID_BUDGET");}
-    public Map<String,Object> get(UUID trip,UUID user) {return s.tripResponse(s.owner(trip,user,false));}
+    @Transactional(readOnly=true) public Map<String,Object> get(UUID trip,UUID user) {return s.tripResponse(s.owner(trip,user,false));}
     public Map<String,Object> patch(UUID trip,UUID user,String version,Map<String,Object>b) {
         var t=s.owner(trip,user,true);s.expected(t,version);var full=s.tripResponse(t);full.putAll(b);validateTrip(full);
         LocalDate start=date(full.get("start_date")),end=date(full.get("end_date"));
@@ -49,7 +48,7 @@ public class TripService {
     public Map<String,Object> state(UUID trip,UUID user,String version,String state) {var t=s.owner(trip,user,true);s.expected(t,version);require(Set.of("DRAFT","PLANNED","COMPLETED","CANCELLED").contains(state),400,"INVALID_STATE");s.update(UPDATE_TRIPS_22,state,trip);s.changed(trip,user,"STATE_CHANGED");return get(trip,user);}
     private void inRange(Map<String,Object>t,LocalDate start,LocalDate end) {require(!end.isBefore(start)&&!start.isBefore(date(t.get("start_date")))&&!end.isAfter(date(t.get("end_date"))),422,"OUTSIDE_TRIP_DATES");}
     private Map<String,Object> segmentResponse(Map<String,Object>r,long v) {return map("segment_id",r.get("trip_destination_id"),"destination_id",r.get("destination_id"),"start_date",r.get("start_date").toString(),"end_date",r.get("end_date").toString(),"version",v);}
-    public Map<String,Object> segments(UUID trip,UUID user,UUID segment) {var t=s.owner(trip,user,false);long v=number(t.get("version"));if(segment!=null)return segmentResponse(s.one(SELECT_TRIP_DESTINATIONS_23,trip,segment),v);return s.page(s.queryForList(SELECT_TRIP_DESTINATIONS_24,trip).stream().map(r->segmentResponse(r,v)).toList(),v);}
+    @Transactional(readOnly=true) public Map<String,Object> segments(UUID trip,UUID user,UUID segment) {var t=s.owner(trip,user,false);long v=number(t.get("version"));if(segment!=null)return segmentResponse(s.one(SELECT_TRIP_DESTINATIONS_23,trip,segment),v);return s.page(s.queryForList(SELECT_TRIP_DESTINATIONS_24,trip).stream().map(r->segmentResponse(r,v)).toList(),v);}
     public Map<String,Object> segment(UUID trip,UUID user,UUID segment,String version,Map<String,Object>b) {
         // Shared with destination events, before user/trip locks to avoid the
         // event's destination-to-trip order racing a validated segment insert.
@@ -64,7 +63,7 @@ public class TripService {
     }
     public void deleteSegment(UUID trip,UUID user,UUID segment,String version) {var t=s.owner(trip,user,true);s.expected(t,version);s.one(SELECT_TRIP_DESTINATIONS_23,trip,segment);require(s.queryForObject(SELECT_TRIP_DAYS_28,Long.class,trip,segment)==0,422,"SEGMENT_IN_USE");s.update(DELETE_TRIP_DESTINATIONS_29,trip,segment);s.changed(trip,user,"DESTINATION_REMOVED");}
     private Map<String,Object> dayResponse(Map<String,Object>r,long v) {return map("day_id",r.get("day_id"),"date",r.get("local_date").toString(),"version",v);}
-    public Map<String,Object> days(UUID trip,UUID user,UUID day) {var t=s.owner(trip,user,false);long v=number(t.get("version"));if(day!=null)return dayResponse(s.one(SELECT_TRIP_DAYS_30,trip,day),v);return s.page(s.queryForList(SELECT_TRIP_DAYS_31,trip).stream().map(r->dayResponse(r,v)).toList(),v);}
+    @Transactional(readOnly=true) public Map<String,Object> days(UUID trip,UUID user,UUID day) {var t=s.owner(trip,user,false);long v=number(t.get("version"));if(day!=null)return dayResponse(s.one(SELECT_TRIP_DAYS_30,trip,day),v);return s.page(s.queryForList(SELECT_TRIP_DAYS_31,trip).stream().map(r->dayResponse(r,v)).toList(),v);}
     public Map<String,Object> day(UUID trip,UUID user,UUID day,String version,Map<String,Object>b) {var t=s.owner(trip,user,true);s.expected(t,version);LocalDate dt=date(b.get("date"));inRange(t,dt,dt);UUID target=day==null?UUID.randomUUID():day;
         if(day==null)s.update(INSERT_TRIP_DAYS_32,target,trip,dt,trip);
         else {s.one(SELECT_TRIP_DAYS_30,trip,day);s.update(UPDATE_TRIP_DAYS_33,dt,trip,day);}
@@ -82,7 +81,7 @@ public class TripService {
     }
     private Map<String,Object> itemResponse(Map<String,Object>r,long v) {var snap=s.decode(r.get("catalog_snapshot"));if(r.get("unavailable_at")!=null)snap.put("status","ARCHIVED");return map("item_id",r.get("item_id"),"place_id",r.get("place_id"),"note",r.get("note"),"duration_minutes",r.get("duration_min"),"locked",r.get("locked"),"rank",r.get("sort_order"),"source_version",r.get("source_version"),"snapshot",snap,"version",v);}
     private List<Map<String,Object>> itemRows(UUID trip,UUID day) {return s.queryForList(SELECT_ITINERARY_ITEMS_37,trip,day);}
-    public Map<String,Object> items(UUID trip,UUID user,UUID day,UUID item) {var t=s.owner(trip,user,false);s.one(SELECT_TRIP_DAYS_30,trip,day);long v=number(t.get("version"));var rows=itemRows(trip,day);if(item!=null)return itemResponse(rows.stream().filter(r->item.equals(r.get("item_id"))).findFirst().orElseThrow(()->new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND,"NOT_FOUND")),v);return s.page(rows.stream().map(r->itemResponse(r,v)).toList(),v);}
+    @Transactional(readOnly=true) public Map<String,Object> items(UUID trip,UUID user,UUID day,UUID item) {var t=s.owner(trip,user,false);s.one(SELECT_TRIP_DAYS_30,trip,day);long v=number(t.get("version"));var rows=itemRows(trip,day);if(item!=null)return itemResponse(rows.stream().filter(r->item.equals(r.get("item_id"))).findFirst().orElseThrow(()->new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND,"NOT_FOUND")),v);return s.page(rows.stream().map(r->itemResponse(r,v)).toList(),v);}
     public Map<String,Object> addItem(UUID trip,UUID user,UUID day,String version,String key,Map<String,Object>b) {
         var t=s.owner(trip,user,true);require(key!=null&&!key.isBlank()&&key.length()<=160,428,"IDEMPOTENCY_KEY_REQUIRED");
         String hash=hash(s.encode(b));String scope="add-item:"+trip+":"+day;
@@ -110,7 +109,7 @@ public class TripService {
     public void deleteItem(UUID trip,UUID user,UUID day,UUID item,String version) {var t=s.owner(trip,user,true);s.expected(t,version);var old=s.one(SELECT_ITINERARY_ITEMS_42,trip,day,item);require(!Boolean.TRUE.equals(old.get("locked")),422,"ITEM_LOCKED");s.update(DELETE_ITINERARY_ITEMS_44,trip,day,item);travel.synchronizeDay(trip,day);s.changed(trip,user,"ITEM_REMOVED");}
     public Map<String,Object> order(UUID trip,UUID user,UUID day,String version,List<UUID>ids) {var t=s.owner(trip,user,true);s.expected(t,version);s.one(SELECT_TRIP_DAYS_30,trip,day);var rows=itemRows(trip,day);require(ids.size()<=100&&ids.size()==rows.size()&&new HashSet<>(ids).size()==ids.size()&&new HashSet<>(ids).equals(new HashSet<>(rows.stream().map(r->(UUID)r.get("item_id")).toList())),422,"ORDER_MUST_CONTAIN_ALL_ITEMS");for(var row:rows)if(Boolean.TRUE.equals(row.get("locked")))require(ids.indexOf(row.get("item_id"))==number(row.get("sort_order")),422,"ITEM_LOCKED");s.execute(SET_CONSTRAINTS_45);for(int i=0;i<ids.size();i++)s.update(UPDATE_ITINERARY_ITEMS_46,i,trip,day,ids.get(i));travel.synchronizeDay(trip,day);long v=s.changed(trip,user,"ITEMS_REORDERED");return map("request_id",UUID.randomUUID(),"status","COMPLETED","version",v);}
     public Map<String,Object> refresh(UUID trip,UUID user,String version,List<UUID> ids) {var t=s.owner(trip,user,true);s.expected(t,version);require(!"COMPLETED".equals(t.get("status")),422,"COMPLETED_SNAPSHOT_IMMUTABLE");require(ids.size()<=100,400,"TOO_MANY_ITEMS");for(UUID item:ids){var r=s.one(SELECT_ITINERARY_ITEMS_47,trip,item);require(!Boolean.TRUE.equals(r.get("locked")),422,"ITEM_LOCKED");UUID place=(UUID)r.get("place_id");snapshot(trip,place,catalog.place(place));}long v=s.changed(trip,user,"SNAPSHOTS_REFRESHED");return map("request_id",UUID.randomUUID(),"status","COMPLETED","version",v);}
-    public Map<String,Object> transfers(UUID trip,UUID user,UUID transfer) {var t=s.owner(trip,user,false);long v=number(t.get("version"));if(transfer!=null)return transferResponse(s.one(SELECT_TRANSFER_ITEMS_48,trip,transfer),v);return s.page(s.queryForList(SELECT_TRANSFER_ITEMS_49,trip).stream().map(r->transferResponse(r,v)).toList(),v);}
+    @Transactional(readOnly=true) public Map<String,Object> transfers(UUID trip,UUID user,UUID transfer) {var t=s.owner(trip,user,false);long v=number(t.get("version"));if(transfer!=null)return transferResponse(s.one(SELECT_TRANSFER_ITEMS_48,trip,transfer),v);return s.page(s.queryForList(SELECT_TRANSFER_ITEMS_49,trip).stream().map(r->transferResponse(r,v)).toList(),v);}
     private Map<String,Object> transferResponse(Map<String,Object>r,long v) {return map("transfer_id",r.get("transfer_id"),"from_item_id",r.get("from_item_id"),"to_item_id",r.get("to_item_id"),"mode",r.get("transport_mode"),"distance_m",r.get("distance_m"),"duration_seconds",r.get("duration_seconds"),"fallback",r.get("fallback"),"version",v);}
     // Legacy UC14-compatible transfer API: validate and persist in short transactions,
     // with the external request between them. Recheck If-Match after routing.

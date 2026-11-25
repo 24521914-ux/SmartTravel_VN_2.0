@@ -58,26 +58,43 @@ public class CatalogRepository {
             }
         }
         UUID[] placeIds = byId.keySet().toArray(UUID[]::new);
-        for (var r : queryUuidArray(db, "SELECT place_id, category_id FROM catalog.place_categories WHERE place_id = ANY(?) ORDER BY place_id, category_id", placeIds)) {
-            @SuppressWarnings("unchecked") var list = (List<UUID>) byId.get((UUID) r.get("place_id")).get("category_ids");
-            list.add((UUID) r.get("category_id"));
-        }
-        for (var r : queryUuidArray(db, "SELECT place_id, tag_id FROM catalog.place_tags WHERE place_id = ANY(?) ORDER BY place_id, tag_id", placeIds)) {
-            @SuppressWarnings("unchecked") var list = (List<UUID>) byId.get((UUID) r.get("place_id")).get("tag_ids");
-            list.add((UUID) r.get("tag_id"));
-        }
-        for (var r : queryUuidArray(db, "SELECT place_id, amenity_id FROM catalog.place_amenities WHERE place_id = ANY(?) ORDER BY place_id, amenity_id", placeIds)) {
-            @SuppressWarnings("unchecked") var list = (List<UUID>) byId.get((UUID) r.get("place_id")).get("amenity_ids");
-            list.add((UUID) r.get("amenity_id"));
+        for (var r : queryUuidArray(db, """
+                WITH target_places AS (SELECT unnest(?) AS place_id)
+                SELECT 1 AS k, c.place_id, c.category_id AS uid, NULL::text AS txt, 0 AS seq
+                FROM catalog.place_categories c JOIN target_places t USING(place_id)
+                UNION ALL
+                SELECT 2 AS k, g.place_id, g.tag_id AS uid, NULL::text AS txt, 0 AS seq
+                FROM catalog.place_tags g JOIN target_places t USING(place_id)
+                UNION ALL
+                SELECT 3 AS k, a.place_id, a.amenity_id AS uid, NULL::text AS txt, 0 AS seq
+                FROM catalog.place_amenities a JOIN target_places t USING(place_id)
+                UNION ALL
+                SELECT 4 AS k, p.place_id, NULL::uuid AS uid, m.object_key AS txt, COALESCE(p.sort_order, 0) AS seq
+                FROM catalog.place_media p
+                JOIN target_places t USING(place_id)
+                JOIN catalog.media_assets m USING(media_id)
+                WHERE m.moderation_status='APPROVED' AND m.object_key NOT LIKE 'private/%'
+                ORDER BY k, place_id, seq, uid
+                """, placeIds)) {
+            int kind = ((Number) r.get("k")).intValue();
+            Map<String,Object> target = byId.get((UUID) r.get("place_id"));
+            if (kind == 4) {
+                @SuppressWarnings("unchecked") var list = (List<String>) target.get("media_keys");
+                list.add((String) r.get("txt"));
+            } else {
+                String field = switch (kind) {
+                    case 1 -> "category_ids";
+                    case 2 -> "tag_ids";
+                    default -> "amenity_ids";
+                };
+                @SuppressWarnings("unchecked") var list = (List<UUID>) target.get(field);
+                list.add((UUID) r.get("uid"));
+            }
         }
         for (var r : queryUuidArray(db, "SELECT place_id, day_of_week weekday, to_char(open_time,'HH24:MI') open, to_char(close_time,'HH24:MI') close, end_day_offset=1 overnight FROM catalog.opening_hours WHERE place_id = ANY(?) ORDER BY place_id, day_of_week, open_time", placeIds)) {
             UUID placeId = (UUID) r.remove("place_id");
             @SuppressWarnings("unchecked") var list = (List<Map<String,Object>>) byId.get(placeId).get("opening_hours");
             list.add(r);
-        }
-        for (var r : queryUuidArray(db, "SELECT p.place_id, m.object_key FROM catalog.place_media p JOIN catalog.media_assets m USING(media_id) WHERE p.place_id = ANY(?) AND m.moderation_status='APPROVED' AND m.object_key NOT LIKE 'private/%' ORDER BY p.place_id, p.sort_order", placeIds)) {
-            @SuppressWarnings("unchecked") var list = (List<String>) byId.get((UUID) r.get("place_id")).get("media_keys");
-            list.add((String) r.get("object_key"));
         }
         if (!byGeo.isEmpty()) {
             UUID[] geoIds = byGeo.keySet().toArray(UUID[]::new);
