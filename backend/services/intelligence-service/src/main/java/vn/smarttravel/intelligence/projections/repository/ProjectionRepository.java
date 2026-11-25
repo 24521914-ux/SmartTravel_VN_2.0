@@ -78,6 +78,7 @@ public class ProjectionRepository {
         db.queryForObject("select pg_advisory_xact_lock(hashtextextended(?,0))",Object.class,"place:"+id);
         if(!stream("catalog",id,version,p)){
             if(!rebuild||!Boolean.TRUE.equals(db.queryForObject("select exists(select 1 from intelligence.projection_versions where stream='catalog' and aggregate_id=? and version=? and payload->>'status'=?)",Boolean.class,id,version,p.path("status").asText())))return;
+            db.update("update intelligence.projection_versions set payload=?::jsonb where stream='catalog' and aggregate_id=? and version=?",json(p),id,version);
         }
         var f=allow(p.has("features")?p.path("features"):p,PLACE_FIELDS);f.remove(List.of("rating_count","rating_sum"));f.put("schema_version",1);
         String status=p.path("status").asText();require(Set.of("DRAFT","PUBLISHED","HIDDEN","ARCHIVED").contains(status),"INVALID_STATUS");
