@@ -79,6 +79,7 @@ try {
   await page.getByRole('tab', { name: /01\/12\/2026/ }).click();
   mark('compact trip settings and day create/edit/delete UI');
   for (let index = 0; index < 3; index++) {
+    if (!await button('+ Thêm vào ngày').count()) await button('Thêm địa điểm').click();
     await confirmed('POST', itemsPath, () => button('+ Thêm vào ngày').and(page.locator(':enabled')).first().click(), 201);
   }
   const items = page.getByTestId('trip-timeline-item');

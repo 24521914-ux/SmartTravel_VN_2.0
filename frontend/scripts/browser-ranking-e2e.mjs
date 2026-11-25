@@ -201,6 +201,7 @@ try {
     if (await openBtn.count()) {
       await openBtn.click();
       await page.locator('.ark-query-group').first().waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
+      await page.locator('.ark-query-group').first().scrollIntoViewIfNeeded().catch(() => {});
       await page.waitForTimeout(300);
     }
     await page.screenshot({ path: resolve(outDir, 'admin-ranking-labeling.png'), fullPage: false });
