@@ -8,7 +8,7 @@ import {
 } from "../../shared/api";
 import { placeImageCandidates } from "../places/media";
 import { hydratePlaceWithOpenData, hydratePlacesWithOpenData, loadOpenDataPlaces } from "../places/osmCatalog";
-import { cachedFirstPlacesPage, cachedTaxonomy, getCachedMergedCatalog } from "../places/catalogCache";
+import { cachedFirstPlacesPage, cachedTaxonomy } from "../places/catalogCache";
 import { consumeMyTripsPrefetch } from "./tripPrefetch";
 import { TripDestinations } from "./TripDestinations";
 import { TripMap, rowId, snapshot, placeName } from "./TripMap";
@@ -659,22 +659,6 @@ export function TripPlanner({
     setPlaceError("");
     try {
       const isDefaultUnfiltered = !next && !query.trim() && !category && !destination;
-      if (isDefaultUnfiltered) {
-        const cached = getCachedMergedCatalog(travel);
-        if (cached) {
-          if (generation !== searchRequest.current) return;
-          const head = cached.places.slice(0, 12);
-          const rows =
-            suggestedPlace &&
-            !head.some((row) => rowId(row) === rowId(suggestedPlace))
-              ? [suggestedPlace, ...head]
-              : head;
-          setPlaces(rows);
-          setCursor(null);
-          return;
-        }
-      }
-
       const params = new URLSearchParams({ limit: "12" });
       if (query.trim()) params.set("q", query.trim());
       if (category) params.set("categoryId", category);

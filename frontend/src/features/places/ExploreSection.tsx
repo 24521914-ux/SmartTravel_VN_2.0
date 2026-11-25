@@ -336,14 +336,15 @@ export function ExploreSection({ travel, onNavigateToTrip, onNavigate, busy = fa
         if (openData.length) openDataRef.current = openData;
         const isSyntheticTest = firstPage.items.some(isSyntheticFixtureSuite);
         if (openData.length && !isSyntheticTest) {
-          const cleanFirst = dedupePlacesById(firstPage.items).filter(cp => !isTestPlaceRecord(cp));
+          const dedupedFirst = dedupePlacesById(firstPage.items);
+          const cleanFirst = dedupedFirst.filter(cp => !isTestPlaceRecord(cp));
           const hasNonDemo = cleanFirst.some(cp => !isLegacySeededDemoPlace(cp));
           const initialSubset = hasNonDemo ? cleanFirst.filter(cp => !isLegacySeededDemoPlace(cp)) : cleanFirst;
           const hydratedInitial = hydratePlacesWithOpenData(initialSubset, openData);
 
           if (!firstPage.next_cursor) {
             const merged = mergeCatalogWithOpenData({
-              catalogPlaces: cleanFirst,
+              catalogPlaces: dedupedFirst,
               openDataPlaces: openData,
               categories: rawCats,
               geographicUnits: rawGeos,
