@@ -8,6 +8,8 @@ import {
 } from "../../shared/api";
 import { placeImageCandidates } from "../places/media";
 import { hydratePlaceWithOpenData, hydratePlacesWithOpenData, loadOpenDataPlaces } from "../places/osmCatalog";
+import { cachedFirstPlacesPage, cachedTaxonomy } from "../places/catalogCache";
+import { consumeMyTripsPrefetch } from "./tripPrefetch";
 import { TripDestinations } from "./TripDestinations";
 import { TripMap, rowId, snapshot, placeName } from "./TripMap";
 import "./trip-planner.css";
@@ -335,6 +337,8 @@ export function TripPlanner({
     mutationLock = useRef(false),
     queued = useRef<Operation[]>([]);
   const dirtyEditors = useRef(new Set<string>());
+  const loadedDestKey = useRef("");
+  const isFirstPlaceFetch = useRef(true);
   const disabled =
       busy ||
       loading ||
@@ -373,6 +377,7 @@ export function TripPlanner({
     id: string,
     selected: Resource,
     generation = request.current,
+    preloaded?: { items: Resource[]; legs: Resource[] } | null,
   ) {
     const selectedId = rowId(selected);
     dayRef.current = selectedId;
@@ -381,19 +386,34 @@ export function TripPlanner({
     setLegs([]);
     setSelectedItem("");
     remember(id, selectedId);
-    const [detail, rows, segments] = await Promise.all([
-      travel.read<Resource>("trip", `/trips/${id}/days/${selectedId}`),
+    if (preloaded) {
+      if (generation !== request.current || dayRef.current !== selectedId) return;
+      setItems(preloaded.items);
+      setLegs(preloaded.legs);
+      setSelectedItem(preloaded.items.length ? rowId(preloaded.items[0]) : "");
+      return;
+    }
+    const [rows, segments] = await Promise.all([
       travel.readAll("trip", `/trips/${id}/days/${selectedId}/items`),
       travel.readAll("trip", `/trips/${id}/days/${selectedId}/travel-legs`),
     ]);
     if (generation !== request.current || dayRef.current !== selectedId) return;
-    setDay(detail);
     setItems(rows.items);
     setLegs(segments.items);
     setSelectedItem(rows.items.length ? rowId(rows.items[0]) : "");
   }
 
-  async function openTrip(value: Resource, preferredDay = "") {
+  async function openTrip(
+    value: Resource,
+    preferredDay = "",
+    options?: {
+      skipTripRefetch?: boolean;
+      preloadedDays?: Resource[];
+      preloadedDestinations?: Resource[];
+      preloadedDayId?: string;
+      preloadedDayData?: { items: Resource[]; legs: Resource[] } | null;
+    },
+  ) {
     const generation = ++request.current;
     setLoading(true);
     setError("");
@@ -410,16 +430,38 @@ export function TripPlanner({
     remember(rowId(value));
     try {
       const id = rowId(value);
+      const destKey = `${id}:${String(value.version ?? '')}`;
+      loadedDestKey.current = destKey;
+
+      const destPromise = options?.preloadedDestinations
+        ? Promise.resolve({ items: options.preloadedDestinations })
+        : travel.readAll("trip", `/trips/${id}/destinations`).catch(() => null);
+      void destPromise.then((destRows) => {
+        if (generation !== request.current) return;
+        if (destRows) setTripDestinations(destRows.items);
+      });
+
       const [detail, rows] = await Promise.all([
-        travel.read<Resource>("trip", `/trips/${id}`),
-        travel.readAll("trip", `/trips/${id}/days`),
+        options?.skipTripRefetch
+          ? Promise.resolve(value)
+          : travel.read<Resource>("trip", `/trips/${id}`),
+        options?.preloadedDays
+          ? Promise.resolve({ items: options.preloadedDays })
+          : travel.readAll("trip", `/trips/${id}/days`),
       ]);
       if (generation !== request.current) return;
+      loadedDestKey.current = `${id}:${String(detail.version ?? '')}`;
       applyTrip(detail);
       setDays(rows.items);
       const selected =
         rows.items.find((row) => rowId(row) === preferredDay) ?? rows.items[0];
-      if (selected) await loadDay(id, selected, generation);
+      if (selected) {
+        const preloaded =
+          options?.preloadedDayData && options.preloadedDayId === rowId(selected)
+            ? options.preloadedDayData
+            : undefined;
+        await loadDay(id, selected, generation, preloaded);
+      }
     } catch (cause) {
       if (generation === request.current) setError(errorMessage(cause));
     } finally {
@@ -443,8 +485,6 @@ export function TripPlanner({
     setLoading(true);
     setError("");
     try {
-      const data = await travel.readAll("trip", "/me/trips");
-      setTrips(data.items);
       let remembered: { tripId?: string; dayId?: string } = {};
       try {
         remembered = JSON.parse(
@@ -453,10 +493,56 @@ export function TripPlanner({
       } catch {
         /* No selection. */
       }
+
+      const rememberedTripId = remembered.tripId && !suggestedPlace ? remembered.tripId : "";
+      const rememberedDayId = remembered.dayId && rememberedTripId ? remembered.dayId : "";
+
+      // Speculatively fetch remembered trip's days, destinations, items, and legs in parallel with /me/trips
+      const tripsPromise = consumeMyTripsPrefetch(travel);
+      const optDaysPromise = rememberedTripId
+        ? travel.readAll("trip", `/trips/${rememberedTripId}/days`).catch(() => null)
+        : Promise.resolve(null);
+      const optDestsPromise = rememberedTripId
+        ? travel.readAll("trip", `/trips/${rememberedTripId}/destinations`).catch(() => null)
+        : Promise.resolve(null);
+      const optItemsPromise =
+        rememberedTripId && rememberedDayId
+          ? travel.readAll("trip", `/trips/${rememberedTripId}/days/${rememberedDayId}/items`).catch(() => null)
+          : Promise.resolve(null);
+      const optLegsPromise =
+        rememberedTripId && rememberedDayId
+          ? travel.readAll("trip", `/trips/${rememberedTripId}/days/${rememberedDayId}/travel-legs`).catch(() => null)
+          : Promise.resolve(null);
+
+      const data = await tripsPromise;
+      setTrips(data.items);
       const selected =
         data.items.find((row) => rowId(row) === remembered.tripId) ?? data.items[0];
-      if (selected) await openTrip(selected, remembered.dayId);
-      else if (!data.items.length) setNewTrip(true);
+      if (selected) {
+        const selectedId = rowId(selected);
+        if (rememberedTripId && selectedId === rememberedTripId) {
+          const [optDays, optDests, optItems, optLegs] = await Promise.all([
+            optDaysPromise,
+            optDestsPromise,
+            optItemsPromise,
+            optLegsPromise,
+          ]);
+          await openTrip(selected, remembered.dayId, {
+            skipTripRefetch: true,
+            preloadedDays: optDays?.items,
+            preloadedDestinations: optDests?.items,
+            preloadedDayId: rememberedDayId,
+            preloadedDayData:
+              optItems && optLegs
+                ? { items: optItems.items, legs: optLegs.items }
+                : null,
+          });
+        } else {
+          await openTrip(selected, remembered.dayId, { skipTripRefetch: true });
+        }
+      } else if (!data.items.length) {
+        setNewTrip(true);
+      }
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
@@ -472,13 +558,15 @@ export function TripPlanner({
         if (active && rows.length) setOpenDataPlaces(rows);
       })
       .catch(() => {});
-    void travel
-      .readAll("catalog", "/categories")
-      .then((data) => setCategories(data.items))
+    void cachedTaxonomy(travel, "categories")
+      .then((items) => {
+        if (active) setCategories(items);
+      })
       .catch(() => {});
-    void travel
-      .readAll("catalog", "/destinations")
-      .then((data) => setDestinations(data.items))
+    void cachedTaxonomy(travel, "destinations")
+      .then((items) => {
+        if (active) setDestinations(items);
+      })
       .catch(() => {});
     return () => {
       active = false;
@@ -509,19 +597,29 @@ export function TripPlanner({
 
   useEffect(() => {
     let active = true;
+    if (!tripId) {
+      setTripDestinations([]);
+      return;
+    }
+    const key = `${tripId}:${String(trip?.version ?? '')}`;
+    if (loadedDestKey.current === key) {
+      return;
+    }
     setTripDestinations([]);
-    if (tripId)
-      void travel
-        .readAll("trip", `${base}/destinations`)
-        .then((data) => {
-          if (active) setTripDestinations(data.items);
-        })
-        .catch(() => {
-          if (active)
-            setNotice(
-              "Chưa tải được điểm đến của chuyến đi. Mở cài đặt để thử lại.",
-            );
-        });
+    void travel
+      .readAll("trip", `${base}/destinations`)
+      .then((data) => {
+        if (active) {
+          loadedDestKey.current = key;
+          setTripDestinations(data.items);
+        }
+      })
+      .catch(() => {
+        if (active)
+          setNotice(
+            "Chưa tải được điểm đến của chuyến đi. Mở cài đặt để thử lại.",
+          );
+      });
     return () => {
       active = false;
     };
@@ -560,12 +658,15 @@ export function TripPlanner({
     setFinding(true);
     setPlaceError("");
     try {
+      const isDefaultUnfiltered = !next && !query.trim() && !category && !destination;
       const params = new URLSearchParams({ limit: "12" });
       if (query.trim()) params.set("q", query.trim());
       if (category) params.set("categoryId", category);
       if (destination) params.set("destinationId", destination);
       if (next) params.set("cursor", next);
-      const data = await travel.read<Page>("catalog", `/places?${params}`);
+      const data = isDefaultUnfiltered
+        ? await cachedFirstPlacesPage(travel, 12)
+        : await travel.read<Page>("catalog", `/places?${params}`);
       if (generation !== searchRequest.current) return;
       const rows =
         suggestedPlace &&
@@ -587,6 +688,13 @@ export function TripPlanner({
   }
 
   useEffect(() => {
+    if (isFirstPlaceFetch.current && !query.trim() && !category && !destination) {
+      isFirstPlaceFetch.current = false;
+      void findPlaces();
+      return () => {
+        searchRequest.current++;
+      };
+    }
     const timer = setTimeout(() => void findPlaces(), 300);
     return () => {
       clearTimeout(timer);

@@ -18,7 +18,7 @@ public class TripStore {
     @SuppressWarnings("unchecked") public Map<String,Object> decode(Object value) { try{return json.readValue(value.toString(),Map.class);}catch(Exception e){throw new IllegalStateException("Stored JSON invalid");} }
     public Map<String,Object> one(String sql,Object...args) {var rows=db.queryForList(sql,args); require(!rows.isEmpty(),404,"NOT_FOUND"); return rows.getFirst();}
     public Map<String,Object> owner(UUID trip,UUID user,boolean lock) {
-        guardUser(user);
+        guardUser(user, lock);
         return one("SELECT * FROM trip.trips WHERE trip_id=? AND user_id=? AND deleted_at IS NULL"+(lock?" FOR UPDATE":""),trip,user);
     }
     public void expected(Map<String,Object> trip,String expected) { require(number(trip.get("version"))==version(expected),409,"VERSION_CONFLICT"); }
@@ -46,12 +46,14 @@ public class TripStore {
     public void execute(String sql){db.execute(sql);}
     public void lockDestinations(){db.queryForObject("SELECT pg_advisory_xact_lock(hashtextextended(?,0))",Object.class,"trip-destination-mutations");}
     public void lockUser(UUID user){db.queryForObject("SELECT pg_advisory_xact_lock(hashtextextended(?,0))",Object.class,"trip-user:"+user);}
-    public void guardUser(UUID user){
-        lockUser(user);
-        require(db.queryForObject("SELECT count(*) FROM trip.user_tombstones WHERE user_id=?",Long.class,user)==0,403,"USER_DELETED");
-        require(db.queryForObject("SELECT count(*) FROM trip.user_status WHERE user_id=? AND status <> 'ACTIVE'",Long.class,user)==0,403,"USER_INACTIVE");
+    public void guardUser(UUID user){guardUser(user, true);}
+    public void guardUser(UUID user, boolean lock){
+        String lockFn = lock ? "pg_advisory_xact_lock" : "pg_advisory_xact_lock_shared";
+        var row = one("SELECT " + lockFn + "(hashtextextended(?,0)), EXISTS(SELECT 1 FROM trip.user_tombstones WHERE user_id=?) AS deleted, EXISTS(SELECT 1 FROM trip.user_status WHERE user_id=? AND status <> 'ACTIVE') AS inactive", "trip-user:" + user, user, user);
+        require(!Boolean.TRUE.equals(row.get("deleted")), 403, "USER_DELETED");
+        require(!Boolean.TRUE.equals(row.get("inactive")), 403, "USER_INACTIVE");
     }
-    public List<String> warnings(UUID trip){var row=one("SELECT COALESCE(sum(i.estimated_cost),0) AS cost,count(i.item_id) FILTER(WHERE i.estimated_cost IS NULL) AS unknown,count(i.item_id) FILTER(WHERE p.unavailable_at IS NOT NULL) AS unavailable,t.budget FROM trip.trips t LEFT JOIN trip.itinerary_items i USING(trip_id) LEFT JOIN trip.place_snapshots p ON p.trip_id=i.trip_id AND p.place_id=i.place_id WHERE t.trip_id=? GROUP BY t.budget",trip);var result=new ArrayList<String>();if(row.get("budget")!=null&&new java.math.BigDecimal(row.get("cost").toString()).compareTo(new java.math.BigDecimal(row.get("budget").toString()))>0)result.add("BUDGET_EXCEEDED");if(number(row.get("unknown"))>0)result.add("PRICE_UNKNOWN");if(number(row.get("unavailable"))>0)result.add("PLACE_UNAVAILABLE");if(db.queryForObject("SELECT count(*) FROM trip.trip_destinations d JOIN trip.destination_status s USING(destination_id) WHERE d.trip_id=? AND s.status='INACTIVE'",Long.class,trip)>0)result.add("DESTINATION_UNAVAILABLE");return result;}
+    public List<String> warnings(UUID trip){var row=one("SELECT COALESCE(sum(i.estimated_cost),0) AS cost,count(i.item_id) FILTER(WHERE i.estimated_cost IS NULL) AS unknown,count(i.item_id) FILTER(WHERE p.unavailable_at IS NOT NULL) AS unavailable,t.budget,EXISTS(SELECT 1 FROM trip.trip_destinations d JOIN trip.destination_status s USING(destination_id) WHERE d.trip_id=t.trip_id AND s.status='INACTIVE') AS dest_unavailable FROM trip.trips t LEFT JOIN trip.itinerary_items i USING(trip_id) LEFT JOIN trip.place_snapshots p ON p.trip_id=i.trip_id AND p.place_id=i.place_id WHERE t.trip_id=? GROUP BY t.trip_id,t.budget",trip);var result=new ArrayList<String>();if(row.get("budget")!=null&&new java.math.BigDecimal(row.get("cost").toString()).compareTo(new java.math.BigDecimal(row.get("budget").toString()))>0)result.add("BUDGET_EXCEEDED");if(number(row.get("unknown"))>0)result.add("PRICE_UNKNOWN");if(number(row.get("unavailable"))>0)result.add("PLACE_UNAVAILABLE");if(Boolean.TRUE.equals(row.get("dest_unavailable")))result.add("DESTINATION_UNAVAILABLE");return result;}
     public Map<String,Object> paginate(Map<String,Object>page,int limit,String cursor){require(limit>=1&&limit<=100,400,"INVALID_LIMIT");int offset=0;long version=number(page.get("watermark"));if(cursor!=null){require(cursor.matches("[1-9][0-9]*:[0-9]+"),400,"INVALID_CURSOR");String[]parts=cursor.split(":");require(number(parts[0])==version,409,"CURSOR_VERSION_CONFLICT");long parsed=number(parts[1]);require(parsed<=Integer.MAX_VALUE,400,"INVALID_CURSOR");offset=(int)parsed;}var rows=(List<?>)page.get("items");require(offset<=rows.size(),400,"INVALID_CURSOR");page.put("items",rows.subList(offset,Math.min(rows.size(),offset+limit)));page.put("next_cursor",offset+limit<rows.size()?version+":"+(offset+limit):null);return page;}
 
     // Persistence for derived day travel legs; callers retain transaction ownership.

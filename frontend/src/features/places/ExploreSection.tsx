@@ -15,10 +15,20 @@ import {
   filterPlacesLocally,
   hydratePlaceWithOpenData,
   hydratePlacesWithOpenData,
+  isLegacySeededDemoPlace,
   isSyntheticFixtureSuite,
+  isTestPlaceRecord,
   loadOpenDataPlaces,
   mergeCatalogWithOpenData,
 } from './osmCatalog';
+import {
+  cachedFirstPlacesPage,
+  cachedTaxonomy,
+  dedupePlacesById,
+  fetchAllRemainingPlaces,
+  getCachedMergedCatalog,
+  setCachedMergedCatalog,
+} from './catalogCache';
 import './explore-voyage.css';
 
 export interface ExploreSectionProps {
@@ -285,7 +295,7 @@ export function ExploreSection({ travel, onNavigateToTrip, onNavigate, busy = fa
   const results = useRef<HTMLElement>(null);
   const itineraryTrackRef = useRef<HTMLDivElement>(null);
 
-  async function loadPlaces(searchQuery: string, categoryId: string, nextCursor?: string) {
+  async function loadPlaces(searchQuery: string, categoryId: string, nextCursor?: string, forceRefresh = false) {
     const id = ++requestId.current;
     setLoading(true);
     setError(false);
@@ -302,31 +312,89 @@ export function ExploreSection({ travel, onNavigateToTrip, onNavigate, busy = fa
       });
 
       if (!hasAppliedFilters) {
-        const [openData, firstPage, catsRes, destRes, geoRes] = await Promise.all([
+        if (!forceRefresh) {
+          const cached = getCachedMergedCatalog(travel);
+          if (cached) {
+            masterCatalog.current = cached;
+            setCategories(cached.categories);
+            setDestinationsList(cached.destinations);
+            setGeographicUnits(cached.geographicUnits);
+            setPlaces(cached.places);
+            setCursor(null);
+            return;
+          }
+        }
+
+        const [openData, firstPage, rawCats, rawDests, rawGeos] = await Promise.all([
           loadOpenDataPlaces(),
-          travel.read<Page>('catalog', `/places?${params}`),
-          travel.readAll('catalog', '/categories').catch(() => ({ items: [] as Resource[] })),
-          travel.readAll('catalog', '/destinations').catch(() => ({ items: [] as Resource[] })),
-          travel.readAll('catalog', '/geographic-units').catch(() => ({ items: [] as Resource[] })),
+          cachedFirstPlacesPage(travel, 12, { force: forceRefresh }),
+          cachedTaxonomy(travel, 'categories', { force: forceRefresh }).catch(() => [] as Resource[]),
+          cachedTaxonomy(travel, 'destinations', { force: forceRefresh }).catch(() => [] as Resource[]),
+          cachedTaxonomy(travel, 'geographic-units', { force: forceRefresh }).catch(() => [] as Resource[]),
         ]);
         if (id !== requestId.current) return;
         if (openData.length) openDataRef.current = openData;
-        const rawCats = catsRes.items ?? [];
-        const rawDests = destRes.items ?? [];
-        const rawGeos = geoRes.items ?? [];
         const isSyntheticTest = firstPage.items.some(isSyntheticFixtureSuite);
         if (openData.length && !isSyntheticTest) {
-          const fullDb = firstPage.next_cursor
-            ? await travel.readAll('catalog', '/places')
-            : firstPage;
-          if (id !== requestId.current) return;
-          const allDbPlaces: Resource[] = [];
-          for (const row of fullDb.items) {
-            const rowId = row.place_id ?? row.id;
-            if (!allDbPlaces.some(existing => (existing.place_id ?? existing.id) === rowId)) {
-              allDbPlaces.push(row);
-            }
+          const dedupedFirst = dedupePlacesById(firstPage.items);
+          const cleanFirst = dedupedFirst.filter(cp => !isTestPlaceRecord(cp));
+          const hasNonDemo = cleanFirst.some(cp => !isLegacySeededDemoPlace(cp));
+          const initialSubset = hasNonDemo ? cleanFirst.filter(cp => !isLegacySeededDemoPlace(cp)) : cleanFirst;
+          const hydratedInitial = hydratePlacesWithOpenData(initialSubset, openData);
+
+          if (!firstPage.next_cursor) {
+            const merged = mergeCatalogWithOpenData({
+              catalogPlaces: dedupedFirst,
+              openDataPlaces: openData,
+              categories: rawCats,
+              geographicUnits: rawGeos,
+              destinations: rawDests,
+            });
+            masterCatalog.current = merged;
+            setCachedMergedCatalog(travel, merged);
+            setCategories(merged.categories);
+            setDestinationsList(merged.destinations);
+            setGeographicUnits(merged.geographicUnits);
+            setPlaces(merged.places);
+            setCursor(null);
+            return;
           }
+
+          // Render initial 12 places and taxonomy immediately instead of stalling on full cursor pagination
+          setCategories(rawCats);
+          setDestinationsList(rawDests);
+          setGeographicUnits(rawGeos);
+          if (hydratedInitial.length > 0) {
+            masterCatalog.current = null;
+            setPlaces(hydratedInitial);
+            setCursor(null);
+            setLoading(false);
+
+            void fetchAllRemainingPlaces(travel, firstPage, { force: forceRefresh })
+              .then(allDbPlaces => {
+                if (id !== requestId.current) return;
+                const merged = mergeCatalogWithOpenData({
+                  catalogPlaces: allDbPlaces,
+                  openDataPlaces: openData,
+                  categories: rawCats,
+                  geographicUnits: rawGeos,
+                  destinations: rawDests,
+                });
+                masterCatalog.current = merged;
+                setCachedMergedCatalog(travel, merged);
+                setCategories(merged.categories);
+                setDestinationsList(merged.destinations);
+                setGeographicUnits(merged.geographicUnits);
+                setPlaces(merged.places);
+              })
+              .catch(() => {
+                // Initial 12 places remain usable if background hydration fails
+              });
+            return;
+          }
+
+          const allDbPlaces = await fetchAllRemainingPlaces(travel, firstPage, { force: forceRefresh });
+          if (id !== requestId.current) return;
           const merged = mergeCatalogWithOpenData({
             catalogPlaces: allDbPlaces,
             openDataPlaces: openData,
@@ -335,6 +403,7 @@ export function ExploreSection({ travel, onNavigateToTrip, onNavigate, busy = fa
             destinations: rawDests,
           });
           masterCatalog.current = merged;
+          setCachedMergedCatalog(travel, merged);
           setCategories(merged.categories);
           setDestinationsList(merged.destinations);
           setGeographicUnits(merged.geographicUnits);
@@ -414,7 +483,7 @@ export function ExploreSection({ travel, onNavigateToTrip, onNavigate, busy = fa
     setAppliedQuery(query.trim());
     setExpanded(true);
     appliedFilters.current = { ...filters };
-    void loadPlaces(query.trim(), category);
+    void loadPlaces(query.trim(), category, undefined, true);
     results.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
 
@@ -426,14 +495,14 @@ export function ExploreSection({ travel, onNavigateToTrip, onNavigate, busy = fa
     setFilters({});
     appliedFilters.current = {};
     setExpanded(true);
-    void loadPlaces(cleanTerm, '');
+    void loadPlaces(cleanTerm, '', undefined, true);
     results.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
 
   function chooseCategory(id: string) {
     setCategory(id);
     setExpanded(true);
-    void loadPlaces(appliedQuery, id);
+    void loadPlaces(appliedQuery, id, undefined, true);
   }
 
   function resetFilters() {
@@ -443,7 +512,7 @@ export function ExploreSection({ travel, onNavigateToTrip, onNavigate, busy = fa
     setFilters({});
     appliedFilters.current = {};
     setExpanded(true);
-    void loadPlaces('', '');
+    void loadPlaces('', '', undefined, true);
   }
 
   async function selectPlace(place: Resource) {

@@ -118,9 +118,43 @@ function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number): num
 
 let openDataCachePromise: Promise<Resource[]> | null = null;
 
+interface OpenDataIndex {
+  byPlaceId: Map<string, Resource>;
+  byExternalId: Map<string, Resource>;
+  byNormName: Map<string, Resource[]>;
+}
+
+const openDataIndexCache = new WeakMap<Resource[], OpenDataIndex>();
+
+function getOpenDataIndex(openDataPlaces: Resource[]): OpenDataIndex {
+  let index = openDataIndexCache.get(openDataPlaces);
+  if (index) return index;
+
+  const byPlaceId = new Map<string, Resource>();
+  const byExternalId = new Map<string, Resource>();
+  const byNormName = new Map<string, Resource[]>();
+
+  for (const op of openDataPlaces) {
+    const pid = String(op.place_id ?? op.id ?? '').trim();
+    if (pid && !byPlaceId.has(pid)) byPlaceId.set(pid, op);
+    const extId = typeof op.external_id === 'string' ? op.external_id.trim() : '';
+    if (extId && !byExternalId.has(extId)) byExternalId.set(extId, op);
+    const normName = normalize(String(op.name ?? ''));
+    if (normName) {
+      const bucket = byNormName.get(normName);
+      if (bucket) bucket.push(op);
+      else byNormName.set(normName, [op]);
+    }
+  }
+
+  index = { byPlaceId, byExternalId, byNormName };
+  openDataIndexCache.set(openDataPlaces, index);
+  return index;
+}
+
 export async function loadOpenDataPlaces(): Promise<Resource[]> {
   if (!openDataCachePromise) {
-    openDataCachePromise = fetch('/data/osm-places.json', { cache: 'no-store' })
+    openDataCachePromise = fetch('/data/osm-places.json')
       .then(async resp => {
         if (!resp.ok) return [];
         const data: unknown = await resp.json();
@@ -142,15 +176,16 @@ function nonEmptyString(value: unknown): string {
 export function findMatchingOpenDataPlace(place: Resource, openDataPlaces: Resource[]): Resource | undefined {
   if (!openDataPlaces.length || isSyntheticFixtureSuite(place)) return undefined;
 
+  const index = getOpenDataIndex(openDataPlaces);
   const pid = String(place.place_id ?? place.id ?? '').trim();
+  if (pid) {
+    const byPid = index.byPlaceId.get(pid);
+    if (byPid) return byPid;
+  }
   const extId = typeof place.external_id === 'string' ? place.external_id.trim() : '';
-  if (pid || extId) {
-    const exactIdMatch = openDataPlaces.find(
-      op =>
-        (pid && String(op.place_id ?? op.id ?? '').trim() === pid) ||
-        (extId && typeof op.external_id === 'string' && op.external_id.trim() === extId),
-    );
-    if (exactIdMatch) return exactIdMatch;
+  if (extId) {
+    const byExt = index.byExternalId.get(extId);
+    if (byExt) return byExt;
   }
 
   const candidateNames = [place.name_vi, place.name, place.place_name, place.name_en]
@@ -162,16 +197,18 @@ export function findMatchingOpenDataPlace(place: Resource, openDataPlaces: Resou
   const clon = Number(place.longitude);
   const hasCoords = place.latitude != null && place.longitude != null && Number.isFinite(clat) && Number.isFinite(clon);
 
-  if (hasCoords) {
-    const coordMatch = openDataPlaces.find(
-      op =>
-        candidateNames.includes(normalize(String(op.name ?? ''))) &&
-        distanceKm(clat, clon, Number(op.latitude), Number(op.longitude)) <= 0.35,
-    );
-    if (coordMatch) return coordMatch;
+  const nameMatches: Resource[] = [];
+  for (const name of candidateNames) {
+    const bucket = index.byNormName.get(name);
+    if (!bucket) continue;
+    for (const op of bucket) {
+      if (hasCoords && distanceKm(clat, clon, Number(op.latitude), Number(op.longitude)) <= 0.35) {
+        return op;
+      }
+      nameMatches.push(op);
+    }
   }
 
-  const nameMatches = openDataPlaces.filter(op => candidateNames.includes(normalize(String(op.name ?? ''))));
   if (nameMatches.length === 1) return nameMatches[0];
   return nameMatches.find(op => nonEmptyString(op.image_url) !== '');
 }
@@ -230,18 +267,15 @@ export function mergeCatalogWithOpenData(params: {
     return { places: catalogPlaces, categories, geographicUnits, destinations };
   }
 
+  const openDataIndex = getOpenDataIndex(openDataPlaces);
   const isMatchedOpenDataPlace = (cp: Resource) => {
     const cName = normalize(String(cp.name_vi ?? cp.name ?? ''));
     const clat = Number(cp.latitude);
     const clon = Number(cp.longitude);
-    return (
-      Number.isFinite(clat) &&
-      Number.isFinite(clon) &&
-      openDataPlaces.some(
-        op =>
-          normalize(String(op.name ?? '')) === cName &&
-          distanceKm(clat, clon, Number(op.latitude), Number(op.longitude)) <= 0.35,
-      )
+    if (!Number.isFinite(clat) || !Number.isFinite(clon)) return false;
+    const bucket = openDataIndex.byNormName.get(cName);
+    return Boolean(
+      bucket?.some(op => distanceKm(clat, clon, Number(op.latitude), Number(op.longitude)) <= 0.35),
     );
   };
 
@@ -333,22 +367,27 @@ export function mergeCatalogWithOpenData(params: {
 
   // Match genuinely new DB catalog places 1-to-1 with Commons metadata if missing image
   const mergedPlaces: Resource[] = activeCatalogPlaces.map(cp => hydratePlaceWithOpenData(cp, openDataPlaces));
+  const mergedByNormName = new Map<string, Resource[]>();
+  for (const mp of mergedPlaces) {
+    const mName = normalize(String(mp.name_vi ?? mp.name ?? ''));
+    if (!mName) continue;
+    const list = mergedByNormName.get(mName);
+    if (list) list.push(mp);
+    else mergedByNormName.set(mName, [mp]);
+  }
 
   for (const op of openDataPlaces) {
     const oName = normalize(String(op.name ?? ''));
     const olat = Number(op.latitude);
     const olon = Number(op.longitude);
-    const duplicate = mergedPlaces.some(mp => {
-      const mName = normalize(String(mp.name_vi ?? mp.name ?? ''));
-      const mlat = Number(mp.latitude);
-      const mlon = Number(mp.longitude);
-      return (
-        mName === oName &&
-        Number.isFinite(mlat) &&
-        Number.isFinite(mlon) &&
-        distanceKm(olat, olon, mlat, mlon) <= 0.35
-      );
-    });
+    const candidates = mergedByNormName.get(oName);
+    const duplicate = Boolean(
+      candidates?.some(mp => {
+        const mlat = Number(mp.latitude);
+        const mlon = Number(mp.longitude);
+        return Number.isFinite(mlat) && Number.isFinite(mlon) && distanceKm(olat, olon, mlat, mlon) <= 0.35;
+      }),
+    );
     if (duplicate) continue;
 
     const catName = String(op.category_name ?? 'Danh lam thắng cảnh');

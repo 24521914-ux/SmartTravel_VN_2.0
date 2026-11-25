@@ -3,15 +3,17 @@ import { AppPreferencesProvider, AuthProvider, ToastProvider, useAppPreferences,
 import { AppHeader, AppFooter } from './layouts/LayoutShell';
 import { ExploreSection } from '../features/places/ExploreSection';
 import { Icon } from '../shared/ui/Icon';
-import { travelClient, apiClient } from '../api/session';
+import { travelClient, apiClient, tokenStore } from '../api/session';
 import type { Resource } from '../shared/api';
 import { isSection, resolveRoute, SECTION_PATHS } from './routes';
 import { aiEnabled } from '../shared/config/features';
+import { prefetchMyTrips } from '../features/trips/tripPrefetch';
 import '../features/trips/trip-auth-gate.css';
+const preloadTripPlanner = () => import('../features/trips/TripPlanner');
 const RecommendationSection = lazy(() => import('../features/recommendations/RecommendationSection').then(m => ({ default: m.RecommendationSection })));
 const MapPanel = lazy(() => import('../features/places/MapPanel').then(m => ({ default: m.MapPanel })));
 const CollectionsPanel = lazy(() => import('../features/collections/CollectionsPanel').then(m => ({ default: m.CollectionsPanel })));
-const TripPlanner = lazy(() => import('../features/trips/TripPlanner').then(m => ({ default: m.TripPlanner })));
+const TripPlanner = lazy(() => preloadTripPlanner().then(m => ({ default: m.TripPlanner })));
 const NotificationPanel = lazy(() => import('../features/notifications/NotificationPanel').then(m => ({ default: m.NotificationPanel })));
 const AccountPanel = lazy(() => import('../features/account/AccountPanel').then(m => ({ default: m.AccountPanel })));
 const BusinessPortal = lazy(() => import('../features/businesses/BusinessPortal').then(m => ({ default: m.BusinessPortal })));
@@ -62,6 +64,13 @@ export function AppContent() {
       window.scrollTo({ top: 0, behavior: 'instant' });
     });
   }
+
+  useEffect(() => {
+    if (activeSection === 'Chuyến đi' && tokenStore.get()) {
+      void preloadTripPlanner();
+      void prefetchMyTrips(travelClient).catch(() => {});
+    }
+  }, [activeSection]);
 
   const isTripStudio = activeSection === 'Chuyến đi' && isAuthenticated;
   const isAccountSettings = activeSection === 'Tài khoản' && isAuthenticated;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Resource, TravelClient } from '../../shared/api';
 import { Icon } from '../../shared/ui';
 import { placeImage } from './media';
@@ -24,6 +24,8 @@ export function CommunityStories({ travel, places }: { travel: TravelClient; pla
   const [reviews, setReviews] = useState<Resource[]>([]);
   const [state, setState] = useState<'empty' | 'loading' | 'ready' | 'error'>('empty');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [nearViewport, setNearViewport] = useState(() => typeof IntersectionObserver === 'undefined');
+  const containerRef = useRef<HTMLDivElement>(null);
   const ids = places
     .filter(p => p.source !== 'geofabrik-osm')
     .slice(0, 4)
@@ -31,11 +33,32 @@ export function CommunityStories({ travel, places }: { travel: TravelClient; pla
     .join(',');
 
   useEffect(() => {
+    if (nearViewport || typeof IntersectionObserver === 'undefined') return;
+    const node = containerRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries.some(e => e.isIntersecting)) {
+          setNearViewport(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '320px 0px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [nearViewport]);
+
+  useEffect(() => {
     let cancelled = false;
     setReviews([]);
     setActiveIndex(0);
     if (!ids) {
       setState('empty');
+      return;
+    }
+    if (!nearViewport) {
+      setState('loading');
       return;
     }
     setState('loading');
@@ -51,7 +74,7 @@ export function CommunityStories({ travel, places }: { travel: TravelClient; pla
     return () => {
       cancelled = true;
     };
-  }, [travel, ids]);
+  }, [travel, ids, nearViewport]);
 
   const current = reviews.length ? reviews[activeIndex % reviews.length] : null;
   const authorName = String(current?.author_name ?? text('Du khách SmartTravel', 'SmartTravel Traveler'));
@@ -61,7 +84,7 @@ export function CommunityStories({ travel, places }: { travel: TravelClient; pla
   const filledStars = Math.round(ratingValue);
 
   return (
-    <div className="ev-testimonial community-stories" aria-labelledby="community-title">
+    <div ref={containerRef} className="ev-testimonial community-stories" aria-labelledby="community-title">
       <h3 id="community-title" className="ev-sr-only">
         {text('Chia sẻ từ cộng đồng du khách', 'Traveler community stories')}
       </h3>

@@ -7,6 +7,7 @@ import { aiEnabled } from '../../shared/config/features';
 import { InteractiveMap, validCoordinates, type MapPoint } from '../places/InteractiveMap';
 import { PlaceDetailPage } from '../places/PlaceDetailPage';
 import { hydratePlaceWithOpenData, hydratePlacesWithOpenData, loadOpenDataPlaces } from '../places/osmCatalog';
+import { cachedFirstPlacesPage, cachedTaxonomy, dedupePlacesById, fetchAllRemainingPlaces, getCachedMergedCatalog, setCachedMergedCatalog } from '../places/catalogCache';
 import { AddToTripModal } from './AddToTripModal';
 import { RecommendationCard } from './RecommendationCard';
 import { RecommendationFilters } from './RecommendationFilters';
@@ -149,6 +150,9 @@ export function RecommendationSection({ travel, onNavigate, busy: externalBusy =
 
   // Race-condition protection + pseudonymous analytics session + impression deduplication
   const requestSeqRef = useRef(0);
+  const metadataSeqRef = useRef(0);
+  const isFirstRankingRef = useRef(true);
+  const executeRankingRef = useRef<(targetFilters: RecommendationFilterState) => Promise<void>>(async () => {});
   const openDataRef = useRef<Resource[]>([]);
   const [openDataVersion, setOpenDataVersion] = useState(0);
   const sessionIdRef = useRef<string>(crypto.randomUUID());
@@ -163,35 +167,84 @@ export function RecommendationSection({ travel, onNavigate, busy: externalBusy =
     setCurrentPage(1);
   }, [filters, budgetBasis]);
 
-  // Load canonical Catalog metadata & real backend stats
+  // Load canonical Catalog metadata & real backend stats without stalling cards on multi-page place pagination
   const loadMetadata = useCallback(async () => {
-    setCatalogLoading(true);
+    const seq = ++metadataSeqRef.current;
     setCatalogError('');
-    try {
-      const [openData, placesRes, catsRes, tagsRes, geoRes, destRes, statsRes] = await Promise.all([
-        loadOpenDataPlaces(),
-        travel.readAll('catalog', '/places').catch(() => ({ items: [] as Resource[] })),
-        travel.readAll('catalog', '/categories').catch(() => ({ items: [] as Resource[] })),
-        travel.readAll('catalog', '/tags').catch(() => ({ items: [] as Resource[] })),
-        travel.readAll('catalog', '/geographic-units').catch(() => ({ items: [] as Resource[] })),
-        travel.readAll('catalog', '/destinations').catch(() => ({ items: [] as Resource[] })),
-        aiEnabled ? fetchRankingStats(travel).catch(() => null) : Promise.resolve(null),
-      ]);
-
-      if (openData.length) {
-        openDataRef.current = openData;
-        setOpenDataVersion(v => v + 1);
-      }
-      setCatalogPlaces(hydratePlacesWithOpenData((placesRes.items ?? []).filter(p => !isTestFixture(p)), openData));
-      setCategories((catsRes.items ?? []).filter(c => !isTestFixture(c)));
-      setTags((tagsRes.items ?? []).filter(t => !isTestFixture(t)));
-      setGeographicUnits((geoRes.items ?? []).filter(g => !isTestFixture(g)));
-      setDestinations((destRes.items ?? []).filter(d => !isTestFixture(d)));
-      if (statsRes) setRankingStats(statsRes);
-    } catch (err) {
-      setCatalogError(err instanceof Error ? err.message : text('Không thể tải danh mục địa bàn.', 'Failed to load catalog metadata.'));
-    } finally {
+    const cachedMerged = getCachedMergedCatalog(travel);
+    if (cachedMerged) {
+      setCatalogPlaces(cachedMerged.places.filter(p => !isTestFixture(p)));
+      setCategories(cachedMerged.categories.filter(c => !isTestFixture(c)));
+      setGeographicUnits(cachedMerged.geographicUnits.filter(g => !isTestFixture(g)));
+      setDestinations(cachedMerged.destinations.filter(d => !isTestFixture(d)));
       setCatalogLoading(false);
+    } else {
+      setCatalogLoading(true);
+    }
+
+    try {
+      const openDataPromise = loadOpenDataPlaces()
+        .then(openData => {
+          if (seq !== metadataSeqRef.current) return openData;
+          if (openData.length) {
+            openDataRef.current = openData;
+            setOpenDataVersion(v => v + 1);
+          }
+          return openData;
+        })
+        .catch(() => [] as Resource[]);
+
+      const tagsPromise = cachedTaxonomy(travel, 'tags').catch(() => [] as Resource[]);
+      const statsPromise = aiEnabled ? fetchRankingStats(travel).catch(() => null) : Promise.resolve(null);
+
+      if (cachedMerged) {
+        const [, tagsRows, statsRes] = await Promise.all([openDataPromise, tagsPromise, statsPromise]);
+        if (seq !== metadataSeqRef.current) return;
+        setTags(tagsRows.filter(t => !isTestFixture(t)));
+        if (statsRes) setRankingStats(statsRes);
+        return;
+      }
+
+      const [openData, catsRows, tagsRows, geoRows, destRows, statsRes, firstPage] = await Promise.all([
+        openDataPromise,
+        cachedTaxonomy(travel, 'categories').catch(() => [] as Resource[]),
+        tagsPromise,
+        cachedTaxonomy(travel, 'geographic-units').catch(() => [] as Resource[]),
+        cachedTaxonomy(travel, 'destinations').catch(() => [] as Resource[]),
+        statsPromise,
+        cachedFirstPlacesPage(travel, 12).catch(() => ({ items: [] as Resource[], next_cursor: null })),
+      ]);
+      if (seq !== metadataSeqRef.current) return;
+
+      const firstItems = (firstPage.items ?? []).filter(p => !isTestFixture(p));
+      setCategories(catsRows.filter(c => !isTestFixture(c)));
+      setTags(tagsRows.filter(t => !isTestFixture(t)));
+      setGeographicUnits(geoRows.filter(g => !isTestFixture(g)));
+      setDestinations(destRows.filter(d => !isTestFixture(d)));
+      if (statsRes) setRankingStats(statsRes);
+      setCatalogPlaces(hydratePlacesWithOpenData(firstItems, openData));
+      setCatalogLoading(false);
+
+      if (firstPage.next_cursor) {
+        const allDb = await fetchAllRemainingPlaces(travel, firstPage);
+        if (seq !== metadataSeqRef.current) return;
+        const cleanPlaces = dedupePlacesById(allDb).filter(p => !isTestFixture(p));
+        const hydratedAll = hydratePlacesWithOpenData(cleanPlaces, openData);
+        setCatalogPlaces(hydratedAll);
+        if (!cleanPlaces.some(p => String(p.place_id ?? p.id ?? '').startsWith('fixture-'))) {
+          setCachedMergedCatalog(travel, {
+            places: hydratedAll,
+            categories: catsRows,
+            geographicUnits: geoRows,
+            destinations: destRows,
+          });
+        }
+      }
+    } catch (err) {
+      if (seq === metadataSeqRef.current) {
+        setCatalogError(err instanceof Error ? err.message : text('Không thể tải danh mục địa bàn.', 'Failed to load catalog metadata.'));
+        setCatalogLoading(false);
+      }
     }
   }, [travel, text]);
 
@@ -379,7 +432,9 @@ export function RecommendationSection({ travel, onNavigate, busy: externalBusy =
     }
   }, [buildRankingPayload, travel, text]);
 
-  // Debounce backend ranking calls when filters/options change
+  executeRankingRef.current = executeRanking;
+
+  // Fire initial ranking immediately; debounce subsequent filter edits (never re-fire just from taxonomy load)
   useEffect(() => {
     syncNonSensitiveFiltersToUrl(filters);
     if (!aiEnabled) {
@@ -392,11 +447,16 @@ export function RecommendationSection({ travel, onNavigate, busy: externalBusy =
     if (minB !== null && maxB !== null && Number.isFinite(minB) && Number.isFinite(maxB) && minB > maxB) {
       return;
     }
+    if (isFirstRankingRef.current) {
+      isFirstRankingRef.current = false;
+      void executeRankingRef.current(filters);
+      return;
+    }
     const timer = window.setTimeout(() => {
-      void executeRanking(filters);
+      void executeRankingRef.current(filters);
     }, 180);
     return () => window.clearTimeout(timer);
-  }, [filters, topN, budgetBasis, executeRanking]);
+  }, [filters, topN, budgetBasis]);
 
   const catalogById = useMemo(() => {
     const map = new Map<string, Resource>();
