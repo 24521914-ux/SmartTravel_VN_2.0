@@ -61,7 +61,7 @@
   border-radius: 15px;
   color: var(--color-on-primary);
   font-size: 15px;
-  box-shadow: 0 10px 24px rgba(39, 120, 78, .18);
+  box-shadow: 0 10px 24px rgba(7, 43, 59, .22);
 }
 
 .trip-auth-submit svg { transition: transform 180ms ease; }
@@ -86,7 +86,7 @@
   overflow: hidden;
   isolation: isolate;
   border-radius: 21px;
-  background: #183b34;
+  background: #072b3b;
 }
 
 .trip-auth-image,

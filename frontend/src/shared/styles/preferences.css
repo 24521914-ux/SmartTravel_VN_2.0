@@ -1,71 +1,85 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --color-background: #0b1411;
-  --color-surface: #14231d;
-  --color-surface-elevated: #1c2c25;
-  --color-surface-subtle: #1a2b22;
-  --color-surface-sunken: #0d1914;
-  --color-text-primary: #f6f4ee;
-  --color-text-secondary: #c6ccc5;
-  --color-text-muted: #a5b0a7;
-  --color-text-inverse: #14231d;
-  --color-primary: #c6d9b4;
-  --color-primary-hover: #d7e5cb;
-  --color-primary-light: #24362b;
-  --color-primary-subtle: #1a2b22;
-  --color-on-primary: #14231d;
-  --color-border: #3b4a3e;
-  --color-border-subtle: #2e4034;
-  --color-border-strong: #687a6b;
-  --color-price: #b7c9ff;
-  --color-action: #f5d24f;
-  --color-action-hover: #ffdf69;
-  --color-action-ink: #192331;
-  --color-star: #f5c84b;
+  --color-background: #081e29;
+  --color-surface: #0d2b3a;
+  --color-surface-elevated: #153e52;
+  --color-surface-subtle: #113445;
+  --color-surface-sunken: #05202d;
+  --color-text-primary: #f4f7f9;
+  --color-text-secondary: #9eb6c4;
+  --color-text-muted: #7f9ba9;
+  --color-text-inverse: #05202d;
+  --color-primary: #62c2df;
+  --color-primary-hover: #83d2ea;
+  --color-primary-light: rgba(98, 194, 223, 0.16);
+  --color-primary-subtle: #113445;
+  --color-on-primary: #05202d;
+  --color-border: rgba(255, 255, 255, 0.12);
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.24);
+  --color-price: #62c2df;
+  --color-action: #f4813f;
+  --color-action-hover: #e56f2c;
+  --color-action-ink: #ffffff;
+  --color-success: #6ee7b7;
+  --color-success-bg: #12382c;
+  --color-warning: #fbbf24;
+  --color-warning-bg: #3b2a14;
+  --color-destructive: #fca5a5;
+  --color-destructive-hover: #f87171;
+  --color-destructive-bg: #3b2524;
+  --color-star: #f4a836;
   --color-promo: #f18a9a;
   --color-promo-soft: #3a252b;
-  --color-card-border: #3b4a3e;
-  --editorial-sand: #223b31;
-  --editorial-tint: #1c2c25;
-  --editorial-overlay: #102e29;
-  --glass-bg: rgba(20, 35, 29, .9);
-  --glass-border: rgba(198, 217, 180, .18);
-  --focus-ring: 0 0 0 3px rgba(198, 217, 180, .35);
+  --color-card-border: rgba(255, 255, 255, 0.12);
+  --editorial-sand: #113445;
+  --editorial-tint: #0d2b3a;
+  --editorial-overlay: #05202d;
+  --glass-bg: rgba(7, 43, 59, .9);
+  --glass-border: rgba(98, 194, 223, .22);
+  --focus-ring: 0 0 0 3px rgba(98, 194, 223, .35);
 }
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --color-background: #f5f7fb;
+  --color-background: #f7f8fa;
   --color-surface: #ffffff;
   --color-surface-elevated: #ffffff;
-  --color-surface-subtle: #f3f5f8;
-  --color-surface-sunken: #e9edf3;
-  --color-text-primary: #192331;
-  --color-text-secondary: #4b586a;
-  --color-text-muted: #58677a;
+  --color-surface-subtle: #f1f4f7;
+  --color-surface-sunken: #e4eaf0;
+  --color-text-primary: #0f2533;
+  --color-text-secondary: #5b6d7a;
+  --color-text-muted: #7b8c98;
   --color-text-inverse: #ffffff;
-  --color-primary: #27784e;
-  --color-primary-hover: #1b633e;
-  --color-primary-light: #e8f2eb;
-  --color-primary-subtle: #f2f7f3;
+  --color-primary: #072b3b;
+  --color-primary-hover: #0d3d52;
+  --color-primary-light: #e7f4f9;
+  --color-primary-subtle: #f1f7fa;
   --color-on-primary: #ffffff;
-  --color-border: #d9e0e9;
-  --color-border-subtle: #e8edf3;
-  --color-border-strong: #aab7c7;
-  --color-price: #214fc4;
-  --color-action: #f3d34d;
-  --color-action-hover: #e9c12b;
-  --color-action-ink: #192331;
-  --color-star: #f0bd2f;
+  --color-border: #e4eaf0;
+  --color-border-subtle: #eef2f6;
+  --color-border-strong: #c4d2de;
+  --color-price: #2e8eb4;
+  --color-action: #f4813f;
+  --color-action-hover: #e56f2c;
+  --color-action-ink: #ffffff;
+  --color-success: #15803d;
+  --color-success-bg: #dcfce7;
+  --color-warning: #b45309;
+  --color-warning-bg: #fef3c7;
+  --color-destructive: #c53030;
+  --color-destructive-hover: #9b2c2c;
+  --color-destructive-bg: #fee2e2;
+  --color-star: #f4a836;
   --color-promo: #cf4053;
   --color-promo-soft: #fff0f1;
-  --color-card-border: #e0e5ec;
-  --editorial-sand: #fff8df;
-  --editorial-tint: #edf2f7;
-  --editorial-overlay: #183c2b;
-  --glass-bg: rgba(255, 255, 255, .9);
-  --glass-border: rgba(31, 55, 90, .14);
-  --focus-ring: 0 0 0 3px rgba(39, 120, 78, .28);
+  --color-card-border: #e4eaf0;
+  --editorial-sand: #fff3eb;
+  --editorial-tint: #e7f4f9;
+  --editorial-overlay: #072b3b;
+  --glass-bg: rgba(255, 255, 255, .94);
+  --glass-border: rgba(7, 43, 59, .12);
+  --focus-ring: 0 0 0 3px rgba(46, 142, 180, .28);
 }
 
 body { background-color: var(--color-background); color: var(--color-text-primary); }
@@ -73,6 +87,10 @@ body { background-color: var(--color-background); color: var(--color-text-primar
 .destination-finder, .finder-field, .finder-advanced-content,
 .destination-finder .finder-budget-grid input,
 .explore-categories button { color-scheme: inherit; }
+:root[data-theme="light"] .destination-finder .finder-main input { color: #0f2533; }
+:root[data-theme="dark"] .destination-finder .finder-main input { color: #f4f7f9; }
+:root[data-theme="light"] .skip-link { background: #ffffff; color: #072b3b; }
+:root[data-theme="dark"] .skip-link { background: #0d2b3a; color: #f4f7f9; }
 .finder-submit, .finder-apply, .explore-categories button[aria-pressed="true"] { color: var(--color-on-primary); }
 
 .nav-preferences { display: inline-flex; align-items: center; gap: 5px; padding: 3px; border: 1px solid rgba(198, 217, 180, .2); border-radius: 999px; background: rgba(13, 25, 20, .22); }
@@ -93,8 +111,63 @@ body { background-color: var(--color-background); color: var(--color-text-primar
 :root[data-theme="light"] .liquid-glass-header.is-scrolled .mobile-menu-btn,
 :root[data-theme="light"] .liquid-glass-header:not(.is-immersive) .mobile-menu-btn { color: var(--color-text-primary); background: var(--color-surface); border-color: var(--color-border); }
 :root[data-theme="light"] .liquid-glass-header.is-immersive:not(.is-scrolled) :is(.preference-toggle, .nav-auth-btn, .mobile-menu-btn, .liquid-nav-link) { color: #f6f4ee; }
+:root[data-theme="light"] .liquid-glass-header.is-immersive:not(.is-scrolled) .header-logout { color: #ffb4a8 !important; }
 :root[data-theme="light"] .liquid-glass-header.is-immersive:not(.is-scrolled) .mobile-menu-btn { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.28); }
+.account-guest-page .liquid-glass-header.is-immersive:not(.is-scrolled) .liquid-glass-container {
+  background: rgba(7, 43, 59, 0.84);
+  border-color: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(22px) saturate(135%);
+  -webkit-backdrop-filter: blur(22px) saturate(135%);
+  box-shadow: 0 12px 34px rgba(7, 43, 59, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
 :root[data-theme="light"] .liquid-nav.open { background: rgba(255,255,255,.98); border-color: var(--color-border); }
+
+/* Unified Ocean Navy Footer across all routes (matching /kham-pha) */
+:root[data-theme] .app-footer {
+  background: #072b3b !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #f4f7f9;
+}
+
+:root[data-theme="dark"] .app-footer {
+  background: #05202d !important;
+}
+
+:root[data-theme] .app-footer strong,
+:root[data-theme] .app-footer h2 {
+  color: #ffffff;
+}
+
+:root[data-theme] .app-footer p,
+:root[data-theme] .app-footer span {
+  color: #b4c9d4 !important;
+}
+
+:root[data-theme] .app-footer .btn-subtle {
+  color: #dce8ee;
+  background: transparent;
+}
+
+:root[data-theme] .app-footer .btn-subtle:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme] .app-footer .photo-credits,
+:root[data-theme] .app-footer .photo-credits summary,
+:root[data-theme] .app-footer .photo-credits li {
+  color: #b4c9d4 !important;
+}
+
+:root[data-theme] .app-footer .photo-credits a {
+  color: #8fd4ea !important;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+:root[data-theme] .app-footer .photo-credits a:hover {
+  color: #ffffff !important;
+}
 
 .destination-carousel-shell { position: relative; }
 .destination-carousel-controls { display: flex; justify-content: flex-end; gap: 8px; margin: -12px 0 12px; }
@@ -314,14 +387,10 @@ body { background-color: var(--color-background); color: var(--color-text-primar
 :root[data-theme="light"] .place-detail-container .travel-panel > div[style*="background: rgb(255, 255, 255)"] { background: var(--color-surface) !important; }
 :root[data-theme="dark"] .place-detail-container .travel-panel > div[style*="background: rgb(255, 255, 255)"] { background: var(--color-surface-elevated) !important; }
 :root[data-theme="dark"] .place-detail-container .travel-panel { border-color: var(--color-border); background: var(--color-surface); }
-:root[data-theme="light"] .app-footer { color: var(--color-text-secondary); border-top: 1px solid var(--color-border-subtle); }
-:root[data-theme="light"] .app-footer :is(h2, h3, strong) { color: var(--color-text-primary); }
-:root[data-theme="light"] .app-footer :is(p, a, button, span) { color: var(--color-text-secondary); }
 
 :root[data-theme="light"] .travel-landing .empty-state { background: rgba(255,255,255,.88); border-color: var(--color-border); }
 :root[data-theme="light"] .finder-status button { color: var(--color-text-secondary); }
 :root[data-theme="light"] .journey-data-note { background: var(--color-surface); border-color: var(--color-border); border-radius: 16px; padding: 14px 18px; }
-:root[data-theme="light"] .app-footer { background: var(--color-surface) !important; }
 
 /* Text on plain surfaces follows the theme; photo overlays retain light ink. */
 :root[data-theme="light"] .journey-section h2 { color: var(--color-text-primary); }

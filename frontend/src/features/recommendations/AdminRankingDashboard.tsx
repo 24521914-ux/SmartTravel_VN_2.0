@@ -21,6 +21,25 @@ const fmtPct = (v: unknown) => {
   return Number.isFinite(n) ? `${(n * 100).toFixed(1)}%` : '—';
 };
 
+const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2)
+    + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return 6371.0088 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
+const formatOpeningSummary = (raw: unknown): string => {
+  if (!Array.isArray(raw) || raw.length === 0) return '';
+  const first = raw[0] as Record<string, unknown>;
+  const open = String(first.open ?? first.open_time ?? '').slice(0, 5);
+  const close = String(first.close ?? first.close_time ?? '').slice(0, 5);
+  if (!open || !close) return '';
+  return raw.length > 1 ? `${open}–${close} (+${raw.length - 1} ca)` : `${open}–${close}`;
+};
+
 export function AdminRankingDashboard({ travel }: AdminRankingDashboardProps) {
   const { showToast } = useToast();
   const [tab, setTab] = useState<AdminTab>('playground');
@@ -40,6 +59,7 @@ export function AdminRankingDashboard({ travel }: AdminRankingDashboardProps) {
   const [catalogPlaces, setCatalogPlaces] = useState<Resource[]>([]);
   const [categories, setCategories] = useState<Resource[]>([]);
   const [destinations, setDestinations] = useState<Resource[]>([]);
+  const [geoUnits, setGeoUnits] = useState<Resource[]>([]);
 
   // Tab A: Playground state
   const [pgConfigA, setPgConfigA] = useState('');
@@ -111,7 +131,7 @@ export function AdminRankingDashboard({ travel }: AdminRankingDashboardProps) {
     setError('');
     try {
       const [
-        cfgs, deps, cohs, jobs, arts, dss, evals, tunes, an, placesRes, catsRes, destsRes,
+        cfgs, deps, cohs, jobs, arts, dss, evals, tunes, an, placesRes, catsRes, destsRes, geoRes,
       ] = await Promise.all([
         adminRankingApi.listConfigs(travel).catch(() => ({ items: [] })),
         adminRankingApi.listDeployments(travel).catch(() => ({ items: [] })),
@@ -125,6 +145,7 @@ export function AdminRankingDashboard({ travel }: AdminRankingDashboardProps) {
         travel.readAll('catalog', '/places').catch(() => ({ items: [] })),
         travel.readAll('catalog', '/categories').catch(() => ({ items: [] })),
         travel.readAll('catalog', '/destinations').catch(() => ({ items: [] })),
+        travel.readAll('catalog', '/geographic-units').catch(() => ({ items: [] })),
       ]);
       setConfigs(cfgs.items ?? []);
       setDeployments(deps.items ?? []);
@@ -138,6 +159,7 @@ export function AdminRankingDashboard({ travel }: AdminRankingDashboardProps) {
       setCatalogPlaces(placesRes.items ?? []);
       setCategories(catsRes.items ?? []);
       setDestinations(destsRes.items ?? []);
+      setGeoUnits(geoRes.items ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không tải được dữ liệu Recommendation Admin.');
     } finally {
@@ -738,6 +760,8 @@ export function AdminRankingDashboard({ travel }: AdminRankingDashboardProps) {
 
             const catNameById = new Map(categories.map(c => [String(c.category_id ?? c.id), String(c.name ?? c.name_vi ?? '')]));
             const destNameById = new Map(destinations.map(d => [String(d.destination_id ?? d.id), String(d.name ?? d.name_vi ?? '')]));
+            const geoNameById = new Map(geoUnits.map(g => [String(g.geographic_unit_id ?? g.id), String(g.name ?? g.name_vi ?? '')]));
+            const catalogById = new Map(catalogPlaces.map(p => [String(p.place_id ?? p.id), p]));
 
             return (
               <div className="ark-card">
@@ -875,13 +899,30 @@ export function AdminRankingDashboard({ travel }: AdminRankingDashboardProps) {
 
                           <div className="ark-candidate-grid">
                             {items.map(j => {
-                              const pInfo = (j.place_info as Resource) ?? {};
+                              const pid = String(j.place_id);
+                              const rawInfo = (j.place_info as Resource) ?? {};
+                              const catRec = catalogById.get(pid);
+                              // Merge authoritative Catalog fields so 203/203 addresses, descriptions, coords & opening hours display immediately
+                              const placeName = String(rawInfo.name || catRec?.name || catRec?.name_vi || pid);
+                              const placeAddress = String(rawInfo.address || catRec?.address || '').trim();
+                              const placeDesc = String(rawInfo.description || catRec?.description || '').trim();
+                              const placeLat = rawInfo.latitude != null ? Number(rawInfo.latitude) : (catRec?.latitude != null ? Number(catRec.latitude) : null);
+                              const placeLon = rawInfo.longitude != null ? Number(rawInfo.longitude) : (catRec?.longitude != null ? Number(catRec.longitude) : null);
+                              const geoAreaName = catRec?.geographic_unit_id ? (geoNameById.get(String(catRec.geographic_unit_id)) ?? '') : '';
+                              const openingSummary = formatOpeningSummary(catRec?.opening_hours);
+                              const distFromOriginKm =
+                                originObj && placeLat != null && placeLon != null && Number.isFinite(placeLat) && Number.isFinite(placeLon)
+                                  ? haversineKm(Number(originObj.latitude), Number(originObj.longitude), placeLat, placeLon)
+                                  : null;
+
                               const jStatus = String(j.judgment_status ?? (j.relevance_grade != null ? 'LABELED' : 'UNLABELED'));
                               const currentGrade = j.relevance_grade == null ? null : Number(j.relevance_grade);
-                              const rowKey = `${String(j.query_id)}:${String(j.place_id)}`;
+                              const rowKey = `${String(j.query_id)}:${pid}`;
                               const isSaving = savingJudgmentKey === rowKey;
-                              const priceMin = pInfo.price_min != null ? Number(pInfo.price_min) : null;
-                              const priceMax = pInfo.price_max != null ? Number(pInfo.price_max) : null;
+                              const priceMinRaw = rawInfo.price_min ?? catRec?.price_min ?? catRec?.price;
+                              const priceMaxRaw = rawInfo.price_max ?? catRec?.price_max;
+                              const priceMin = priceMinRaw != null ? Number(priceMinRaw) : null;
+                              const priceMax = priceMaxRaw != null ? Number(priceMaxRaw) : null;
                               const priceLabel = priceMin == null
                                 ? 'Chưa có thông tin giá'
                                 : priceMin === 0 && (priceMax == null || priceMax === 0)
@@ -889,37 +930,69 @@ export function AdminRankingDashboard({ travel }: AdminRankingDashboardProps) {
                                   : priceMax != null && priceMax !== priceMin
                                     ? `${priceMin.toLocaleString('vi-VN')} – ${priceMax.toLocaleString('vi-VN')} đ`
                                     : `${priceMin.toLocaleString('vi-VN')} đ`;
-                              const pCats = Array.isArray(pInfo.category_ids)
-                                ? (pInfo.category_ids as string[]).map(cid => catNameById.get(cid)).filter(Boolean)
-                                : [];
-                              const pTags = Array.isArray(pInfo.tags) ? (pInfo.tags as string[]).slice(0, 5) : [];
+                              const ratingAvgRaw = rawInfo.rating_avg ?? catRec?.rating_avg;
+                              const ratingCntRaw = rawInfo.rating_count ?? catRec?.review_count ?? 0;
+                              const rawCats = Array.isArray(rawInfo.category_ids) && rawInfo.category_ids.length > 0
+                                ? (rawInfo.category_ids as string[])
+                                : (Array.isArray(catRec?.category_ids) ? (catRec.category_ids as string[]) : []);
+                              const pCats = rawCats.map(cid => catNameById.get(cid)).filter(Boolean);
+                              const pTags = Array.isArray(rawInfo.tags) ? (rawInfo.tags as string[]).slice(0, 5) : [];
 
                               return (
                                 <div key={String(j.judgment_id)} className={`ark-cand-row status-${jStatus.toLowerCase()}`}>
                                   <div className="ark-cand-info">
                                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                                      <strong>{String(pInfo.name || j.place_id)}</strong>
+                                      <strong>{placeName}</strong>
                                       {pCats.map(cn => <span key={cn} className="ark-pill">{cn}</span>)}
-                                      {Boolean(pInfo.space_type) && pInfo.space_type !== 'UNKNOWN' && (
-                                        <span className="ark-pill">{String(pInfo.space_type)}</span>
+                                      {geoAreaName && <span className="ark-pill">{geoAreaName}</span>}
+                                      {distFromOriginKm != null && (
+                                        <span className="ark-pill is-ok ark-dist-badge">
+                                          Cách tâm {distFromOriginKm < 1 ? `${Math.round(distFromOriginKm * 1000)} m` : `${distFromOriginKm.toFixed(2)} km`}
+                                        </span>
+                                      )}
+                                      {Boolean(rawInfo.space_type) && rawInfo.space_type !== 'UNKNOWN' && (
+                                        <span className="ark-pill">{String(rawInfo.space_type)}</span>
                                       )}
                                     </div>
                                     <div className="ark-cand-meta">
-                                      <span>{pInfo.address ? String(pInfo.address) : 'Chưa có địa chỉ'}</span>
+                                      <span>{placeAddress || 'Chưa có địa chỉ'}</span>
                                       <span>· {priceLabel}</span>
                                       <span>
-                                        · Đánh giá: {pInfo.rating_avg != null ? `${Number(pInfo.rating_avg).toFixed(1)}★ (${String(pInfo.rating_count ?? 0)})` : 'Chưa có đánh giá'}
+                                        · Đánh giá: {ratingAvgRaw != null ? `${Number(ratingAvgRaw).toFixed(1)}★ (${String(ratingCntRaw)})` : 'Chưa có đánh giá'}
                                       </span>
+                                      {openingSummary && <span>· Giờ mở: {openingSummary}</span>}
+                                      {placeLat != null && placeLon != null && (
+                                        <span className="ark-map-links">
+                                          ·{' '}
+                                          <a
+                                            className="ark-map-link"
+                                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeAddress ? `${placeName}, ${placeAddress}` : `${placeName} ${placeLat},${placeLon}`)}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                          >
+                                            Google Maps ↗
+                                          </a>
+                                          {' · '}
+                                          <a
+                                            className="ark-map-link"
+                                            href={`https://www.openstreetmap.org/?mlat=${placeLat}&mlon=${placeLon}#map=16/${placeLat}/${placeLon}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                          >
+                                            OSM ↗
+                                          </a>
+                                        </span>
+                                      )}
                                     </div>
-                                    {Boolean(pInfo.description) && (
-                                      <p className="ark-cand-desc">{String(pInfo.description).slice(0, 220)}</p>
+                                    {Boolean(placeDesc) && (
+                                      <p className="ark-cand-desc">{placeDesc.slice(0, 240)}</p>
                                     )}
                                     {pTags.length > 0 && (
                                       <div className="ark-cand-tags">Tags: {pTags.join(', ')}</div>
                                     )}
                                   </div>
 
-                                  <div className="ark-grade-bar" role="group" aria-label={`Chấm điểm cho ${String(pInfo.name || j.place_id)}`}>
+                                  <div className="ark-grade-bar" role="group" aria-label={`Chấm điểm cho ${placeName}`}>
                                     {[
                                       { grade: 0, label: '0 · Không phù hợp' },
                                       { grade: 1, label: '1 · Tạm được' },

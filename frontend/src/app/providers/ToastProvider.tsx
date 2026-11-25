@@ -47,10 +47,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       >
         {toasts.map(toast => {
           const bgColors = {
-            success: 'var(--color-success)',
-            error: 'var(--color-destructive)',
-            warning: 'var(--color-warning)',
-            info: 'var(--color-primary)'
+            success: '#157347',
+            error: '#b91c1c',
+            warning: '#b45309',
+            info: '#072b3b'
           };
           const icons = {
             success: 'check',
@@ -66,6 +66,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 pointerEvents: 'auto',
                 background: bgColors[toast.type],
                 color: '#ffffff',
+                border: '1px solid rgba(255, 255, 255, 0.16)',
                 padding: '12px 18px',
                 borderRadius: 'var(--radius-button)',
                 boxShadow: 'var(--shadow-lg)',

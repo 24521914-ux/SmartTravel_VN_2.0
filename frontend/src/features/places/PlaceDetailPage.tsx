@@ -4,6 +4,7 @@ import type { TravelClient, Resource, Page } from '../../shared/api';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { useToast } from '../../app/providers/ToastProvider';
 import { mediaUrl, placeImageCandidates } from './media';
+import { hydratePlaceWithOpenData, loadOpenDataPlaces } from './osmCatalog';
 import { useAppPreferences } from '../../app/providers/AppPreferences';
 
 export interface PlaceDetailPageProps {
@@ -37,25 +38,40 @@ export function PlaceDetailPage({ place, travel, onBack, onAddToTrip, busy = fal
   const [submittingPrice, setSubmittingPrice] = useState(false);
   const [contributingPhoto, setContributingPhoto] = useState(false);
   const [photoContributed, setPhotoContributed] = useState(false);
+  const [hydratedPlace, setHydratedPlace] = useState<Resource>(place);
 
-  const placeId = String(place.id ?? place.place_id ?? '');
-  const imageCandidates = placeImageCandidates(place);
+  useEffect(() => {
+    let active = true;
+    setHydratedPlace(place);
+    if (placeImageCandidates(place, { allowEditorialLandmark: false }).length === 0) {
+      void loadOpenDataPlaces().then(openData => {
+        if (active && openData.length) {
+          setHydratedPlace(hydratePlaceWithOpenData(place, openData));
+        }
+      });
+    }
+    return () => { active = false; };
+  }, [place]);
+
+  const placeId = String(hydratedPlace.id ?? hydratedPlace.place_id ?? '');
+  const imageCandidates = placeImageCandidates(hydratedPlace);
+  const imageCandidateKey = imageCandidates.join('|');
   const imageUrl = imageCandidates[imageIndex] ?? '';
-  const name = String(locale === 'en' ? place.name_en ?? place.name ?? place.title ?? 'Destination details' : place.name_vi ?? place.name ?? place.title ?? 'Chi tiết địa điểm');
-  const address = String(place.address ?? text('Chưa có địa chỉ', 'Address unavailable'));
-  const rawRating = place.rating_avg ?? place.rating;
+  const name = String(locale === 'en' ? hydratedPlace.name_en ?? hydratedPlace.name ?? hydratedPlace.title ?? 'Destination details' : hydratedPlace.name_vi ?? hydratedPlace.name ?? hydratedPlace.title ?? 'Chi tiết địa điểm');
+  const address = String(hydratedPlace.address ?? text('Chưa có địa chỉ', 'Address unavailable'));
+  const rawRating = hydratedPlace.rating_avg ?? hydratedPlace.rating;
   const rating = rawRating == null || !Number.isFinite(Number(rawRating)) ? null : Number(rawRating);
-  const reviewCount = Number(place.review_count ?? 0);
-  const rawPrice = place.price_min ?? place.price;
+  const reviewCount = Number(hydratedPlace.review_count ?? 0);
+  const rawPrice = hydratedPlace.price_min ?? hydratedPlace.price;
   const minPrice = rawPrice == null || rawPrice === '' || !Number.isFinite(Number(rawPrice)) ? null : Number(rawPrice);
-  const maxPrice = place.price_max == null || place.price_max === '' || !Number.isFinite(Number(place.price_max)) ? null : Number(place.price_max);
-  const currency = String(place.currency ?? 'VND');
+  const maxPrice = hydratedPlace.price_max == null || hydratedPlace.price_max === '' || !Number.isFinite(Number(hydratedPlace.price_max)) ? null : Number(hydratedPlace.price_max);
+  const currency = String(hydratedPlace.currency ?? 'VND');
   const placePrice = minPrice === null ? text('Chưa cập nhật giá', 'Price unavailable') : minPrice === 0 && (maxPrice === null || maxPrice === 0) ? text('Miễn phí', 'Free') : maxPrice !== null && maxPrice > minPrice ? `${formatCurrency(minPrice, currency)} – ${formatCurrency(maxPrice, currency)}` : `${text('Từ', 'From')} ${formatCurrency(minPrice, currency)}`;
-  const lat = Number(place.latitude);
-  const lon = Number(place.longitude);
-  const hasCoordinates = place.latitude != null && place.longitude != null && Number.isFinite(lat) && Number.isFinite(lon);
+  const lat = Number(hydratedPlace.latitude);
+  const lon = Number(hydratedPlace.longitude);
+  const hasCoordinates = hydratedPlace.latitude != null && hydratedPlace.longitude != null && Number.isFinite(lat) && Number.isFinite(lon);
 
-  useEffect(() => { setImageIndex(0); }, [placeId]);
+  useEffect(() => { setImageIndex(0); }, [placeId, imageCandidateKey]);
 
   useEffect(() => {
     if (place.source === 'geofabrik-osm') {
@@ -266,12 +282,12 @@ export function PlaceDetailPage({ place, travel, onBack, onAddToTrip, busy = fal
       {detailError && <p role="alert">{detailError}</p>}
       {imageUrl ? (
         <figure style={{ margin: '0 0 16px' }}>
-          <img src={imageUrl} alt={name} style={{ width: '100%', maxHeight: 420, objectFit: 'cover', borderRadius: 'var(--radius-card)' }} onError={() => setImageIndex(index => index + 1)} />
-          {(typeof place.image_author === 'string' && place.image_author || typeof place.image_license === 'string' && place.image_license) && (
+          <img src={imageUrl} alt={name} referrerPolicy="no-referrer" style={{ width: '100%', maxHeight: 420, objectFit: 'cover', borderRadius: 'var(--radius-card)' }} onError={() => setImageIndex(index => index + 1)} />
+          {(typeof hydratedPlace.image_author === 'string' && hydratedPlace.image_author || typeof hydratedPlace.image_license === 'string' && hydratedPlace.image_license) && (
             <figcaption style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: 6 }}>
               {text('Nguồn ảnh:', 'Photo:')} Wikimedia Commons
-              {typeof place.image_author === 'string' && place.image_author ? ` · ${place.image_author}` : ''}
-              {typeof place.image_license === 'string' && place.image_license ? ` (${place.image_license})` : ''}
+              {typeof hydratedPlace.image_author === 'string' && hydratedPlace.image_author ? ` · ${hydratedPlace.image_author}` : ''}
+              {typeof hydratedPlace.image_license === 'string' && hydratedPlace.image_license ? ` (${hydratedPlace.image_license})` : ''}
             </figcaption>
           )}
         </figure>
@@ -493,7 +509,7 @@ export function PlaceDetailPage({ place, travel, onBack, onAddToTrip, busy = fal
                 <p style={{ fontSize: '0.9375rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
                   {String(rev.content ?? rev.body ?? rev.title ?? '')}
                 </p>
-                {Array.isArray(rev.media_keys) && rev.media_keys.filter((key): key is string => typeof key === 'string').map(key => mediaUrl(key) ? <img key={key} src={mediaUrl(key)} alt="Ảnh chia sẻ từ đánh giá" loading="lazy" style={{ maxWidth: '100%', maxHeight: 240 }} onError={e => { e.currentTarget.hidden = true; }} /> : null)}
+                {Array.isArray(rev.media_keys) && rev.media_keys.filter((key): key is string => typeof key === 'string').map(key => mediaUrl(key) ? <img key={key} src={mediaUrl(key)} alt="Ảnh chia sẻ từ đánh giá" loading="lazy" referrerPolicy="no-referrer" style={{ maxWidth: '100%', maxHeight: 240 }} onError={e => { e.currentTarget.hidden = true; }} /> : null)}
                 <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
                   {rev.created_at ? new Date(String(rev.created_at)).toLocaleDateString('vi-VN') : ''}
                 </span>

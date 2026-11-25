@@ -419,3 +419,17 @@
   border-color: #64748b;
   color: #ffffff;
 }
+
+.ark-map-link {
+  color: var(--color-primary);
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.ark-map-link:hover {
+  opacity: 0.85;
+}
+
+.ark-dist-badge {
+  font-variant-numeric: tabular-nums;
+}

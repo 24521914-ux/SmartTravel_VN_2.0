@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppPreferences } from '../../app/providers/AppPreferences';
 import type { Resource } from '../../shared/api';
 import { Icon } from '../../shared/ui';
@@ -23,7 +23,8 @@ import {
   type VisitTimeSlot,
 } from './recommendation-engine';
 
-type IconName = ComponentProps<typeof Icon>['name'];
+const SLIDER_MAX_VND = 2_000_000;
+const SLIDER_STEP_VND = 50_000;
 
 interface RecommendationFiltersProps {
   filters: RecommendationFilterState;
@@ -34,32 +35,14 @@ interface RecommendationFiltersProps {
   spaceReliability: SpaceReliability;
   showMap: boolean;
   totalCount: number;
+  catalogLoading?: boolean;
+  catalogError?: string;
   onToggleMap: () => void;
   onChange: (next: RecommendationFilterState) => void;
   onReset: () => void;
+  onSearchSubmit?: () => void;
   externalModalOpen?: boolean;
   onExternalModalOpenChange?: (open: boolean) => void;
-}
-
-function categoryIcon(name: string): IconName {
-  const norm = normalizeText(name);
-  if (norm.includes('ca phe') || norm.includes('cafe') || norm.includes('coffee')) return 'coffee';
-  if (norm.includes('am thuc') || norm.includes('nha hang') || norm.includes('food')) return 'food';
-  if (norm.includes('luu tru') || norm.includes('khach san') || norm.includes('hotel')) return 'building';
-  if (norm.includes('thien nhien') || norm.includes('bien') || norm.includes('nui')) return 'leaf';
-  if (norm.includes('mua sam') || norm.includes('cho')) return 'tag';
-  return 'compass';
-}
-
-function experienceIcon(key: ExperienceKey): IconName {
-  switch (key) {
-    case 'sea_view': return 'waves';
-    case 'mountain': return 'mountains';
-    case 'quiet': return 'leaf';
-    case 'sunset': return 'sunset';
-    case 'street_food': return 'food';
-    case 'heritage': return 'layers';
-  }
 }
 
 export function RecommendationFilters({
@@ -71,13 +54,16 @@ export function RecommendationFilters({
   spaceReliability,
   showMap,
   totalCount,
+  catalogLoading = false,
+  catalogError = '',
   onToggleMap,
   onChange,
   onReset,
+  onSearchSubmit,
   externalModalOpen,
   onExternalModalOpenChange,
 }: RecommendationFiltersProps) {
-  const { locale, text } = useAppPreferences();
+  const { locale, text, formatCurrency } = useAppPreferences();
   const [internalModalOpen, setInternalModalOpen] = useState(false);
   const modalOpen = externalModalOpen ?? internalModalOpen;
   const setModalOpen = (next: boolean) => {
@@ -86,6 +72,7 @@ export function RecommendationFilters({
   };
 
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
+  const [mobileGroupsOpen, setMobileGroupsOpen] = useState(false);
   const locationBoxRef = useRef<HTMLDivElement>(null);
 
   // Origin search state inside advanced filter drawer
@@ -147,10 +134,10 @@ export function RecommendationFilters({
 
   const filteredLocations = useMemo(() => {
     const q = normalizeText(filters.locationQuery);
-    if (!q) return locationOptions.slice(0, 12);
+    if (!q) return locationOptions.slice(0, 10);
     return locationOptions
       .filter(opt => opt.searchText.includes(q))
-      .slice(0, 12);
+      .slice(0, 10);
   }, [filters.locationQuery, locationOptions]);
 
   const selectedLocationOption = useMemo(
@@ -166,8 +153,6 @@ export function RecommendationFilters({
   const advancedFilterCount = useMemo(() => {
     let count = 0;
     if (filters.budgetTier) count += 1;
-    if (filters.minPrice || filters.maxPrice) count += 1;
-    if (filters.visitTime) count += 1;
     if (filters.companion) count += 1;
     if (filters.spaceType && spaceReliability.trusted) count += 1;
     if (filters.minRating) count += 1;
@@ -179,6 +164,8 @@ export function RecommendationFilters({
     let count = advancedFilterCount;
     if (filters.locationQuery.trim() || filters.geographicUnitId || filters.destinationId) count += 1;
     if (filters.categoryId) count += 1;
+    if (filters.visitTime) count += 1;
+    if (filters.minPrice || filters.maxPrice) count += 1;
     count += filters.experiences.length;
     return count;
   }, [advancedFilterCount, filters]);
@@ -215,6 +202,24 @@ export function RecommendationFilters({
       geographicUnitId: '',
       destinationId: '',
     });
+  };
+
+  const handleSidebarSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLocationDropdownOpen(false);
+    if (filters.locationQuery.trim() && !filters.destinationId && !filters.geographicUnitId) {
+      const q = normalizeText(filters.locationQuery);
+      const exact = locationOptions.find(opt => opt.searchText.includes(q));
+      if (exact) {
+        onChange({
+          ...filters,
+          locationQuery: exact.label,
+          geographicUnitId: exact.kind === 'geo' ? exact.id : '',
+          destinationId: exact.kind === 'destination' ? exact.id : '',
+        });
+      }
+    }
+    onSearchSubmit?.();
   };
 
   const handleUseMyLocation = () => {
@@ -279,6 +284,14 @@ export function RecommendationFilters({
     }
   };
 
+  // Dual range slider values clamped to [0, SLIDER_MAX_VND]
+  const parsedMin = filters.minPrice.trim() ? Number(filters.minPrice) : 0;
+  const parsedMax = filters.maxPrice.trim() ? Number(filters.maxPrice) : SLIDER_MAX_VND;
+  const sliderMin = Number.isFinite(parsedMin) ? Math.max(0, Math.min(SLIDER_MAX_VND, parsedMin)) : 0;
+  const sliderMax = Number.isFinite(parsedMax) ? Math.max(sliderMin, Math.min(SLIDER_MAX_VND, parsedMax)) : SLIDER_MAX_VND;
+  const minPercent = (sliderMin / SLIDER_MAX_VND) * 100;
+  const maxPercent = (sliderMax / SLIDER_MAX_VND) * 100;
+
   const minBudgetNum = filters.minPrice.trim() ? Number(filters.minPrice) : null;
   const maxBudgetNum = filters.maxPrice.trim() ? Number(filters.maxPrice) : null;
   const budgetRangeInvalid =
@@ -288,162 +301,63 @@ export function RecommendationFilters({
     Number.isFinite(maxBudgetNum) &&
     minBudgetNum > maxBudgetNum;
 
-  const activeChips: Array<{ id: string; label: string; onRemove: () => void }> = [];
-
-  if (selectedLocationOption || filters.locationQuery.trim()) {
-    activeChips.push({
-      id: 'location',
-      label: `${text('Điểm đến', 'Destination')}: ${selectedLocationOption?.label || filters.locationQuery.trim()}`,
-      onRemove: clearLocation,
-    });
-  }
-
-  if (filters.categoryId) {
-    const found = categories.find(c => String(c.category_id ?? c.id) === filters.categoryId);
-    activeChips.push({
-      id: `cat-${filters.categoryId}`,
-      label: found ? localizedName(found, locale) : filters.categoryId,
-      onRemove: () => onChange({ ...filters, categoryId: '' }),
-    });
-  }
-
-  for (const expKey of filters.experiences) {
-    const found = EXPERIENCE_OPTIONS.find(e => e.key === expKey);
-    activeChips.push({
-      id: `exp-${expKey}`,
-      label: `${text('Ưu tiên', 'Pref')}: ${found ? (locale === 'en' ? found.en : found.vi) : expKey}`,
-      onRemove: () => toggleExperience(expKey),
-    });
-  }
-
-  if (filters.budgetTier) {
-    const found = BUDGET_TIER_OPTIONS.find(b => b.value === filters.budgetTier);
-    activeChips.push({
-      id: 'budget-tier',
-      label: found ? (locale === 'en' ? found.en : found.vi) : filters.budgetTier,
-      onRemove: () => onChange({ ...filters, budgetTier: '' }),
-    });
-  }
-
-  if (filters.minPrice || filters.maxPrice) {
-    const lo = filters.minPrice ? `${Number(filters.minPrice).toLocaleString('vi-VN')}đ` : '0đ';
-    const hi = filters.maxPrice ? `${Number(filters.maxPrice).toLocaleString('vi-VN')}đ` : '∞';
-    activeChips.push({
-      id: 'budget-range',
-      label: `${text('Ngân sách', 'Budget')}: ${lo} – ${hi}`,
-      onRemove: () => onChange({ ...filters, minPrice: '', maxPrice: '' }),
-    });
-  }
-
-  if (filters.visitTime) {
-    const found = VISIT_TIME_SLOTS.find(v => v.value === filters.visitTime);
-    activeChips.push({
-      id: 'visit-time',
-      label: `${text('Thời điểm', 'Time')}: ${found ? (locale === 'en' ? found.en : found.vi) : filters.visitTime}`,
-      onRemove: () => onChange({ ...filters, visitTime: '' }),
-    });
-  }
-
-  if (filters.companion) {
-    const found = COMPANION_OPTIONS.find(c => c.value === filters.companion);
-    activeChips.push({
-      id: 'companion',
-      label: `${text('Đi cùng', 'With')}: ${found ? (locale === 'en' ? found.en : found.vi) : filters.companion}`,
-      onRemove: () => onChange({ ...filters, companion: '' }),
-    });
-  }
-
-  if (filters.spaceType && spaceReliability.trusted) {
-    activeChips.push({
-      id: 'space',
-      label: filters.spaceType === 'INDOOR' ? text('Trong nhà', 'Indoor') : text('Ngoài trời', 'Outdoor'),
-      onRemove: () => onChange({ ...filters, spaceType: '' }),
-    });
-  }
-
-  if (filters.minRating) {
-    activeChips.push({
-      id: 'rating',
-      label: `${text('Từ', 'Min')} ${filters.minRating}★`,
-      onRemove: () => onChange({ ...filters, minRating: '' }),
-    });
-  }
-
-  if (filters.origin) {
-    activeChips.push({
-      id: 'origin',
-      label: `${text('Trong', 'Within')} ${filters.radiusKm || '5'} km · ${filters.origin.label}`,
-      onRemove: () => onChange({ ...filters, origin: null, radiusKm: '' }),
-    });
-  }
+  const minSliderDisplay = sliderMin === 0 ? text('0 ₫', '0 VND') : formatCurrency(sliderMin, 'VND');
+  const maxSliderDisplay = filters.maxPrice.trim() === '' || sliderMax >= SLIDER_MAX_VND
+    ? `${formatCurrency(SLIDER_MAX_VND, 'VND')}+`
+    : formatCurrency(sliderMax, 'VND');
 
   return (
-    <div className="rec-ribbon" id="rec-discovery-bar">
-      {/* Row 1: Category Index + Inline Search + Actions */}
-      <div className="rec-ribbon-top">
-        <div className="rec-category-nav" role="group" aria-label={text('Loại địa điểm', 'Place categories')}>
-          <button
-            type="button"
-            className={`rec-cat-tab ${!filters.categoryId ? 'is-active' : ''}`}
-            onClick={() => onChange({ ...filters, categoryId: '' })}
-            aria-pressed={!filters.categoryId}
-          >
-            {text('Tất cả', 'All')}
-          </button>
-          {categories.map(cat => {
-            const id = String(cat.category_id ?? cat.id ?? '');
-            const label = localizedName(cat, locale);
-            const active = filters.categoryId === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                className={`rec-cat-tab ${active ? 'is-active' : ''}`}
-                onClick={() => toggleCategory(id)}
-                aria-pressed={active}
-              >
-                <Icon name={categoryIcon(label)} size={14} />
-                <span>{label}</span>
-              </button>
-            );
-          })}
-        </div>
+    <aside className="rec-sidebar" id="rec-discovery-bar" aria-label={text('Bộ lọc địa điểm', 'Destination filters')}>
+      {/* 1. Search Form (Search destinations input + Visit time select + Blue Search button) */}
+      <form className="rec-side-search-form" onSubmit={handleSidebarSearchSubmit}>
+        <div className="rec-hero-input-wrap rec-side-input-wrap" ref={locationBoxRef}>
+          <input
+            type="text"
+            className="rec-hero-input"
+            value={filters.locationQuery}
+            onFocus={() => setLocationDropdownOpen(true)}
+            onKeyDown={e => {
+              if (e.key === 'Escape') setLocationDropdownOpen(false);
+            }}
+            onChange={e => {
+              // Typing immediately clears canonical IDs so stale IDs never persist
+              onChange({
+                ...filters,
+                locationQuery: e.target.value,
+                geographicUnitId: '',
+                destinationId: '',
+              });
+              setLocationDropdownOpen(true);
+            }}
+            placeholder={text('Tìm điểm đến...', 'Search destinations')}
+            aria-label={text('Nhập thành phố hoặc điểm đến', 'Search destinations')}
+            autoComplete="off"
+          />
+          {filters.locationQuery ? (
+            <button
+              type="button"
+              className="rec-inline-clear"
+              onClick={clearLocation}
+              aria-label={text('Xóa điểm đến', 'Clear location')}
+            >
+              <Icon name="x" size={14} />
+            </button>
+          ) : (
+            <span className="rec-side-input-chevron" aria-hidden="true">
+              <Icon name="chevronDown" size={15} />
+            </span>
+          )}
 
-        <div className="rec-ribbon-utilities">
-          <div className="rec-inline-search" ref={locationBoxRef}>
-            <Icon name="pin" size={15} className="rec-inline-search-icon" />
-            <input
-              type="text"
-              className="rec-inline-search-input"
-              value={filters.locationQuery}
-              onFocus={() => setLocationDropdownOpen(true)}
-              onChange={e => {
-                onChange({
-                  ...filters,
-                  locationQuery: e.target.value,
-                  geographicUnitId: '',
-                  destinationId: '',
-                });
-                setLocationDropdownOpen(true);
-              }}
-              placeholder={text('Lọc theo tỉnh, thành phố...', 'Filter by city or province...')}
-              aria-label={text('Tìm theo thành phố hoặc điểm đến', 'Search by city or destination')}
-              autoComplete="off"
-            />
-            {filters.locationQuery && (
-              <button
-                type="button"
-                className="rec-inline-clear"
-                onClick={clearLocation}
-                aria-label={text('Xóa điểm đến', 'Clear location')}
-              >
-                <Icon name="x" size={14} />
-              </button>
-            )}
-
-            {locationDropdownOpen && filteredLocations.length > 0 && (
-              <div className="rec-loc-popover" role="listbox" aria-label={text('Gợi ý khu vực', 'Area suggestions')}>
-                {filteredLocations.map(opt => {
+          {locationDropdownOpen && (
+            <div className="rec-loc-popover" role="listbox" aria-label={text('Điểm đến gợi ý', 'Suggested destinations')}>
+              {catalogLoading ? (
+                <div className="rec-loc-state">{text('Đang tải danh sách điểm đến…', 'Loading destinations…')}</div>
+              ) : catalogError ? (
+                <div className="rec-loc-state">{catalogError}</div>
+              ) : filteredLocations.length === 0 ? (
+                <div className="rec-loc-state">{text('Không tìm thấy địa bàn phù hợp.', 'No matching destination found.')}</div>
+              ) : (
+                filteredLocations.map(opt => {
                   const isSel =
                     (opt.kind === 'geo' && opt.id === filters.geographicUnitId) ||
                     (opt.kind === 'destination' && opt.id === filters.destinationId);
@@ -463,19 +377,155 @@ export function RecommendationFilters({
                       </span>
                     </button>
                   );
-                })}
-              </div>
-            )}
-          </div>
+                })
+              )}
+            </div>
+          )}
+        </div>
 
+        <div className="rec-side-select-wrap">
+          <select
+            className="rec-side-select"
+            value={filters.visitTime}
+            onChange={e => onChange({ ...filters, visitTime: e.target.value as VisitTimeSlot })}
+            aria-label={text('Thời điểm ghé thăm', 'Visit time')}
+          >
+            {VISIT_TIME_SLOTS.map(slot => (
+              <option key={slot.value || 'any'} value={slot.value}>
+                {slot.value === ''
+                  ? text('Chọn khung giờ ghé thăm', 'Any visit time')
+                  : `${locale === 'en' ? slot.en : slot.vi} (${locale === 'en' ? slot.rangeEn : slot.rangeVi})`}
+              </option>
+            ))}
+          </select>
+          <span className="rec-side-input-chevron" aria-hidden="true">
+            <Icon name="chevronDown" size={15} />
+          </span>
+        </div>
+
+        <button type="submit" className="rec-side-search-btn">
+          <Icon name="search" size={15} />
+          <span>{text('Tìm kiếm', 'Search')}</span>
+        </button>
+      </form>
+
+      {/* Mobile Filter Accordion Trigger */}
+      <button
+        type="button"
+        className="rec-side-mobile-toggle"
+        aria-expanded={mobileGroupsOpen}
+        onClick={() => setMobileGroupsOpen(prev => !prev)}
+      >
+        <span>
+          <Icon name="filter" size={15} />
+          {text('Bộ lọc tiêu chí', 'Filter criteria')}
+          {totalActiveFilters > 0 ? ` (${totalActiveFilters})` : ''}
+        </span>
+        <Icon name={mobileGroupsOpen ? 'chevronUp' : 'chevronDown'} size={16} />
+      </button>
+
+      {/* 2. Sidebar Filter Sections */}
+      <div className={`rec-side-groups ${mobileGroupsOpen ? 'is-open' : ''}`}>
+        {/* Place Types (Checkboxes) */}
+        <section className="rec-side-group">
+          <h3 className="rec-side-heading">{text('Loại hình', 'Place Types')}</h3>
+          <div className="rec-check-list" role="group" aria-label={text('Loại hình địa điểm', 'Place types')}>
+            {categories.map(cat => {
+              const id = String(cat.category_id ?? cat.id ?? '');
+              const label = localizedName(cat, locale);
+              const checked = filters.categoryId === id;
+              return (
+                <label key={id} className="rec-check-row">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleCategory(id)}
+                  />
+                  <span>{label}</span>
+                </label>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Prices (Dual-Handle Blue Range Slider) */}
+        <section className="rec-side-group">
+          <h3 className="rec-side-heading">{text('Ngân sách', 'Prices')}</h3>
+          <div className="rec-price-readout">
+            <span>{minSliderDisplay}</span>
+            <span>{maxSliderDisplay}</span>
+          </div>
+          <div className="rec-dual-range">
+            <div className="rec-dual-track" />
+            <div
+              className="rec-dual-fill"
+              style={{ left: `${minPercent}%`, width: `${Math.max(0, maxPercent - minPercent)}%` }}
+            />
+            <input
+              type="range"
+              min={0}
+              max={SLIDER_MAX_VND}
+              step={SLIDER_STEP_VND}
+              value={sliderMin}
+              aria-label={text('Ngân sách tối thiểu', 'Minimum budget')}
+              onChange={e => {
+                const nextMin = Math.min(Number(e.target.value), sliderMax);
+                onChange({
+                  ...filters,
+                  budgetTier: '',
+                  minPrice: nextMin <= 0 ? '' : String(nextMin),
+                });
+              }}
+            />
+            <input
+              type="range"
+              min={0}
+              max={SLIDER_MAX_VND}
+              step={SLIDER_STEP_VND}
+              value={sliderMax}
+              aria-label={text('Ngân sách tối đa', 'Maximum budget')}
+              onChange={e => {
+                const nextMax = Math.max(Number(e.target.value), sliderMin);
+                onChange({
+                  ...filters,
+                  budgetTier: '',
+                  maxPrice: nextMax >= SLIDER_MAX_VND ? '' : String(nextMax),
+                });
+              }}
+            />
+          </div>
+        </section>
+
+        {/* Experiences (Checkboxes) */}
+        <section className="rec-side-group">
+          <h3 className="rec-side-heading">{text('Trải nghiệm', 'Experiences')}</h3>
+          <div className="rec-check-list" role="group" aria-label={text('Trải nghiệm ưu tiên', 'Preferred experiences')}>
+            {EXPERIENCE_OPTIONS.map(exp => {
+              const checked = filters.experiences.includes(exp.key);
+              return (
+                <label key={exp.key} className="rec-check-row">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleExperience(exp.key)}
+                  />
+                  <span>{locale === 'en' ? exp.en : exp.vi}</span>
+                </label>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Utility Controls (Advanced Filters Drawer + Map View + Reset) */}
+        <section className="rec-side-utilities">
           <button
             type="button"
-            className={`rec-util-btn ${advancedFilterCount > 0 ? 'has-active' : ''}`}
+            className={`rec-side-util-btn ${advancedFilterCount > 0 ? 'has-active' : ''}`}
             onClick={() => setModalOpen(true)}
             aria-expanded={modalOpen}
           >
-            <Icon name="filter" size={15} />
-            <span>{text('Bộ lọc', 'Filters')}</span>
+            <Icon name="filter" size={14} />
+            <span>{text('Bộ lọc nâng cao', 'Advanced filters')}</span>
             {advancedFilterCount > 0 && (
               <span className="rec-util-badge">{advancedFilterCount}</span>
             )}
@@ -483,72 +533,25 @@ export function RecommendationFilters({
 
           <button
             type="button"
-            className={`rec-util-btn ${showMap ? 'is-map-on' : ''}`}
+            className={`rec-side-util-btn ${showMap ? 'is-map-on' : ''}`}
             onClick={onToggleMap}
             aria-pressed={showMap}
           >
-            <Icon name="map" size={15} />
+            <Icon name="map" size={14} />
             <span>{showMap ? text('Ẩn bản đồ', 'Hide map') : text('Xem bản đồ', 'Map view')}</span>
           </button>
-        </div>
-      </div>
 
-      {/* Row 2: Soft Experience Signals + Count */}
-      <div className="rec-ribbon-sub">
-        <div className="rec-exp-strip" role="group" aria-label={text('Ưu tiên trải nghiệm xếp hạng', 'Experience ranking signals')}>
-          <span className="rec-exp-label">
-            <Icon name="sparkle" size={13} />
-            {text('Ưu tiên xếp hạng:', 'Rank by mood:')}
-          </span>
-          <div className="rec-exp-list">
-            {EXPERIENCE_OPTIONS.map(exp => {
-              const active = filters.experiences.includes(exp.key);
-              return (
-                <button
-                  key={exp.key}
-                  type="button"
-                  className={`rec-exp-toggle ${active ? 'is-active' : ''}`}
-                  onClick={() => toggleExperience(exp.key)}
-                  aria-pressed={active}
-                >
-                  <Icon name={experienceIcon(exp.key)} size={13} />
-                  <span>{locale === 'en' ? exp.en : exp.vi}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="rec-count-readout" aria-live="polite">
-          <strong>{totalCount}</strong>
-          <span>{text('địa điểm được xếp hạng', 'ranked destinations')}</span>
-        </div>
-      </div>
-
-      {/* Row 3: Active Filter Chips (only when active) */}
-      {activeChips.length > 0 && (
-        <div className="rec-active-strip">
-          <div className="rec-active-list">
-            {activeChips.map(chip => (
-              <span key={chip.id} className="rec-active-tag">
-                <span>{chip.label}</span>
-                <button
-                  type="button"
-                  onClick={chip.onRemove}
-                  aria-label={`${text('Bỏ', 'Remove')} ${chip.label}`}
-                >
-                  <Icon name="x" size={12} />
-                </button>
-              </span>
-            ))}
-          </div>
           {totalActiveFilters > 0 && (
-            <button type="button" className="rec-clear-all-link" onClick={onReset}>
-              {text('Xóa tất cả', 'Clear all')}
+            <button
+              type="button"
+              className="rec-side-reset-link"
+              onClick={onReset}
+            >
+              {text('Xóa tất cả bộ lọc', 'Clear all filters')}
             </button>
           )}
-        </div>
-      )}
+        </section>
+      </div>
 
       {/* Architectural Slide-Over Drawer for Advanced Filters */}
       {modalOpen && (
@@ -913,6 +916,6 @@ export function RecommendationFilters({
           </div>
         </div>
       )}
-    </div>
+    </aside>
   );
 }

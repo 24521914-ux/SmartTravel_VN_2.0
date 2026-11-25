@@ -5,6 +5,7 @@ import { useAuth } from '../../app/providers/AuthProvider';
 import { useToast } from '../../app/providers/ToastProvider';
 import { useAppPreferences } from '../../app/providers/AppPreferences';
 import './account-auth.css';
+import './account-settings.css';
 
 type GuestMode = 'login' | 'register' | 'verify-email' | 'resend-verification' | 'forgot-password' | 'reset-password';
 
@@ -28,6 +29,8 @@ export function AccountPanel() {
   const [options, setOptions] = useState<Resource[]>([]);
   const [sessions, setSessions] = useState<Resource[]>([]);
   const [deletion, setDeletion] = useState<Resource | null>(null);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const displayNameInputRef = useRef<HTMLInputElement>(null);
   const owner = user?.user_id ?? user?.id ?? null;
   const currentOwner = useRef(owner); currentOwner.current = owner;
 
@@ -373,27 +376,582 @@ export function AccountPanel() {
           </section>
         </div>
       </div>
-    ) : <>
-      {error && <p role="alert">{error}</p>}
-      <section className="travel-panel account-summary"><div className="account-summary-copy"><span className="section-eyebrow">Tài khoản của bạn</span><h2>{String(profile?.display_name ?? user?.display_name ?? '')}</h2><div className="account-role-list">{(user?.roles ?? []).map(role => <Badge key={role}>{role === 'USER' ? 'Du khách' : role === 'ADMIN' ? 'Quản trị viên' : role === 'BUSINESS' ? 'Doanh nghiệp' : role}</Badge>)}</div><details className="account-identifier"><summary>Mã tài khoản</summary><code>{String(profile?.user_id ?? '')}</code></details></div><Button variant="secondary" disabled={busy || isLoading} onClick={() => void run(async () => { await logout(); showToast('Đã đăng xuất.', 'info'); })}>Đăng xuất</Button></section>
-      <div className="sub-tab-bar" role="tablist">{([['profile', 'Hồ sơ cá nhân'], ['security', 'Bảo mật tài khoản'], ['preferences', 'Sở thích & Quyền riêng tư']] as const).map(([id, title]) => <button key={id} type="button" role="tab" aria-selected={activeTab === id} className={`sub-tab ${activeTab === id ? 'active' : ''}`} onClick={() => setActiveTab(id)}>{title}</button>)}</div>
-      {activeTab === 'profile' && <section className="travel-panel"><h3>Thông tin cơ bản</h3><form className="clay-form" key={String(profile?.version)} onSubmit={e => submit(e, async data => {
-        const current = await travel.read<Resource>('identity', '/me');
-        setProfile(await travel.mutate('identity', '/me', { display_name: fieldValue(data, 'display_name') }, 'PATCH', Number(current.version)));
-        await reloadUser(); showToast('Đã cập nhật hồ sơ.', 'success');
-      })}><label htmlFor="display-name">Tên hiển thị<input id="display-name" name="display_name" required maxLength={1024} defaultValue={String(profile?.display_name ?? '')} /></label><Button type="submit" disabled={busy || !profile}>Lưu hồ sơ</Button></form></section>}
-      {activeTab === 'security' && <section className="travel-panel"><h3>Đổi mật khẩu</h3><form className="clay-form" onSubmit={e => submit(e, async data => {
-        await travel.mutate('identity', '/me/password', { current_password: String(data.get('current_password')), new_password: String(data.get('new_password')) }, 'PUT');
-        showToast('Đã cập nhật mật khẩu. Vui lòng đăng nhập lại nếu phiên đã bị thu hồi.', 'success');
-      })}><label htmlFor="current-pass">Mật khẩu hiện tại<input id="current-pass" name="current_password" type="password" autoComplete="current-password" required minLength={12} maxLength={128} /></label><label htmlFor="new-pass">Mật khẩu mới<input id="new-pass" name="new_password" type="password" autoComplete="new-password" required minLength={12} maxLength={128} /></label><Button type="submit" disabled={busy}>Lưu mật khẩu</Button></form>
-        <h3>Phiên đăng nhập</h3><Button disabled={busy} onClick={() => void run(loadAccount)}>Tải lại phiên</Button>{sessions.map(session => <div key={String(session.session_id ?? session.id)}><p>{String(session.session_id ?? session.id)} · {String(session.created_at ?? '')}</p><Button disabled={busy} onClick={() => void run(async () => { await travel.mutate('identity', `/me/sessions/${encodeURIComponent(String(session.session_id ?? session.id))}`, undefined, 'DELETE'); await loadAccount(); })}>Thu hồi phiên</Button></div>)}
-      </section>}
-      {activeTab === 'preferences' && <section className="travel-panel"><h3>Sở thích du lịch</h3>{preferences && <form className="clay-form" key={String(preferences.version)} onSubmit={e => submit(e, async data => {
-        const saved = await travel.mutate<Resource>('identity', '/me/preferences', { category_ids: data.getAll('category_ids'), travel_style_ids: data.getAll('travel_style_ids'), food_preference_ids: data.getAll('food_preference_ids'), budget_min: fieldValue(data, 'budget_min') === '' ? null : Number(data.get('budget_min')), budget_max: fieldValue(data, 'budget_max') === '' ? null : Number(data.get('budget_max')), budget_level: fieldValue(data, 'budget_level'), currency: 'VND', personalization_enabled: data.has('personalization_enabled'), consent_version: Number(preferences.consent_version) }, 'PUT', Number(preferences.version));
-        setPreferences(saved); showToast('Đã lưu sở thích.', 'success');
-      })}><fieldset><legend>Danh mục yêu thích</legend>{categories.map(category => { const id = String(category.category_id ?? category.id); return <label key={id}><input type="checkbox" name="category_ids" value={id} defaultChecked={(preferences.category_ids as string[] ?? []).includes(id)} />{String(category.name)}</label>; })}</fieldset>{(['TRAVEL_STYLE', 'FOOD_PREFERENCE'] as const).map(kind => { const field = kind === 'TRAVEL_STYLE' ? 'travel_style_ids' : 'food_preference_ids'; return <fieldset key={kind}><legend>{kind === 'TRAVEL_STYLE' ? 'Phong cách du lịch' : 'Sở thích ẩm thực'}</legend>{options.filter(option => option.type === kind || option.kind === kind).map(option => { const id = String(option.option_id ?? option.id); return <label key={id}><input type="checkbox" name={field} value={id} defaultChecked={(preferences[field] as string[] ?? []).includes(id)} />{String(option.name ?? option.label)}</label>; })}</fieldset>; })}<label htmlFor="budget-min">Ngân sách tối thiểu (VND)<input id="budget-min" name="budget_min" type="number" min="0" defaultValue={preferences.budget_min == null ? '' : String(preferences.budget_min)} /></label><label htmlFor="budget-max">Ngân sách tối đa (VND)<input id="budget-max" name="budget_max" type="number" min="0" defaultValue={preferences.budget_max == null ? '' : String(preferences.budget_max)} /></label><div className="form-group"><label htmlFor="budget-level">Mức ngân sách</label><RoundedSelect id="budget-level" name="budget_level" label="Mức ngân sách" defaultValue={String(preferences.budget_level)} options={[{ value: 'LOW', label: 'Thấp' }, { value: 'MID', label: 'Trung bình' }, { value: 'HIGH', label: 'Cao' }, { value: 'CUSTOM', label: 'Tùy chỉnh (giữ khoảng đã lưu)' }]} /></div><label><input type="checkbox" name="personalization_enabled" defaultChecked={Boolean(preferences.personalization_enabled)} />Đồng ý dùng dữ liệu để cá nhân hóa theo chính sách hiện tại</label><Button type="submit" disabled={busy}>Lưu sở thích</Button></form>}
-        <details><summary>Yêu cầu xóa dữ liệu cá nhân</summary><p>Yêu cầu xóa dữ liệu được xử lý bất đồng bộ trên các service. Thao tác này có thể không khôi phục được.</p><form onSubmit={e => submit(e, async () => { setDeletion(await travel.mutate('identity', '/me/deletion-requests', { policy_version: 1 })); })}><label><input type="checkbox" required />Tôi xác nhận yêu cầu xóa dữ liệu của mình</label><Button type="submit" disabled={busy}>Gửi yêu cầu xóa dữ liệu</Button></form>{deletion && <p role="status">Yêu cầu {String(deletion.request_id)} · {String(deletion.status)}</p>}</details>
-      </section>}
-    </>}
+    ) : (
+      <div className="as-workspace">
+        <div className="as-inner">
+          <header className="as-page-header">
+            <h1 className="as-title">{text('Tài khoản', 'Account Settings')}</h1>
+            <p className="as-subtitle">
+              {text(
+                'Cập nhật hồ sơ cá nhân, bảo mật truy cập, sở thích du lịch và quyền riêng tư của bạn.',
+                'Update your profile, security access, travel preferences, and privacy settings.',
+              )}
+            </p>
+          </header>
+
+          <div className="as-layout">
+            {/* Left Vertical Settings Navigation */}
+            <aside className="as-sidebar" aria-label={text('Danh mục cài đặt tài khoản', 'Account settings navigation')}>
+              <div className="as-nav" role="tablist" aria-orientation="vertical">
+                {(
+                  [
+                    ['profile', 'Hồ sơ cá nhân', 'My Profile', 'user'],
+                    ['security', 'Bảo mật tài khoản', 'Security', 'shield'],
+                    ['preferences', 'Sở thích & Quyền riêng tư', 'Preferences & Privacy', 'sparkle'],
+                  ] as const
+                ).map(([id, titleVi, titleEn, iconName]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === id}
+                    className={`as-nav-item ${activeTab === id ? 'active' : ''}`}
+                    onClick={() => setActiveTab(id)}
+                  >
+                    <Icon name={iconName} size={16} />
+                    <span>{text(titleVi, titleEn)}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="as-sidebar-footer">
+                <button
+                  type="button"
+                  className="as-logout-btn"
+                  disabled={busy || isLoading}
+                  onClick={() =>
+                    void run(async () => {
+                      await logout();
+                      showToast('Đã đăng xuất.', 'info');
+                    })
+                  }
+                >
+                  <Icon name="arrow" size={15} />
+                  <span>{text('Đăng xuất', 'Sign out')}</span>
+                </button>
+              </div>
+            </aside>
+
+            {/* Right Settings Cards */}
+            <div className="as-content">
+              {!bannerDismissed && (
+                <div className="as-callout" role="region" aria-label={text('Hoàn thiện hồ sơ', 'Complete your profile')}>
+                  <div className="as-callout-body">
+                    <span className="as-callout-icon" aria-hidden="true">
+                      <Icon name="user" size={16} />
+                    </span>
+                    <div>
+                      <strong>{text('Hoàn thiện hồ sơ cá nhân.', 'Complete your profile.')}</strong>
+                      <p>
+                        {text(
+                          'Cập nhật tên hiển thị, sở thích du lịch và kiểm tra các phiên đăng nhập đang hoạt động.',
+                          'Keep your display name, travel preferences, and active sessions up to date.',
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="as-callout-actions">
+                    <button
+                      type="button"
+                      className="as-btn-dark"
+                      onClick={() => setBannerDismissed(true)}
+                    >
+                      {text('Ẩn', 'Dismiss')}
+                    </button>
+                    <button
+                      type="button"
+                      className="as-btn-white"
+                      onClick={() => {
+                        if (activeTab === 'profile') {
+                          displayNameInputRef.current?.focus();
+                        } else {
+                          setActiveTab('profile');
+                          setTimeout(() => displayNameInputRef.current?.focus(), 40);
+                        }
+                      }}
+                    >
+                      {text('Cập nhật', 'Update')}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <div role="alert" className="as-alert">
+                  <Icon name="alert" size={16} />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              {activeTab === 'profile' && (
+                <section className="as-card" aria-label={text('Hồ sơ cá nhân', 'My profile')}>
+                  <div className="as-card-head">
+                    <h2 className="as-card-title">
+                      {String(profile?.display_name ?? user?.display_name ?? text('Hồ sơ cá nhân', 'My profile'))}
+                    </h2>
+                    <p className="as-card-desc">
+                      {text('Thông tin tài khoản hiển thị công khai trên SmartTravel VN', 'Public account details')}
+                    </p>
+                  </div>
+
+                  {/* Row 1: Photo / Avatar & Role */}
+                  <div className="as-row">
+                    <div className="as-row-label">
+                      <strong>{text('Ảnh đại diện', 'Photo')}</strong>
+                      <span>{text('Hiển thị trong đánh giá và lịch trình.', 'Shown in reviews and itineraries.')}</span>
+                    </div>
+                    <div className="as-row-control as-avatar-row">
+                      <div className="as-avatar-circle" aria-hidden="true">
+                        {String(profile?.display_name ?? user?.display_name ?? user?.email ?? 'U')
+                          .trim()
+                          .charAt(0)
+                          .toUpperCase()}
+                      </div>
+                      <div className="as-avatar-meta">
+                        <div className="account-role-list">
+                          {(user?.roles ?? []).map((role) => (
+                            <Badge key={role}>
+                              {role === 'USER'
+                                ? 'Du khách'
+                                : role === 'ADMIN'
+                                  ? 'Quản trị viên'
+                                  : role === 'BUSINESS'
+                                    ? 'Doanh nghiệp'
+                                    : role}
+                            </Badge>
+                          ))}
+                        </div>
+                        <details className="account-identifier">
+                          <summary>{text('Mã tài khoản', 'Account ID')}</summary>
+                          <code>{String(profile?.user_id ?? user?.user_id ?? '')}</code>
+                        </details>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Row 2: Display Name Form */}
+                  <form
+                    className="as-row as-form-row"
+                    key={String(profile?.version)}
+                    onSubmit={(e) =>
+                      submit(e, async (data) => {
+                        const current = await travel.read<Resource>('identity', '/me');
+                        setProfile(
+                          await travel.mutate(
+                            'identity',
+                            '/me',
+                            { display_name: fieldValue(data, 'display_name') },
+                            'PATCH',
+                            Number(current.version),
+                          ),
+                        );
+                        await reloadUser();
+                        showToast('Đã cập nhật hồ sơ.', 'success');
+                      })
+                    }
+                  >
+                    <div className="as-row-label">
+                      <label htmlFor="display-name">{text('Tên hiển thị', 'Full name')}</label>
+                      <span>{text('Sử dụng xuyên suốt không gian SmartTravel.', 'Used across the workspace.')}</span>
+                    </div>
+                    <div className="as-row-control as-inline-save">
+                      <input
+                        ref={displayNameInputRef}
+                        id="display-name"
+                        name="display_name"
+                        required
+                        maxLength={1024}
+                        defaultValue={String(profile?.display_name ?? user?.display_name ?? '')}
+                      />
+                      <Button type="submit" className="as-btn-white" disabled={busy || !profile}>
+                        Lưu hồ sơ
+                      </Button>
+                    </div>
+                  </form>
+
+                  {/* Row 3: Email Address */}
+                  <div className="as-row">
+                    <div className="as-row-label">
+                      <div className="as-label-with-badge">
+                        <strong>{text('Địa chỉ email', 'Email address')}</strong>
+                        <span className="as-verified-badge">{text('Đã xác minh', 'Verified')}</span>
+                      </div>
+                      <span>{text('Email đăng nhập chính của tài khoản.', 'Primary sign-in email.')}</span>
+                    </div>
+                    <div className="as-row-control">
+                      <input
+                        type="email"
+                        readOnly
+                        aria-label={text('Địa chỉ email', 'Email address')}
+                        value={String(profile?.email ?? user?.email ?? '')}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 4: Profile Details (Role & Timezone) */}
+                  <div className="as-row as-row-last">
+                    <div className="as-row-label">
+                      <strong>{text('Chi tiết tài khoản', 'Profile details')}</strong>
+                      <span>{text('Vai trò và múi giờ áp dụng cho lịch trình.', 'Account role and timezone for itineraries.')}</span>
+                    </div>
+                    <div className="as-row-control as-stacked-fields">
+                      <div className="as-readonly-field">
+                        <span>{text('Vai trò', 'Role')}</span>
+                        <div>
+                          {(user?.roles ?? ['USER'])
+                            .map((r) =>
+                              r === 'USER'
+                                ? 'Du khách'
+                                : r === 'ADMIN'
+                                  ? 'Quản trị viên'
+                                  : r === 'BUSINESS'
+                                    ? 'Doanh nghiệp'
+                                    : r,
+                            )
+                            .join(', ')}
+                        </div>
+                      </div>
+                      <div className="as-readonly-field">
+                        <span>{text('Múi giờ', 'Time zone')}</span>
+                        <div>UTC+7 (Asia/Ho_Chi_Minh)</div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {activeTab === 'security' && (
+                <div className="as-stack">
+                  <section className="as-card" aria-label={text('Đổi mật khẩu', 'Change password')}>
+                    <div className="as-card-head">
+                      <h2 className="as-card-title">{text('Đổi mật khẩu', 'Change password')}</h2>
+                      <p className="as-card-desc">
+                        {text('Cập nhật mật khẩu tối thiểu 12 ký tự để bảo vệ tài khoản.', 'Use at least 12 characters to keep your account secure.')}
+                      </p>
+                    </div>
+                    <form
+                      className="as-security-form"
+                      onSubmit={(e) =>
+                        submit(e, async (data) => {
+                          await travel.mutate(
+                            'identity',
+                            '/me/password',
+                            {
+                              current_password: String(data.get('current_password')),
+                              new_password: String(data.get('new_password')),
+                            },
+                            'PUT',
+                          );
+                          showToast('Đã cập nhật mật khẩu. Vui lòng đăng nhập lại nếu phiên đã bị thu hồi.', 'success');
+                        })
+                      }
+                    >
+                      <div className="as-row">
+                        <div className="as-row-label">
+                          <label htmlFor="current-pass">Mật khẩu hiện tại</label>
+                          <span>{text('Xác nhận mật khẩu đang dùng.', 'Confirm your existing password.')}</span>
+                        </div>
+                        <div className="as-row-control">
+                          <input
+                            id="current-pass"
+                            name="current_password"
+                            type="password"
+                            autoComplete="current-password"
+                            required
+                            minLength={12}
+                            maxLength={128}
+                          />
+                        </div>
+                      </div>
+                      <div className="as-row">
+                        <div className="as-row-label">
+                          <label htmlFor="new-pass">Mật khẩu mới</label>
+                          <span>{text('Tối thiểu 12 ký tự.', 'Minimum 12 characters.')}</span>
+                        </div>
+                        <div className="as-row-control">
+                          <input
+                            id="new-pass"
+                            name="new_password"
+                            type="password"
+                            autoComplete="new-password"
+                            required
+                            minLength={12}
+                            maxLength={128}
+                          />
+                        </div>
+                      </div>
+                      <div className="as-card-footer">
+                        <Button type="submit" className="as-btn-white" disabled={busy}>
+                          Lưu mật khẩu
+                        </Button>
+                      </div>
+                    </form>
+                  </section>
+
+                  <section className="as-card" aria-label={text('Phiên đăng nhập', 'Active sessions')}>
+                    <div className="as-card-head as-card-head-split">
+                      <div>
+                        <h2 className="as-card-title">{text('Phiên đăng nhập', 'Active sessions')}</h2>
+                        <p className="as-card-desc">
+                          {text('Theo dõi và thu hồi các thiết bị đang giữ phiên đăng nhập.', 'Monitor and revoke active sign-in sessions.')}
+                        </p>
+                      </div>
+                      <Button type="button" className="as-btn-dark" disabled={busy} onClick={() => void run(loadAccount)}>
+                        Tải lại phiên
+                      </Button>
+                    </div>
+                    <div className="as-session-list">
+                      {sessions.length === 0 ? (
+                        <div className="as-row as-row-last">
+                          <p className="as-muted-empty">{text('Không có phiên đăng nhập nào khác.', 'No active sessions listed.')}</p>
+                        </div>
+                      ) : (
+                        sessions.map((session) => {
+                          const sid = String(session.session_id ?? session.id);
+                          return (
+                            <div className="as-row as-session-row" key={sid}>
+                              <div className="as-row-label">
+                                <strong className="as-session-id">{sid}</strong>
+                                <span>{String(session.created_at ?? '')}</span>
+                              </div>
+                              <div className="as-row-control as-session-action">
+                                <Button
+                                  type="button"
+                                  className="as-btn-dark as-btn-danger-hover"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void run(async () => {
+                                      await travel.mutate(
+                                        'identity',
+                                        `/me/sessions/${encodeURIComponent(sid)}`,
+                                        undefined,
+                                        'DELETE',
+                                      );
+                                      await loadAccount();
+                                    })
+                                  }
+                                >
+                                  Thu hồi phiên
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </section>
+                </div>
+              )}
+
+              {activeTab === 'preferences' && (
+                <div className="as-stack">
+                  <section className="as-card" aria-label={text('Sở thích du lịch', 'Travel preferences')}>
+                    <div className="as-card-head">
+                      <h2 className="as-card-title">{text('Sở thích du lịch', 'Travel preferences')}</h2>
+                      <p className="as-card-desc">
+                        {text('Cá nhân hóa gợi ý điểm đến, phong cách và ngân sách của bạn.', 'Tailor destination recommendations, travel style, and budget.')}
+                      </p>
+                    </div>
+                    {preferences && (
+                      <form
+                        key={String(preferences.version)}
+                        onSubmit={(e) =>
+                          submit(e, async (data) => {
+                            const saved = await travel.mutate<Resource>(
+                              'identity',
+                              '/me/preferences',
+                              {
+                                category_ids: data.getAll('category_ids'),
+                                travel_style_ids: data.getAll('travel_style_ids'),
+                                food_preference_ids: data.getAll('food_preference_ids'),
+                                budget_min: fieldValue(data, 'budget_min') === '' ? null : Number(data.get('budget_min')),
+                                budget_max: fieldValue(data, 'budget_max') === '' ? null : Number(data.get('budget_max')),
+                                budget_level: fieldValue(data, 'budget_level'),
+                                currency: 'VND',
+                                personalization_enabled: data.has('personalization_enabled'),
+                                consent_version: Number(preferences.consent_version),
+                              },
+                              'PUT',
+                              Number(preferences.version),
+                            );
+                            setPreferences(saved);
+                            showToast('Đã lưu sở thích.', 'success');
+                          })
+                        }
+                      >
+                        <div className="as-row">
+                          <div className="as-row-label">
+                            <strong>Danh mục yêu thích</strong>
+                            <span>{text('Chọn các chủ đề bạn thích khám phá.', 'Select categories you enjoy exploring.')}</span>
+                          </div>
+                          <div className="as-row-control">
+                            <fieldset className="as-fieldset">
+                              <legend className="as-sr-only">Danh mục yêu thích</legend>
+                              <div className="as-chip-checks">
+                                {categories.map((category) => {
+                                  const id = String(category.category_id ?? category.id);
+                                  return (
+                                    <label key={id} className="as-chip-check">
+                                      <input
+                                        type="checkbox"
+                                        name="category_ids"
+                                        value={id}
+                                        defaultChecked={((preferences.category_ids as string[]) ?? []).includes(id)}
+                                      />
+                                      <span>{String(category.name)}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            </fieldset>
+                          </div>
+                        </div>
+
+                        {(['TRAVEL_STYLE', 'FOOD_PREFERENCE'] as const).map((kind) => {
+                          const field = kind === 'TRAVEL_STYLE' ? 'travel_style_ids' : 'food_preference_ids';
+                          const title = kind === 'TRAVEL_STYLE' ? 'Phong cách du lịch' : 'Sở thích ẩm thực';
+                          return (
+                            <div className="as-row" key={kind}>
+                              <div className="as-row-label">
+                                <strong>{title}</strong>
+                                <span>
+                                  {kind === 'TRAVEL_STYLE'
+                                    ? text('Nhịp độ và trải nghiệm ưu tiên.', 'Preferred pace and experience.')
+                                    : text('Khẩu vị và món ăn mong muốn.', 'Culinary preferences.')}
+                                </span>
+                              </div>
+                              <div className="as-row-control">
+                                <fieldset className="as-fieldset">
+                                  <legend className="as-sr-only">{title}</legend>
+                                  <div className="as-chip-checks">
+                                    {options
+                                      .filter((option) => option.type === kind || option.kind === kind)
+                                      .map((option) => {
+                                        const id = String(option.option_id ?? option.id);
+                                        return (
+                                          <label key={id} className="as-chip-check">
+                                            <input
+                                              type="checkbox"
+                                              name={field}
+                                              value={id}
+                                              defaultChecked={((preferences[field] as string[]) ?? []).includes(id)}
+                                            />
+                                            <span>{String(option.name ?? option.label)}</span>
+                                          </label>
+                                        );
+                                      })}
+                                  </div>
+                                </fieldset>
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        <div className="as-row">
+                          <div className="as-row-label">
+                            <strong>{text('Ngân sách dự kiến', 'Budget range')}</strong>
+                            <span>{text('Khoảng chi tiêu mong muốn cho mỗi điểm đến.', 'Expected spending per destination.')}</span>
+                          </div>
+                          <div className="as-row-control as-budget-grid">
+                            <label htmlFor="budget-min">
+                              Ngân sách tối thiểu (VND)
+                              <input
+                                id="budget-min"
+                                name="budget_min"
+                                type="number"
+                                min="0"
+                                defaultValue={preferences.budget_min == null ? '' : String(preferences.budget_min)}
+                              />
+                            </label>
+                            <label htmlFor="budget-max">
+                              Ngân sách tối đa (VND)
+                              <input
+                                id="budget-max"
+                                name="budget_max"
+                                type="number"
+                                min="0"
+                                defaultValue={preferences.budget_max == null ? '' : String(preferences.budget_max)}
+                              />
+                            </label>
+                            <div className="as-select-field">
+                              <label htmlFor="budget-level">Mức ngân sách</label>
+                              <RoundedSelect
+                                id="budget-level"
+                                name="budget_level"
+                                label="Mức ngân sách"
+                                defaultValue={String(preferences.budget_level)}
+                                options={[
+                                  { value: 'LOW', label: 'Thấp' },
+                                  { value: 'MID', label: 'Trung bình' },
+                                  { value: 'HIGH', label: 'Cao' },
+                                  { value: 'CUSTOM', label: 'Tùy chỉnh (giữ khoảng đã lưu)' },
+                                ]}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="as-row">
+                          <div className="as-row-label">
+                            <strong>{text('Cá nhân hóa', 'Personalization')}</strong>
+                            <span>{text('Cho phép SmartTravel tối ưu thứ tự gợi ý.', 'Allow SmartTravel to tailor recommendations.')}</span>
+                          </div>
+                          <div className="as-row-control">
+                            <label className="as-consent-check">
+                              <input
+                                type="checkbox"
+                                name="personalization_enabled"
+                                defaultChecked={Boolean(preferences.personalization_enabled)}
+                              />
+                              <span>Đồng ý dùng dữ liệu để cá nhân hóa theo chính sách hiện tại</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        <div className="as-card-footer">
+                          <Button type="submit" className="as-btn-white" disabled={busy}>
+                            Lưu sở thích
+                          </Button>
+                        </div>
+                      </form>
+                    )}
+                  </section>
+
+                  <section className="as-card as-card-danger" aria-label={text('Quyền riêng tư', 'Privacy')}>
+                    <details className="as-deletion-details">
+                      <summary>Yêu cầu xóa dữ liệu cá nhân</summary>
+                      <p className="as-card-desc">
+                        Yêu cầu xóa dữ liệu được xử lý bất đồng bộ trên các service. Thao tác này có thể không khôi phục được.
+                      </p>
+                      <form
+                        className="as-deletion-form"
+                        onSubmit={(e) =>
+                          submit(e, async () => {
+                            setDeletion(await travel.mutate('identity', '/me/deletion-requests', { policy_version: 1 }));
+                          })
+                        }
+                      >
+                        <label className="as-consent-check">
+                          <input type="checkbox" required />
+                          <span>Tôi xác nhận yêu cầu xóa dữ liệu của mình</span>
+                        </label>
+                        <Button type="submit" className="as-btn-danger" disabled={busy}>
+                          Gửi yêu cầu xóa dữ liệu
+                        </Button>
+                      </form>
+                      {deletion && (
+                        <p role="status" className="as-deletion-status">
+                          Yêu cầu {String(deletion.request_id)} · {String(deletion.status)}
+                        </p>
+                      )}
+                    </details>
+                  </section>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
   </div>;
 }

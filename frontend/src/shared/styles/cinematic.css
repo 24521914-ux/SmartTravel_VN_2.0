@@ -3,28 +3,28 @@
 */
 
 :root {
-  --color-background: #0b1411;
-  --color-surface: #14231d;
-  --color-surface-elevated: #1c2c25;
-  --color-surface-subtle: #172820;
-  --color-text-primary: #f6f4ee;
-  --color-text-secondary: #c6ccc5;
-  --color-text-muted: #95a399;
-  --color-primary: #b4c5a3;
-  --color-primary-hover: #d3dfc7;
-  --color-primary-light: #24362b;
-  --color-border: #2e4034;
-  --color-border-subtle: #203126;
-  --editorial-sand: #e8e4d8;
-  --editorial-tint: #1c2c25;
+  --color-background: #081e29;
+  --color-surface: #0d2b3a;
+  --color-surface-elevated: #153e52;
+  --color-surface-subtle: #113445;
+  --color-text-primary: #f4f7f9;
+  --color-text-secondary: #9eb6c4;
+  --color-text-muted: #7f9ba9;
+  --color-primary: #62c2df;
+  --color-primary-hover: #83d2ea;
+  --color-primary-light: #113445;
+  --color-border: rgba(255, 255, 255, 0.12);
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --editorial-sand: #fff3eb;
+  --editorial-tint: #0d2b3a;
   --font-display: 'Playfair Display', 'Be Vietnam Pro', Georgia, serif;
   --font-heading: 'Be Vietnam Pro', -apple-system, sans-serif;
   --font-body: 'Be Vietnam Pro', -apple-system, sans-serif;
 }
 
 body {
-  background-color: #0b1411;
-  color: #f6f4ee;
+  background-color: #081e29;
+  color: #f4f7f9;
   font-family: var(--font-body);
   overflow-x: hidden;
 }
