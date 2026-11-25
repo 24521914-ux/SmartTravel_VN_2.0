@@ -137,6 +137,18 @@ html { scroll-padding-top: 104px; }
   .header-account, .header-logout { padding: 8px 6px; }
   .sub-tab { flex: 1 1 140px; padding: 10px; font-size: .8125rem; }
 }
+@media (max-width: 420px) {
+  .liquid-glass-container,
+  .liquid-glass-header.is-immersive:not(.is-scrolled) .liquid-glass-container {
+    padding-inline: 10px;
+    gap: 6px;
+  }
+  .brand-badge { gap: 6px; font-size: 0.95rem; }
+  .brand-badge .brand-icon-wrapper { width: 28px; height: 28px; }
+  .nav-actions { gap: 4px; }
+  .header-account, .header-logout { padding: 6px 4px; }
+  .mobile-menu-btn { width: 34px; height: 34px; min-height: 34px; }
+}
 
 /* Detail views replace the landing hero and need clearance below the fixed nav. */
 .main-content-landing > .place-detail-container { padding: 112px 24px 48px; }

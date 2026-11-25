@@ -811,19 +811,28 @@
 
 /* Responsive Breakpoints */
 @media (max-width: 860px) {
+  :root[data-theme] .account-settings-active .liquid-glass-header .liquid-glass-container {
+    padding: 0 14px;
+    gap: 8px;
+  }
+
   .as-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 20px;
   }
 
   .as-sidebar {
     position: static;
     gap: 12px;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .as-nav {
     flex-direction: row;
     overflow-x: auto;
+    max-width: 100%;
+    min-width: 0;
     scrollbar-width: none;
     padding-bottom: 4px;
   }
@@ -863,6 +872,11 @@
 }
 
 @media (max-width: 480px) {
+  :root[data-theme] .account-settings-active .liquid-glass-header .liquid-glass-container {
+    padding: 0 10px;
+    gap: 6px;
+  }
+
   .as-workspace {
     padding: 76px 14px 40px;
   }
