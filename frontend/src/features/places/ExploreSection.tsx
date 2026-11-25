@@ -88,18 +88,16 @@ export function ExploreSection({ travel, onNavigateToTrip, onNavigate, busy = fa
         const rawGeos = geoRes.items ?? [];
         const isSyntheticTest = firstPage.items.some(isSyntheticFixtureSuite);
         if (openData.length && !isSyntheticTest) {
-          const allDbPlaces = [...firstPage.items];
-          let next = firstPage.next_cursor ?? null;
-          while (next) {
-            const page = await travel.read<Page>('catalog', `/places?limit=100&cursor=${encodeURIComponent(next)}`);
-            if (id !== requestId.current) return;
-            for (const row of page.items) {
-              const rowId = row.place_id ?? row.id;
-              if (!allDbPlaces.some(existing => (existing.place_id ?? existing.id) === rowId)) {
-                allDbPlaces.push(row);
-              }
+          const fullDb = firstPage.next_cursor
+            ? await travel.readAll('catalog', '/places')
+            : firstPage;
+          if (id !== requestId.current) return;
+          const allDbPlaces: Resource[] = [];
+          for (const row of fullDb.items) {
+            const rowId = row.place_id ?? row.id;
+            if (!allDbPlaces.some(existing => (existing.place_id ?? existing.id) === rowId)) {
+              allDbPlaces.push(row);
             }
-            next = page.next_cursor ?? null;
           }
           const merged = mergeCatalogWithOpenData({
             catalogPlaces: allDbPlaces,

@@ -24,6 +24,8 @@
     "test:gateway:trip:timeline": "node scripts/trip-timeline-gateway.mjs",
     "integration:coverage": "node scripts/integration-coverage.mjs",
     "test:browser:ai": "node scripts/browser-smoke.mjs",
+    "test:browser:ranking": "node scripts/browser-ranking-e2e.mjs",
+    "test:browser:ranking:smoke": "node scripts/browser-ranking-smoke.mjs",
     "test:ui": "node scripts/clay-ui-check.mjs",
     "test:ui:editorial": "node scripts/editorial-ui-check.mjs"
   },

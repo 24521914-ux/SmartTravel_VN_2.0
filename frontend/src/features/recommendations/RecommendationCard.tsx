@@ -1,220 +1,496 @@
 import { useEffect, useState } from 'react';
-import { Icon, RatingStars } from '../../shared/ui';
-import type { Resource } from '../../shared/api';
 import { useAppPreferences } from '../../app/providers/AppPreferences';
+import type { Resource } from '../../shared/api';
+import { Icon } from '../../shared/ui';
 import { placeImageCandidates } from '../places/media';
 import type { RankedRecommendation } from './recommendation-engine';
 
-export interface RecommendationCardProps {
+export type RecommendationCardVariant = 'lead' | 'featured' | 'dispatch' | 'compact';
+
+interface RecommendationCardProps {
   item: RankedRecommendation;
-  isFavorite?: boolean;
-  favoriteDisabled?: boolean;
-  isSelectedOnMap?: boolean;
-  onToggleFavorite?: (place: Resource, next: boolean) => Promise<void>;
-  onSelectPlace: (place: Resource) => void;
+  variant?: RecommendationCardVariant;
+  isFavorite: boolean;
+  isHighlighted: boolean;
+  feedbackState?: 'ACCEPT' | 'SKIP';
+  busy: boolean;
+  onSelect: (place: Resource) => void;
+  onToggleFavorite: (placeId: string) => void;
   onAddToTrip: (place: Resource) => void;
-  onHighlightOnMap?: (placeId: string) => void;
-  busy?: boolean;
+  onFeedback?: (placeId: string, action: 'ACCEPT' | 'SKIP') => void;
+  onHover?: (placeId: string | null) => void;
+}
+
+function formatRankNumber(rank: number): string {
+  return rank < 10 ? `0${rank}` : `${rank}`;
 }
 
 export function RecommendationCard({
   item,
-  isFavorite = false,
-  favoriteDisabled = false,
-  isSelectedOnMap = false,
+  variant = 'dispatch',
+  isFavorite,
+  isHighlighted,
+  feedbackState,
+  busy,
+  onSelect,
   onToggleFavorite,
-  onSelectPlace,
   onAddToTrip,
-  onHighlightOnMap,
-  busy = false,
+  onFeedback,
+  onHover,
 }: RecommendationCardProps) {
-  const { locale, text, formatCurrency } = useAppPreferences();
-  const [favorite, setFavorite] = useState(isFavorite);
-  const [togglingFav, setTogglingFav] = useState(false);
+  const { text, formatCurrency } = useAppPreferences();
+  const candidates = placeImageCandidates(item.place);
+  const candidateKey = candidates.join('|');
   const [imageIndex, setImageIndex] = useState(0);
 
   useEffect(() => {
-    setFavorite(isFavorite);
-  }, [isFavorite]);
-
-  useEffect(() => {
     setImageIndex(0);
-  }, [item.placeId]);
+  }, [candidateKey]);
 
-  const candidates = placeImageCandidates(item.place);
-  const activePhotoUrl = candidates[imageIndex] ?? '';
-  const hasMultiplePhotos = candidates.length > 1 && imageIndex < candidates.length;
+  const imageUrl = candidates[imageIndex] ?? '';
+  const hasPhoto = Boolean(imageUrl);
+  const rankDisplay = formatRankNumber(item.rank);
+  const provinceText = typeof item.place.province === 'string' && item.place.province.trim()
+    ? item.place.province.trim()
+    : '';
 
-  const priceLabel =
-    item.minPrice === null
-      ? text('Chưa cập nhật giá', 'Price unavailable')
-      : item.minPrice === 0 && (item.maxPrice === null || item.maxPrice === 0)
-        ? text('Miễn phí', 'Free')
-        : item.maxPrice !== null && item.maxPrice > item.minPrice
-          ? `${formatCurrency(item.minPrice, item.currency)} – ${formatCurrency(item.maxPrice, item.currency)}`
-          : `${text('Từ', 'From')} ${formatCurrency(item.minPrice, item.currency)}`;
-
-  async function handleFavoriteClick() {
-    if (togglingFav || busy || favoriteDisabled || !onToggleFavorite) return;
-    setTogglingFav(true);
-    try {
-      await onToggleFavorite(item.place, !favorite);
-      setFavorite(!favorite);
-    } catch {
-      // Parent handles toast; retain server-confirmed state
-    } finally {
-      setTogglingFav(false);
+  const priceLabel = (() => {
+    const min = item.minPrice;
+    const max = item.maxPrice;
+    if (min === null && max === null) return text('Chưa có thông tin giá', 'Price not available');
+    if ((min ?? 0) === 0 && (max ?? 0) === 0) return text('Miễn phí', 'Free');
+    if (min !== null && max !== null && min !== max) {
+      return `${formatCurrency(min, item.currency)} – ${formatCurrency(max, item.currency)}`;
     }
+    const single = min ?? max ?? 0;
+    return single === 0 ? text('Miễn phí', 'Free') : formatCurrency(single, item.currency);
+  })();
+
+  const handleImageError = () => {
+    setImageIndex(current => (current + 1 < candidates.length ? current + 1 : candidates.length));
+  };
+
+  const renderRatingMeta = () => {
+    if (item.rating !== null && item.rating > 0) {
+      return (
+        <span className="rec-meta-rating">
+          <Icon name="star" size={14} />
+          <strong>{item.rating.toFixed(1)}</strong>
+          {item.reviewCount > 0 && (
+            <span className="rec-meta-count">({item.reviewCount})</span>
+          )}
+        </span>
+      );
+    }
+    return (
+      <span className="rec-meta-muted">
+        {text('Chưa có đánh giá', 'No ratings yet')}
+      </span>
+    );
+  };
+
+  const renderReasons = (limit: number) => {
+    if (item.reasons.length === 0) return null;
+    return (
+      <div className="rec-reasons-group" aria-label={text('Lý do gợi ý', 'Why recommended')}>
+        <span className="rec-reasons-eyebrow">
+          <Icon name="sparkle" size={12} />
+          {text('Lý do gợi ý', 'Why recommended')}
+        </span>
+        <div className="rec-reasons-list">
+          {item.reasons.slice(0, limit).map((reason, idx) => (
+            <span key={`${item.placeId}-reason-${idx}`} className="rec-reason-tag">
+              {reason}
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderFavoriteButton = (extraClass = '') => (
+    <button
+      type="button"
+      className={`rec-fav-btn ${isFavorite ? 'is-active' : ''} ${extraClass}`.trim()}
+      onClick={() => onToggleFavorite(item.placeId)}
+      disabled={busy}
+      aria-pressed={isFavorite}
+      aria-label={isFavorite ? text('Bỏ yêu thích', 'Remove favorite') : text('Lưu địa điểm yêu thích', 'Save to favorites')}
+      title={isFavorite ? text('Bỏ yêu thích', 'Remove favorite') : text('Lưu yêu thích', 'Save favorite')}
+    >
+      <Icon name="heart" size={17} />
+    </button>
+  );
+
+  // ── Variant 1: Lead Editorial Spread (#1) ──
+  if (variant === 'lead') {
+    return (
+      <article
+        className={`rec-lead-spread ${hasPhoto ? 'has-photo' : 'is-typographic'} ${isHighlighted ? 'is-highlighted' : ''}`}
+        onMouseEnter={() => onHover?.(item.placeId)}
+        onMouseLeave={() => onHover?.(null)}
+      >
+        {hasPhoto ? (
+          <div
+            className="rec-lead-media"
+            onClick={() => onSelect(item.place)}
+            role="button"
+            tabIndex={0}
+            aria-label={`${text('Xem chi tiết', 'View details')}: ${item.name}`}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onSelect(item.place);
+              }
+            }}
+          >
+            <img
+              src={imageUrl}
+              alt={item.name}
+              width={800}
+              height={520}
+              loading="eager"
+              decoding="async"
+              className="rec-lead-img"
+              onError={handleImageError}
+            />
+            <span className="rec-rank-stamp" aria-label={`${text('Hạng', 'Rank')} ${item.rank}`}>
+              #{item.rank}
+            </span>
+            {renderFavoriteButton('rec-fav-overlay')}
+          </div>
+        ) : (
+          <div
+            className="rec-lead-folio"
+            onClick={() => onSelect(item.place)}
+            role="button"
+            tabIndex={0}
+            aria-label={`${text('Xem chi tiết', 'View details')}: ${item.name}`}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onSelect(item.place);
+              }
+            }}
+          >
+            <div className="rec-folio-top">
+              <span className="rec-folio-kicker">
+                {text('ĐỀ XUẤT DẪN ĐẦU', 'TOP RANKED PICK')}
+              </span>
+              {renderFavoriteButton()}
+            </div>
+            <div className="rec-folio-numeral" aria-hidden="true">
+              {rankDisplay}
+            </div>
+            <div className="rec-folio-foot">
+              <span className="rec-folio-cat">{item.categoryLabel}</span>
+              {provinceText && <span className="rec-folio-region">{provinceText}</span>}
+            </div>
+          </div>
+        )}
+
+        <div className="rec-lead-dossier">
+          <div className="rec-dossier-meta">
+            <span className="rec-rank-inline">#{item.rank}</span>
+            <span className="rec-meta-sep" aria-hidden="true">/</span>
+            <span className="rec-meta-cat">{item.categoryLabel}</span>
+            <span className="rec-meta-sep" aria-hidden="true">·</span>
+            {renderRatingMeta()}
+          </div>
+
+          <h3 className="rec-lead-title">
+            <button type="button" className="rec-title-btn" onClick={() => onSelect(item.place)}>
+              {item.name}
+            </button>
+          </h3>
+
+          <div className="rec-address-row">
+            <Icon name="pin" size={14} />
+            <span>{item.address || text('Việt Nam', 'Vietnam')}</span>
+            {item.distanceKm !== null && (
+              <span className="rec-distance-chip">
+                {item.distanceKm < 1
+                  ? `${Math.round(item.distanceKm * 1000)} m`
+                  : `${item.distanceKm.toFixed(1)} km`}
+              </span>
+            )}
+          </div>
+
+          {renderReasons(2)}
+
+          {onFeedback && (
+            <div className="rec-feedback-row" role="group" aria-label={text('Phản hồi gợi ý', 'Recommendation feedback')}>
+              <button
+                type="button"
+                className={`rec-feedback-btn ${feedbackState === 'ACCEPT' ? 'is-active' : ''}`}
+                onClick={() => onFeedback(item.placeId, 'ACCEPT')}
+                aria-pressed={feedbackState === 'ACCEPT'}
+              >
+                {text('Phù hợp', 'Relevant')}
+              </button>
+              <button
+                type="button"
+                className={`rec-feedback-btn ${feedbackState === 'SKIP' ? 'is-active' : ''}`}
+                onClick={() => onFeedback(item.placeId, 'SKIP')}
+                aria-pressed={feedbackState === 'SKIP'}
+              >
+                {text('Không phù hợp', 'Not for me')}
+              </button>
+            </div>
+          )}
+
+          <p className="rec-lead-summary">
+            {item.summary || text('Khám phá thông tin chi tiết, địa chỉ chính xác và gợi ý thời điểm ghé thăm cho điểm đến này.', 'Explore full details, verified location, and visit recommendations for this destination.')}
+          </p>
+
+          <div className="rec-dossier-footer">
+            <div className="rec-price-block">
+              <span className="rec-price-caption">{text('Chi phí tham khảo', 'Estimated budget')}</span>
+              <span className="rec-price-value">{priceLabel}</span>
+            </div>
+            <div className="rec-action-group">
+              <button
+                type="button"
+                className="rec-btn-secondary"
+                onClick={() => onAddToTrip(item.place)}
+                disabled={busy}
+              >
+                <Icon name="plus" size={15} />
+                <span>{text('Thêm vào chuyến đi', 'Add to trip')}</span>
+              </button>
+              <button
+                type="button"
+                className="rec-btn-primary"
+                onClick={() => onSelect(item.place)}
+              >
+                <span>{text('Xem chi tiết', 'View details')}</span>
+                <Icon name="arrow" size={15} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </article>
+    );
   }
+
+  // ── Variant 2: Featured Editorial Pair (#2, #3) ──
+  if (variant === 'featured') {
+    return (
+      <article
+        className={`rec-feat-card ${hasPhoto ? 'has-photo' : 'is-typographic'} ${isHighlighted ? 'is-highlighted' : ''}`}
+        onMouseEnter={() => onHover?.(item.placeId)}
+        onMouseLeave={() => onHover?.(null)}
+      >
+        {hasPhoto ? (
+          <div
+            className="rec-feat-media"
+            onClick={() => onSelect(item.place)}
+            role="button"
+            tabIndex={0}
+            aria-label={`${text('Xem chi tiết', 'View details')}: ${item.name}`}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onSelect(item.place);
+              }
+            }}
+          >
+            <img
+              src={imageUrl}
+              alt={item.name}
+              width={640}
+              height={400}
+              loading="lazy"
+              decoding="async"
+              className="rec-feat-img"
+              onError={handleImageError}
+            />
+            <span className="rec-rank-stamp" aria-label={`${text('Hạng', 'Rank')} ${item.rank}`}>
+              #{item.rank}
+            </span>
+            {renderFavoriteButton('rec-fav-overlay')}
+          </div>
+        ) : (
+          <div className="rec-feat-folio">
+            <div className="rec-feat-folio-left">
+              <span className="rec-feat-numeral" aria-hidden="true">{rankDisplay}</span>
+              <div className="rec-feat-folio-meta">
+                <span className="rec-rank-inline">#{item.rank}</span>
+                <span className="rec-meta-cat">{item.categoryLabel}</span>
+              </div>
+            </div>
+            {renderFavoriteButton()}
+          </div>
+        )}
+
+        <div className="rec-feat-body">
+          {hasPhoto ? (
+            <div className="rec-dossier-meta">
+              <span className="rec-meta-cat">{item.categoryLabel}</span>
+              <span className="rec-meta-sep" aria-hidden="true">·</span>
+              {renderRatingMeta()}
+            </div>
+          ) : (
+            <div className="rec-dossier-meta">
+              {renderRatingMeta()}
+              {provinceText && (
+                <>
+                  <span className="rec-meta-sep" aria-hidden="true">·</span>
+                  <span className="rec-meta-muted">{provinceText}</span>
+                </>
+              )}
+            </div>
+          )}
+
+          <h3 className="rec-feat-title">
+            <button type="button" className="rec-title-btn" onClick={() => onSelect(item.place)}>
+              {item.name}
+            </button>
+          </h3>
+
+          <div className="rec-address-row">
+            <Icon name="pin" size={13} />
+            <span>{item.address || text('Việt Nam', 'Vietnam')}</span>
+            {item.distanceKm !== null && (
+              <span className="rec-distance-chip">
+                {item.distanceKm < 1
+                  ? `${Math.round(item.distanceKm * 1000)} m`
+                  : `${item.distanceKm.toFixed(1)} km`}
+              </span>
+            )}
+          </div>
+
+          {renderReasons(2)}
+
+          <p className="rec-feat-summary">
+            {item.summary || text('Xem địa chỉ, đánh giá cộng đồng và lưu vào hành trình sắp tới.', 'View location, traveler reviews, and add to your upcoming itinerary.')}
+          </p>
+
+          <div className="rec-feat-footer">
+            <span className="rec-price-value">{priceLabel}</span>
+            <div className="rec-action-group">
+              <button
+                type="button"
+                className="rec-btn-secondary rec-btn-sm"
+                onClick={() => onAddToTrip(item.place)}
+                disabled={busy}
+              >
+                <Icon name="plus" size={14} />
+                <span>{text('Chuyến đi', 'Trip')}</span>
+              </button>
+              <button
+                type="button"
+                className="rec-btn-primary rec-btn-sm"
+                onClick={() => onSelect(item.place)}
+              >
+                <span>{text('Chi tiết', 'Details')}</span>
+                <Icon name="arrow" size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </article>
+    );
+  }
+
+  // ── Variant 3 & 4: Editorial Dispatch Row (#4+) & Compact Map Row ──
+  const isCompact = variant === 'compact';
 
   return (
     <article
-      className={`travel-card rec-card ${isSelectedOnMap ? 'is-map-selected' : ''}`}
-      data-place-id={item.placeId}
-      onMouseEnter={() => onHighlightOnMap?.(item.placeId)}
+      className={`rec-dispatch-row ${isCompact ? 'is-compact' : ''} ${hasPhoto ? 'has-photo' : 'no-photo'} ${isHighlighted ? 'is-highlighted' : ''}`}
+      onMouseEnter={() => onHover?.(item.placeId)}
+      onMouseLeave={() => onHover?.(null)}
     >
-      <div className="place-card-img-wrapper rec-card-media">
-        <span
-          className={`rec-rank-badge ${item.rank <= 3 ? 'is-top3' : ''}`}
-          aria-label={text(`Xếp hạng ${item.rank}`, `Rank ${item.rank}`)}
+      <div className="rec-dispatch-rank" aria-label={`${text('Hạng', 'Rank')} ${item.rank}`}>
+        <span className="rec-dispatch-num">{rankDisplay}</span>
+        <span className="rec-dispatch-hash">#{item.rank}</span>
+      </div>
+
+      {hasPhoto && (
+        <div
+          className="rec-dispatch-thumb"
+          onClick={() => onSelect(item.place)}
+          role="button"
+          tabIndex={0}
+          aria-label={`${text('Xem chi tiết', 'View details')}: ${item.name}`}
+          onKeyDown={e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onSelect(item.place);
+            }
+          }}
         >
-          #{item.rank}
-        </span>
+          <img
+            src={imageUrl}
+            alt={item.name}
+            width={192}
+            height={144}
+            loading="lazy"
+            decoding="async"
+            className="rec-dispatch-img"
+            onError={handleImageError}
+          />
+        </div>
+      )}
 
-        {activePhotoUrl ? (
-          <>
-            <img
-              key={`${item.placeId}-${activePhotoUrl}`}
-              src={activePhotoUrl}
-              alt={item.name}
-              className="place-card-img"
-              width={640}
-              height={480}
-              loading="lazy"
-              onError={() => setImageIndex(idx => idx + 1)}
-            />
-            {hasMultiplePhotos && (
-              <div className="rec-photo-nav">
-                <button
-                  type="button"
-                  aria-label={text('Ảnh trước', 'Previous photo')}
-                  onClick={e => {
-                    e.stopPropagation();
-                    setImageIndex(idx => (idx - 1 + candidates.length) % candidates.length);
-                  }}
-                >
-                  <Icon name="arrowLeft" size={14} />
-                </button>
-                <button
-                  type="button"
-                  aria-label={text('Ảnh tiếp theo', 'Next photo')}
-                  onClick={e => {
-                    e.stopPropagation();
-                    setImageIndex(idx => (idx + 1) % candidates.length);
-                  }}
-                >
-                  <Icon name="arrow" size={14} />
-                </button>
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="place-photo-missing rec-photo-placeholder">
-            <Icon name="map" size={34} />
-            <span>{text('Ảnh địa điểm đang được cập nhật', 'Destination photo coming soon')}</span>
-          </div>
-        )}
+      <div className="rec-dispatch-main">
+        <div className="rec-dossier-meta">
+          <span className="rec-meta-cat">{item.categoryLabel}</span>
+          <span className="rec-meta-sep" aria-hidden="true">·</span>
+          {renderRatingMeta()}
+          {item.distanceKm !== null && (
+            <>
+              <span className="rec-meta-sep" aria-hidden="true">·</span>
+              <span className="rec-distance-chip">
+                {item.distanceKm < 1
+                  ? `${Math.round(item.distanceKm * 1000)} m`
+                  : `${item.distanceKm.toFixed(1)} km`}
+              </span>
+            </>
+          )}
+        </div>
 
-        {onToggleFavorite && (
-          <button
-            type="button"
-            className="place-card-favorite-btn"
-            aria-label={`${favorite ? text('Bỏ lưu', 'Remove') : text('Lưu', 'Save')} ${item.name}`}
-            aria-pressed={favorite}
-            onClick={() => void handleFavoriteClick()}
-            disabled={busy || togglingFav || favoriteDisabled}
-          >
-            <Icon name="heart" size={19} />
+        <h3 className="rec-dispatch-title">
+          <button type="button" className="rec-title-btn" onClick={() => onSelect(item.place)}>
+            {item.name}
           </button>
+        </h3>
+
+        <div className="rec-address-row">
+          <Icon name="pin" size={13} />
+          <span>{item.address || text('Việt Nam', 'Vietnam')}</span>
+        </div>
+
+        {renderReasons(isCompact ? 1 : 2)}
+
+        {!isCompact && item.summary && (
+          <p className="rec-dispatch-summary">{item.summary}</p>
         )}
       </div>
 
-      <div className="rec-card-body">
-        <div className="rec-card-meta-row">
-          <span className="destination-category">{item.categoryLabel}</span>
-          {item.distanceKm !== null && (
-            <span className="rec-distance-pill">
-              <Icon name="route" size={13} />
-              {item.distanceKm.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} km
-            </span>
-          )}
-        </div>
-
-        <h3 className="rec-card-title">
-          <span className="rec-card-index">{item.rank}.</span> {item.name}
-        </h3>
-
-        <div className="rec-card-rating-row">
-          {item.rating !== null ? (
-            <div className="rec-rating-group">
-              <RatingStars rating={item.rating} size={15} />
-              <strong>{item.rating.toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</strong>
-              {item.reviewCount > 0 && (
-                <span className="destination-review-count">
-                  ({item.reviewCount.toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')} {text('đánh giá', 'reviews')})
-                </span>
-              )}
-            </div>
-          ) : (
-            <span className="destination-unrated">{text('Chưa có điểm đánh giá', 'Not rated yet')}</span>
-          )}
-        </div>
-
-        {item.address && (
-          <p className="destination-address rec-card-address">
-            <Icon name="pin" size={14} />
-            <span>{item.address}</span>
-          </p>
-        )}
-
-        {/* Separated Recommendation Reasons (never mixed into Place Description) */}
-        {item.reasons.length > 0 && (
-          <div className="rec-reasons-box" aria-label={text('Lý do gợi ý', 'Recommendation reasons')}>
-            <Icon name="sparkle" size={14} />
-            <span>{item.reasons.join(' · ')}</span>
-          </div>
-        )}
-
-        {/* Concise Place Summary */}
-        <p className="rec-card-summary">
-          {item.summary || text('Thông tin giới thiệu địa điểm đang được cập nhật.', 'Place summary coming soon.')}
-        </p>
-
-        <div className="rec-card-footer">
-          <div className="destination-price">
-            <span>{text('Giá tham khảo', 'Estimated price')}</span>
-            <strong>{priceLabel}</strong>
-          </div>
-          <div className="rec-card-actions">
-            <button
-              type="button"
-              className="btn-secondary btn-size-sm rec-add-trip-btn"
-              onClick={() => onAddToTrip(item.place)}
-              disabled={busy}
-            >
-              <Icon name="plus" size={15} />
-              <span>{text('Thêm vào trip', 'Add to trip')}</span>
-            </button>
-            <button
-              type="button"
-              className="destination-detail rec-detail-btn"
-              onClick={() => onSelectPlace(item.place)}
-              disabled={busy}
-            >
-              <span>{text('Xem chi tiết', 'Details')}</span>
-              <Icon name="arrow" size={16} />
-            </button>
-          </div>
+      <div className="rec-dispatch-side">
+        <span className="rec-price-value">{priceLabel}</span>
+        <div className="rec-dispatch-actions">
+          {renderFavoriteButton()}
+          <button
+            type="button"
+            className="rec-btn-secondary rec-btn-sm"
+            onClick={() => onAddToTrip(item.place)}
+            disabled={busy}
+            title={text('Thêm vào chuyến đi', 'Add to trip')}
+          >
+            <Icon name="plus" size={14} />
+            <span>{text('Chuyến đi', 'Trip')}</span>
+          </button>
+          <button
+            type="button"
+            className="rec-btn-primary rec-btn-sm"
+            onClick={() => onSelect(item.place)}
+          >
+            <span>{text('Xem', 'View')}</span>
+            <Icon name="arrow" size={14} />
+          </button>
         </div>
       </div>
     </article>

@@ -43,9 +43,7 @@ jobs:
       - name: Validate frozen contracts and build final source
         run: |
           python backend/platform/validate_contracts.py
-          bash backend/mvnw -B -f backend/services/pom.xml -pl identity-service,catalog-service,community-service,trip-service,ingestion-service -am clean verify
-          # Keep the existing container for deletion ACKs; do not run AI suites.
-          bash backend/mvnw -B -f backend/services/pom.xml -pl intelligence-service -am -DskipTests package
+          bash backend/mvnw -B -f backend/services/pom.xml -pl identity-service,catalog-service,community-service,trip-service,ingestion-service,intelligence-service -am clean verify
           bash backend/mvnw -B -f backend/platform/api-gateway/pom.xml clean verify
           npm --prefix frontend run test:contracts
           npm --prefix frontend run build
@@ -63,11 +61,19 @@ jobs:
           python backend/infra/p03_nonai_resilience.py --release-id p03-non-ai-${{ github.sha }} --allow-p02-outages
           python backend/infra/p02_import_ack_test.py
           npm --prefix frontend run test:gateway
-      - name: Actual browser UI smoke
+      - name: Actual browser UI smoke (non-AI kill-switch and default AI ranking)
         run: |
-          npm --prefix frontend run dev > /tmp/smarttravel-p02-vite.log 2>&1 &
+          (cd frontend && exec env VITE_AI_ENABLED=false ./node_modules/.bin/vite --host 127.0.0.1) > /tmp/smarttravel-p02-vite-nonai.log 2>&1 &
+          VITE_NONAI_PID=$!
           export P03_RELEASE_ID=p03-non-ai-${{ github.sha }}
           npm --prefix frontend run test:browser
+          kill "$VITE_NONAI_PID" 2>/dev/null || true
+          wait "$VITE_NONAI_PID" 2>/dev/null || true
+          (cd frontend && exec ./node_modules/.bin/vite --host 127.0.0.1) > /tmp/smarttravel-p02-vite-ai.log 2>&1 &
+          VITE_AI_PID=$!
+          npm --prefix frontend run test:browser:ranking:smoke
+          kill "$VITE_AI_PID" 2>/dev/null || true
+          wait "$VITE_AI_PID" 2>/dev/null || true
       - name: Record exact images and runtime alerts
         run: |
           python backend/infra/p02.py manifest

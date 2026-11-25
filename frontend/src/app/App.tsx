@@ -6,6 +6,7 @@ import { Icon } from '../shared/ui/Icon';
 import { travelClient, apiClient } from '../api/session';
 import type { Resource } from '../shared/api';
 import { isSection, resolveRoute, SECTION_PATHS } from './routes';
+import { aiEnabled } from '../shared/config/features';
 import '../features/trips/trip-auth-gate.css';
 const RecommendationSection = lazy(() => import('../features/recommendations/RecommendationSection').then(m => ({ default: m.RecommendationSection })));
 const MapPanel = lazy(() => import('../features/places/MapPanel').then(m => ({ default: m.MapPanel })));
@@ -20,6 +21,7 @@ const AdminCatalogManager = lazy(() => import('../features/catalog/AdminCatalogM
 const ContributionsPanel = lazy(() => import('../features/contributions/ContributionsPanel').then(m => ({ default: m.ContributionsPanel })));
 const AdminUsersPanel = lazy(() => import('../features/account/AdminUsersPanel').then(m => ({ default: m.AdminUsersPanel })));
 const AdminMediaPanel = lazy(() => import('../features/catalog/AdminMediaPanel').then(m => ({ default: m.AdminMediaPanel })));
+const AdminRankingDashboard = lazy(() => import('../features/recommendations/AdminRankingDashboard').then(m => ({ default: m.AdminRankingDashboard })));
 
 export function AppContent() {
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
@@ -72,13 +74,13 @@ export function AppContent() {
         setIsMenuOpen={setIsMenuOpen}
       />
 
-      <main className={`main-content ${activeSection === 'Khám phá' || (activeSection === 'Tài khoản' && !isAuthenticated) ? 'main-content-landing' : ''}`} id="main-content" tabIndex={-1}>
+      <main className={`main-content ${activeSection === 'Khám phá' || activeSection === 'Gợi ý' || activeSection === 'Bộ sưu tập' || (activeSection === 'Chuyến đi' && isAuthenticated) || (activeSection === 'Tài khoản' && !isAuthenticated) ? 'main-content-landing' : ''}`} id="main-content" tabIndex={-1}>
         {activeSection === null && <section className="travel-panel">
           <h1>{text('Không tìm thấy trang', 'Page not found')}</h1>
           <p>{text('Đường dẫn này không tồn tại. Bạn có thể quay lại trang khám phá.', 'This page does not exist. You can return to Explore.')}</p>
           <button type="button" className="btn-subtle" onClick={() => handleNavigate('Khám phá')}>{text('Về trang khám phá', 'Back to Explore')}</button>
         </section>}
-        {activeSection && activeSection !== 'Khám phá' && (activeSection !== 'Tài khoản' || isAuthenticated) && <div style={{ marginBottom: '24px' }}>
+        {activeSection && activeSection !== 'Khám phá' && activeSection !== 'Gợi ý' && activeSection !== 'Bộ sưu tập' && !(activeSection === 'Chuyến đi' && isAuthenticated) && (activeSection !== 'Tài khoản' || isAuthenticated) && <div style={{ marginBottom: '24px' }}>
           <h1 style={{ fontSize: '2.1rem', fontWeight: 800, color: 'var(--color-text-primary)' }}>
             {text(activeSection, ({ 'Gợi ý': 'Recommendations', 'Bản đồ': 'Map', 'Bộ sưu tập': 'Collections', 'Chuyến đi': 'Trips', 'Tài khoản': 'Account', 'Thông báo': 'Notifications', 'Đóng góp': 'Contribute', 'Doanh nghiệp': 'Business', 'Kiểm duyệt': 'Moderation', 'Quản trị': 'Administration' } as Record<string, string>)[activeSection] ?? activeSection)}
           </h1>
@@ -166,7 +168,7 @@ export function AppContent() {
         )}
 
         {activeSection === 'Quản trị' && (
-          <><AdminIngestionConsole travel={travelClient} /><AdminCatalogManager travel={travelClient} /><AdminMediaPanel apiClient={apiClient} /><AdminUsersPanel travel={travelClient} /></>
+          <>{aiEnabled && <AdminRankingDashboard travel={travelClient} />}<AdminIngestionConsole travel={travelClient} /><AdminCatalogManager travel={travelClient} /><AdminMediaPanel apiClient={apiClient} /><AdminUsersPanel travel={travelClient} /></>
         )}
         {activeSection === 'Đóng góp' && <ContributionsPanel travel={travelClient} />}
         </Suspense>

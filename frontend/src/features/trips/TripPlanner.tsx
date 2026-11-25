@@ -648,22 +648,96 @@ export function TripPlanner({
               : "Mọi thay đổi được lưu tự động";
   return (
     <div className="tp-planner">
-      <div className="tp-topbar">
-        <div>
-          <span className="tp-eyebrow">HÀNH TRÌNH CỦA BẠN</span>
-          <h2>{trip ? "Không gian lập lịch trình" : "Chuyến đi của bạn"}</h2>
+      <h1 className="tp-sr-only">Chuyến đi</h1>
+      <div className="tp-shell">
+        <div className="tp-command-bar">
+          <div className="tp-command-left">
+            {!!trips.length ? (
+              <nav className="tp-trip-picker" aria-label="Chọn chuyến đi">
+                <div className="tp-field tp-picker-field">
+                  <label htmlFor="tp-trip-selector" className="tp-picker-label">Chuyến đi</label>
+                  <RoundedSelect
+                    id="tp-trip-selector"
+                    label="Chọn chuyến đi"
+                    disabled={disabled}
+                    value={tripId}
+                    placeholder="Chọn chuyến đi của bạn"
+                    onChange={(selectedId) => {
+                      const value = trips.find((row) => rowId(row) === selectedId);
+                      if (value) void openTrip(value);
+                    }}
+                    options={[
+                      { value: "", label: "Chọn chuyến đi của bạn" },
+                      ...trips.map((row) => ({
+                        value: rowId(row),
+                        label: String(row.name),
+                      })),
+                    ]}
+                  />
+                </div>
+              </nav>
+            ) : (
+              <span className="tp-command-brand">Không gian lập lịch trình</span>
+            )}
+          </div>
+
+          <div className="tp-command-right">
+            {trip && !newTrip && (
+              <>
+                <span
+                  data-testid="trip-save-status"
+                  className={`tp-sync tp-sync-${sync}`}
+                  role="status"
+                >
+                  {sync === "saved" ? "✓ " : ""}
+                  {status}
+                </span>
+                <button
+                  type="button"
+                  className="tp-ghost-btn"
+                  disabled={disabled}
+                  onClick={() => setSettings(!settings)}
+                  aria-expanded={settings}
+                >
+                  <Icon name="settings" size={16} /> Cài đặt chuyến đi
+                </button>
+              </>
+            )}
+            <button
+              type="button"
+              className="tp-primary"
+              disabled={disabled}
+              onClick={() => {
+                setNewTrip(true);
+                setError("");
+              }}
+            >
+              + Chuyến đi mới
+            </button>
+          </div>
         </div>
-        <button
-          className="tp-primary"
-          disabled={disabled}
-          onClick={() => {
-            setNewTrip(true);
-            setError("");
-          }}
-        >
-          + Chuyến đi mới
-        </button>
-      </div>
+
+        {!trip && !newTrip && (
+          <header className="tp-empty-masthead">
+            <h2 className="tp-trip-title">
+              Chuyến đi của bạn
+            </h2>
+            {!!trips.length && (
+              <div className="tp-quick-trips">
+                {trips.slice(0, 4).map((row) => (
+                  <button
+                    type="button"
+                    disabled={disabled}
+                    key={rowId(row)}
+                    onClick={() => void openTrip(row)}
+                  >
+                    {String(row.name)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </header>
+        )}
       {suggestedPlace && (
         <p className="tp-banner">
           Chọn chuyến đi và ngày để thêm{" "}
@@ -824,45 +898,6 @@ export function TripPlanner({
           </form>
         </section>
       )}
-      {!!trips.length && (
-        <section className="tp-trip-picker-section" aria-labelledby="created-trips-heading">
-          <h2 id="created-trips-heading">Các chuyến đi đã tạo</h2>
-          <nav className="tp-trip-picker" aria-label="Chọn chuyến đi">
-            <div className="tp-field">
-              <label htmlFor="tp-trip-selector">Chuyến đi</label>
-              <RoundedSelect
-                id="tp-trip-selector"
-                label="Chọn chuyến đi"
-                pill
-                disabled={disabled}
-                value={tripId}
-                placeholder="Chọn chuyến đi của bạn"
-                onChange={(selectedId) => {
-                  const value = trips.find((row) => rowId(row) === selectedId);
-                  if (value) void openTrip(value);
-                }}
-                options={[
-                  { value: "", label: "Chọn chuyến đi của bạn" },
-                  ...trips.map((row) => ({
-                    value: rowId(row),
-                    label: String(row.name),
-                  })),
-                ]}
-              />
-            </div>
-            {!trip &&
-              trips.slice(0, 4).map((row) => (
-                <button
-                  disabled={disabled}
-                  key={rowId(row)}
-                  onClick={() => void openTrip(row)}
-                >
-                  {String(row.name)} →
-                </button>
-              ))}
-          </nav>
-        </section>
-      )}
       {loading && (
         <p role="status" className="tp-loading">
           Đang tải lịch trình…
@@ -871,13 +906,18 @@ export function TripPlanner({
       {trip && !newTrip && (
         <>
           <header className="tp-overview">
-            <div>
-              <span className="tp-eyebrow">
-                CHUYẾN ĐI · {states[String(trip.state)] ?? String(trip.state)}
-              </span>
-              <h2>{String(trip.name)}</h2>
+            <div className="tp-overview-main">
+              <div className="tp-title-line">
+                <h2 className="tp-trip-title">
+                  {String(trip.name)}
+                </h2>
+                <span className="tp-state-chip">
+                  {states[String(trip.state)] ?? String(trip.state)}
+                </span>
+              </div>
               <div className="tp-overview-meta">
                 <span>
+                  <Icon name="pin" size={15} />
                   {tripDestinations.length
                     ? tripDestinations
                         .map((segment) =>
@@ -890,36 +930,19 @@ export function TripPlanner({
                             )?.name ?? "Điểm đến đã lưu",
                           ),
                         )
-                        .join(" · ")
+                        .join(", ")
                     : "Chưa chọn điểm đến"}
                 </span>
                 <span>
-                  <Icon name="calendar" size={17} />
-                  {dateLabel(trip.start_date)} — {dateLabel(trip.end_date)}
+                  <Icon name="calendar" size={15} />
+                  {dateLabel(trip.start_date)} – {dateLabel(trip.end_date)}
                 </span>
-                <span>
+                <span className="tp-meta-budget">
                   {trip.budget == null
                     ? "Chưa đặt ngân sách"
                     : `${Number(trip.budget).toLocaleString("vi-VN")} ${String(trip.currency ?? "VND")}`}
                 </span>
               </div>
-            </div>
-            <div className="tp-overview-actions">
-              <span
-                data-testid="trip-save-status"
-                className={`tp-sync tp-sync-${sync}`}
-                role="status"
-              >
-                {sync === "saved" ? "✓ " : ""}
-                {status}
-              </span>
-              <button
-                disabled={disabled}
-                onClick={() => setSettings(!settings)}
-                aria-expanded={settings}
-              >
-                <Icon name="settings" size={18} /> Cài đặt chuyến đi
-              </button>
             </div>
           </header>
           {settings && (
@@ -1113,11 +1136,8 @@ export function TripPlanner({
           <div className={`tp-workspace tp-view-${mobileView}`}>
             <aside className="tp-explore tp-panel">
               <div className="tp-section-heading">
-                <div>
-                  <span className="tp-eyebrow">KHÁM PHÁ</span>
-                  <h3>Đi đâu hôm nay?</h3>
-                </div>
-                <Icon name="compass" size={23} />
+                <h3>Đi đâu hôm nay?</h3>
+                <Icon name="compass" size={18} />
               </div>
               <label>
                 Tìm địa điểm
@@ -1242,7 +1262,6 @@ export function TripPlanner({
             >
               <div className="tp-section-heading">
                 <div>
-                  <span className="tp-eyebrow">LỊCH TRÌNH CỦA BẠN</span>
                   <h3>
                     {day
                       ? `Ngày ${dateLabel(day.date)}`
@@ -1563,11 +1582,8 @@ export function TripPlanner({
             </section>
             <aside className="tp-map tp-panel">
               <div className="tp-section-heading">
-                <div>
-                  <span className="tp-eyebrow">THEO DẤU HÀNH TRÌNH</span>
-                  <h3>Bản đồ trong ngày</h3>
-                </div>
-                <Icon name="map" size={23} />
+                <h3>Bản đồ trong ngày</h3>
+                <Icon name="map" size={18} />
               </div>
               <TripMap
                 items={items}
@@ -1601,6 +1617,7 @@ export function TripPlanner({
           </button>
         </div>
       )}
+      </div>
     </div>
   );
 }
