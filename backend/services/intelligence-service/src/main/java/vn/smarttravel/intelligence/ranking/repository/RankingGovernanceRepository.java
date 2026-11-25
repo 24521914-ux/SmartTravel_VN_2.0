@@ -294,7 +294,7 @@ public class RankingGovernanceRepository {
                   WHERE use_case = 'place_ranking' AND deactivated_at IS NULL
                 ) AND config_version_id <> ?
                 """, excludingConfigId);
-        db.update("UPDATE intelligence.ranking_deployments SET deactivated_at = now() WHERE use_case = 'place_ranking' AND deactivated_at IS NULL");
+        db.update("UPDATE intelligence.ranking_deployments SET deactivated_at = GREATEST(clock_timestamp(), activated_at) WHERE use_case = 'place_ranking' AND deactivated_at IS NULL");
     }
 
     public void insertDeployment(
@@ -313,8 +313,8 @@ public class RankingGovernanceRepository {
                 INSERT INTO intelligence.ranking_deployments(
                   deployment_id, use_case, config_version_id, cohort_snapshot_id, cf_artifact_id,
                   scorer_versions, feature_schema_version, evaluation_run_id,
-                  quality_status, is_demo_activation, activated_by, reason
-                ) VALUES (?,'place_ranking',?,?,?,?::jsonb,1,?,?,?,?,?)
+                  quality_status, is_demo_activation, activated_by, activated_at, reason
+                ) VALUES (?,'place_ranking',?,?,?,?::jsonb,1,?,?,?,?,clock_timestamp(),?)
                 """,
                 deploymentId, configId, cohortId, cfId,
                 scorerVersionsJson, evalRunId, qualityStatus, isDemoActivation, actor, reason
