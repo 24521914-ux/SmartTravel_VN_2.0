@@ -44,9 +44,9 @@
   isolation: isolate;
   background: linear-gradient(
     140deg,
-    #0284c7 0%,
-    #2563eb 48%,
-    #1e40af 100%
+    #072b3b 0%,
+    #0d3d52 48%,
+    #2e8eb4 100%
   );
 }
 
@@ -67,7 +67,7 @@
   height: 100%;
   object-fit: cover;
   z-index: 1;
-  filter: saturate(1.2) contrast(1.1);
+  filter: saturate(1.15) contrast(1.06);
 }
 
 .auth-hero-overlay {
@@ -76,9 +76,9 @@
   z-index: 2;
   background: linear-gradient(
     140deg,
-    rgba(2, 132, 199, 0.90) 0%,
-    rgba(37, 99, 235, 0.92) 50%,
-    rgba(30, 58, 138, 0.97) 100%
+    rgba(7, 43, 59, 0.88) 0%,
+    rgba(13, 61, 82, 0.90) 50%,
+    rgba(5, 32, 45, 0.96) 100%
   );
   mix-blend-mode: multiply;
 }
@@ -89,9 +89,9 @@
   z-index: 3;
   background: linear-gradient(
     to bottom,
-    rgba(2, 132, 199, 0.35) 0%,
+    rgba(7, 43, 59, 0.35) 0%,
     transparent 35%,
-    rgba(30, 58, 138, 0.65) 100%
+    rgba(5, 32, 45, 0.68) 100%
   );
   pointer-events: none;
 }
@@ -252,8 +252,8 @@
 
 .auth-mode-pill-tab.active {
   background: #ffffff;
-  color: #2563eb;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  color: #072b3b;
+  box-shadow: 0 2px 6px rgba(7, 43, 59, 0.08);
 }
 
 .auth-account-badge {
@@ -262,9 +262,9 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #2563eb;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  color: #072b3b;
+  background: #e7f4f9;
+  border: 1px solid #bce0ed;
   padding: 3px 8px;
   border-radius: 4px;
   margin: 0;
@@ -276,7 +276,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #2563eb;
+  color: #072b3b;
   text-decoration: none;
 }
 
@@ -285,7 +285,7 @@
   font-weight: 800;
   font-size: 13.5px;
   letter-spacing: 0.06em;
-  color: #2563eb;
+  color: #072b3b;
 }
 
 /* Heading & Subtitle */
@@ -373,7 +373,7 @@
 .auth-form-side input[type="text"]:focus,
 .auth-form-side input[type="email"]:focus,
 .auth-form-side input[type="password"]:focus {
-  border-bottom: 2px solid #2563eb !important;
+  border-bottom: 2px solid #2e8eb4 !important;
   box-shadow: none !important;
   outline: none !important;
 }
@@ -407,7 +407,7 @@
   align-self: flex-end;
   background: none;
   border: none;
-  color: #2563eb;
+  color: #2e8eb4;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -417,24 +417,24 @@
 }
 
 .auth-forgot-link:hover {
-  color: #1d4ed8;
+  color: #072b3b;
   text-decoration: underline;
 }
 
-/* Primary Submit CTA Button (Blue Theme) */
+/* Primary Submit CTA Button (/kham-pha Coral Accent) */
 .auth-submit-btn {
-  background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+  background: #f4813f !important;
   color: #ffffff !important;
   border: none !important;
-  border-radius: 5px !important;
+  border-radius: 999px !important;
   padding: 12px 28px !important;
   font-size: 12.5px !important;
   font-weight: 700 !important;
   letter-spacing: 0.06em !important;
   text-transform: uppercase !important;
   cursor: pointer !important;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
-  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s !important;
+  box-shadow: 0 4px 14px rgba(244, 129, 63, 0.34) !important;
+  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s, background-color 0.15s !important;
   width: fit-content !important;
   min-width: 150px !important;
   margin-top: 6px !important;
@@ -445,7 +445,8 @@
 }
 
 .auth-submit-btn:hover:not(:disabled) {
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45) !important;
+  background: #e56f2c !important;
+  box-shadow: 0 6px 18px rgba(244, 129, 63, 0.42) !important;
   transform: translateY(-1px) !important;
 }
 
@@ -563,7 +564,7 @@
   justify-content: space-between;
   align-items: center;
   font-size: 11px;
-  color: #94a3b8;
+  color: #64748b;
   margin-top: 24px;
   padding-top: 14px;
   border-top: 1px solid #f8fafc;
@@ -857,9 +858,180 @@
 .account-guest-page > .app-footer h2,
 .account-guest-page > .app-footer strong { color: var(--auth-ink); }
 
-.account-guest-page > .app-footer .btn-subtle { color: #5d6b5d; }
+.account-guest-page > .app-footer p,
+.account-guest-page > .app-footer span { color: #5d6b5d !important; }
+
+.account-guest-page > .app-footer .btn-subtle { color: #475569; }
 
 .account-guest-page > .app-footer .btn-subtle:hover { color: var(--auth-leaf); }
+
+.account-guest-page > .app-footer .photo-credits,
+.account-guest-page > .app-footer .photo-credits summary,
+.account-guest-page > .app-footer .photo-credits li {
+  color: #5d6b5d !important;
+}
+
+.account-guest-page > .app-footer .photo-credits a {
+  color: var(--auth-leaf) !important;
+}
+
+/* Dark mode overrides for Guest Auth (/tai-khoan) */
+:root[data-theme="dark"] .account-guest-page .account-auth-container,
+:root[data-theme="dark"] .account-guest-page .auth-split-card {
+  background: #081e29;
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-hero-gradient-top {
+  background: linear-gradient(to bottom, rgba(5, 32, 45, .36) 0%, transparent 34%, rgba(8, 30, 41, .6) 72%, #081e29 100%);
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-social-proof-pill {
+  background: rgba(13, 43, 58, 0.94);
+  color: #f4f7f9;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-proof-user {
+  color: #f4f7f9;
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-proof-check {
+  color: #6ee7b7;
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-proof-action {
+  color: #9eb6c4;
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-form-side {
+  background: linear-gradient(to bottom, #081e29 0%, #081e29 82%, #05202d 100%);
+  color: #f4f7f9;
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-mode-pill-tabs {
+  background: #113445;
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-mode-pill-tab {
+  color: #9eb6c4;
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-mode-pill-tab.active {
+  background: #0d2b3a;
+  color: #f4f7f9;
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-account-badge {
+  background: rgba(98, 194, 223, 0.16);
+  border-color: rgba(98, 194, 223, 0.32);
+  color: #62c2df;
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-brand-logo,
+:root[data-theme="dark"] .account-guest-page .auth-brand-name,
+:root[data-theme="dark"] .account-guest-page .auth-form-heading {
+  color: #f4f7f9;
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-form-subtext,
+:root[data-theme="dark"] .account-guest-page .auth-field-label,
+:root[data-theme="dark"] .account-guest-page .auth-social-label,
+:root[data-theme="dark"] .account-guest-page .auth-flow-recipient {
+  color: #9eb6c4;
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-form-side input.auth-text-input,
+:root[data-theme="dark"] .account-guest-page .auth-form-side input[type="text"],
+:root[data-theme="dark"] .account-guest-page .auth-form-side input[type="email"],
+:root[data-theme="dark"] .account-guest-page .auth-form-side input[type="password"] {
+  border-bottom-color: rgba(255, 255, 255, 0.22) !important;
+  color: #f4f7f9 !important;
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-form-side input::placeholder {
+  color: #7f9ba9 !important;
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-pw-toggle {
+  color: #9eb6c4;
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-forgot-link {
+  color: #62c2df;
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-social-btn {
+  background: #0d2b3a;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-social-btn.google {
+  color: #f4f7f9;
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-social-btn.facebook {
+  color: #62c2df;
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-alt-nav {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-alt-nav button {
+  background: #0d2b3a;
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #dce8ee;
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-alt-nav button:hover {
+  background: #153e52;
+  border-color: #62c2df;
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-flow-notice,
+:root[data-theme="dark"] .account-guest-page .auth-mailbox-hint {
+  background: #0d2b3a;
+  border-color: rgba(98, 194, 223, 0.24);
+  color: #dce8ee;
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-alert-box {
+  background: rgba(248, 113, 113, 0.14);
+  border-color: rgba(248, 113, 113, 0.36);
+  color: #fca5a5;
+}
+
+:root[data-theme="dark"] .account-guest-page .auth-form-footer {
+  border-top-color: rgba(255, 255, 255, 0.1);
+  color: #9eb6c4;
+}
+
+:root[data-theme="dark"] .account-guest-page > .app-footer {
+  background: #05202d !important;
+  color: #f4f7f9;
+}
+
+:root[data-theme="dark"] .account-guest-page > .app-footer h2,
+:root[data-theme="dark"] .account-guest-page > .app-footer strong {
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .account-guest-page > .app-footer p,
+:root[data-theme="dark"] .account-guest-page > .app-footer span,
+:root[data-theme="dark"] .account-guest-page > .app-footer .photo-credits,
+:root[data-theme="dark"] .account-guest-page > .app-footer .photo-credits summary,
+:root[data-theme="dark"] .account-guest-page > .app-footer .photo-credits li {
+  color: #b4c9d4 !important;
+}
+
+:root[data-theme="dark"] .account-guest-page > .app-footer .btn-subtle {
+  color: #dce8ee;
+}
+
+:root[data-theme="dark"] .account-guest-page > .app-footer .photo-credits a {
+  color: #8fd4ea !important;
+}
 
 @media (max-width: 860px) {
   .account-guest-page .auth-split-card { grid-template-columns: 1fr; }

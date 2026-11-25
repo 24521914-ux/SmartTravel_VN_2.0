@@ -102,12 +102,13 @@ const icons: Record<string, PhosphorIcon> = {
 export interface IconProps {
   name: string;
   size?: number;
+  weight?: 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone';
   className?: string;
   style?: React.CSSProperties;
 }
 
-export function Icon({ name, size = 20, className = '', style }: IconProps) {
+export function Icon({ name, size = 20, weight = 'regular', className = '', style }: IconProps) {
   const Glyph = icons[name] ?? Compass;
-  return <Glyph size={size} weight="regular" className={className} style={style} aria-hidden="true" />;
+  return <Glyph size={size} weight={weight} className={className} style={style} aria-hidden="true" />;
 }
 

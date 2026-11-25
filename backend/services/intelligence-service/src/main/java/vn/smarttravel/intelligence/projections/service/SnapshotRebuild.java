@@ -27,7 +27,7 @@ public class SnapshotRebuild {
         return Map.of("rebuilt",catalog.get("rebuilt"),"watermark",catalog.get("watermark"),"policies",policies,"sources",Map.of("catalog",catalog,"rating",ratings,"preferences",preferences,"interaction",interactions));
     }
     private Map<String,Object> source(UUID actor,String name,Function<String,JsonNode> fetch){
-        String cursor=null;JsonNode watermark=null;int total=0;long deadline=System.nanoTime()+java.time.Duration.ofSeconds(30).toNanos();var seen=new HashSet<String>();
+        String cursor=null;JsonNode watermark=null;int total=0;long deadline=System.nanoTime()+java.time.Duration.ofSeconds(120).toNanos();var seen=new HashSet<String>();
         do{
             require(System.nanoTime()<deadline,"REBUILD_DEADLINE");var snapshot=fetch.apply(cursor);
             var current=snapshot.path("watermark");

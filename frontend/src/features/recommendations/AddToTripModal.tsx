@@ -50,6 +50,7 @@ export function AddToTripModal({
     : '';
   const placeAddress = place && typeof place.address === 'string' ? place.address : '';
   const placePhotos = place ? placeImageCandidates(place) : [];
+  const placePhotoKey = placePhotos.join('|');
 
   const [stage, setStage] = useState<ModalStage>('selecting');
   const [trips, setTrips] = useState<Resource[]>([]);
@@ -68,7 +69,7 @@ export function AddToTripModal({
 
   const [idempotencyKey, setIdempotencyKey] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [photoFailed, setPhotoFailed] = useState(false);
+  const [photoIndex, setPhotoIndex] = useState(0);
 
   const selectedTrip = trips.find(t => rowId(t) === selectedTripId) ?? null;
   const selectedDay = days.find(d => rowId(d) === selectedDayId) ?? null;
@@ -141,8 +142,12 @@ export function AddToTripModal({
   }
 
   useEffect(() => {
+    setPhotoIndex(0);
+  }, [placeId, placePhotoKey]);
+
+  useEffect(() => {
     if (!place) return;
-    setPhotoFailed(false);
+    setPhotoIndex(0);
     setDurationMinutes('120');
     setNote(text(`Ghé thăm ${placeName}`, `Visit ${placeName}`));
     setShowCreateTrip(false);
@@ -359,12 +364,13 @@ export function AddToTripModal({
           )}
 
           <div className="rec-trip-place-preview">
-            {placePhotos[0] && !photoFailed ? (
+            {placePhotos[photoIndex] ? (
               <img
-                key={placeId}
-                src={placePhotos[0]}
+                key={`${placeId}-${photoIndex}`}
+                src={placePhotos[photoIndex]}
                 alt={placeName}
-                onError={() => setPhotoFailed(true)}
+                referrerPolicy="no-referrer"
+                onError={() => setPhotoIndex(curr => curr + 1)}
               />
             ) : (
               <div className="rec-trip-place-thumb-placeholder" aria-hidden="true">

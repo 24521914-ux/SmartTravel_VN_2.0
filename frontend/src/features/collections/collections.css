@@ -5,25 +5,25 @@
    ============================================================================ */
 
 .col-editorial-root {
-  --col-bg: #f7f3ec;
-  --col-surface: #ede6da;
-  --col-card: #fdfbf7;
-  --col-ink: #2a2622;
-  --col-muted: #5d554c;
-  --col-accent: #7a4a2c;
-  --col-accent-hover: #623a21;
+  --col-bg: #f7f8fa;
+  --col-surface: #f1f4f7;
+  --col-card: #ffffff;
+  --col-ink: #0f2533;
+  --col-muted: #5b6d7a;
+  --col-accent: #072b3b;
+  --col-accent-hover: #0d3d52;
   --col-accent-ink: #ffffff;
-  --col-accent-soft: rgba(122, 74, 44, 0.1);
-  --col-line: rgba(42, 38, 34, 0.14);
-  --col-line-strong: rgba(42, 38, 34, 0.28);
-  --col-danger: #a63429;
-  --col-public-bg: #e7efe9;
-  --col-public-ink: #1f4d36;
-  --col-radius-sm: 6px;
-  --col-radius-md: 10px;
-  --col-radius-lg: 14px;
-  --col-font-display: 'Source Serif 4', Georgia, serif;
-  --col-font-body: 'Be Vietnam Pro', 'Libre Franklin', system-ui, -apple-system, sans-serif;
+  --col-accent-soft: rgba(46, 142, 180, 0.12);
+  --col-line: #e4eaf0;
+  --col-line-strong: #c4d2de;
+  --col-danger: #c53030;
+  --col-public-bg: #e7f4f9;
+  --col-public-ink: #072b3b;
+  --col-radius-sm: 8px;
+  --col-radius-md: 12px;
+  --col-radius-lg: 16px;
+  --col-font-display: 'Playfair Display', 'Be Vietnam Pro', Georgia, serif;
+  --col-font-body: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
 
   background: var(--col-bg);
   color: var(--col-ink);
@@ -35,20 +35,20 @@
 }
 
 :root[data-theme="dark"] .col-editorial-root {
-  --col-bg: #1c1917;
-  --col-surface: #25211d;
-  --col-card: #2c2723;
-  --col-ink: #f7f3ec;
-  --col-muted: #bdb5aa;
-  --col-accent: #f7f3ec;
-  --col-accent-hover: #e5ddd0;
-  --col-accent-ink: #1c1917;
-  --col-accent-soft: rgba(247, 243, 236, 0.1);
-  --col-line: rgba(247, 243, 236, 0.14);
-  --col-line-strong: rgba(247, 243, 236, 0.3);
-  --col-danger: #f08a7e;
-  --col-public-bg: rgba(94, 180, 134, 0.16);
-  --col-public-ink: #b9e6cc;
+  --col-bg: #081e29;
+  --col-surface: #113445;
+  --col-card: #0d2b3a;
+  --col-ink: #f4f7f9;
+  --col-muted: #9eb6c4;
+  --col-accent: #f4813f;
+  --col-accent-hover: #e56f2c;
+  --col-accent-ink: #ffffff;
+  --col-accent-soft: rgba(98, 194, 223, 0.14);
+  --col-line: rgba(255, 255, 255, 0.12);
+  --col-line-strong: rgba(255, 255, 255, 0.24);
+  --col-danger: #f87171;
+  --col-public-bg: rgba(98, 194, 223, 0.16);
+  --col-public-ink: #62c2df;
 }
 
 .col-wrap {

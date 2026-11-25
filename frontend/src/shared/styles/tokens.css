@@ -1,37 +1,37 @@
 :root {
-  /* Brand Palette - Modern Vietnam Travel */
-  --color-primary: #087e8b;
-  --color-primary-hover: #066a75;
-  --color-primary-active: #04525b;
-  --color-primary-light: #e6f4f5;
-  --color-primary-subtle: #f0f8f9;
+  /* Brand Palette - SmartTravel Ocean Navy (Unified with /kham-pha) */
+  --color-primary: #072b3b;
+  --color-primary-hover: #0d3d52;
+  --color-primary-active: #05202d;
+  --color-primary-light: #e7f4f9;
+  --color-primary-subtle: #f1f7fa;
   --color-on-primary: #ffffff;
 
-  --color-secondary: #2f9e76;
-  --color-secondary-hover: #268261;
-  --color-secondary-light: #eaf6f1;
+  --color-secondary: #2e8eb4;
+  --color-secondary-hover: #237496;
+  --color-secondary-light: #e7f4f9;
   --color-on-secondary: #ffffff;
 
-  --color-accent: #f4b860;
-  --color-accent-hover: #e09f44;
-  --color-accent-light: #fef7ed;
-  --color-on-accent: #1f2937;
+  --color-accent: #f4813f;
+  --color-accent-hover: #e56f2c;
+  --color-accent-light: #fff3eb;
+  --color-on-accent: #ffffff;
 
   /* Surfaces & Neutrals */
-  --color-background: #f8faf9;
+  --color-background: #f7f8fa;
   --color-surface: #ffffff;
   --color-surface-elevated: #ffffff;
-  --color-surface-subtle: #f1f5f3;
-  --color-surface-sunken: #eaf0ed;
+  --color-surface-subtle: #f1f4f7;
+  --color-surface-sunken: #e4eaf0;
 
-  --color-text-primary: #1f2937;
-  --color-text-secondary: #64748b;
-  --color-text-muted: #94a3b8;
+  --color-text-primary: #0f2533;
+  --color-text-secondary: #5b6d7a;
+  --color-text-muted: #7b8c98;
   --color-text-inverse: #ffffff;
 
-  --color-border: #e2e8f0;
-  --color-border-subtle: #edf2f0;
-  --color-border-strong: #cbd5e1;
+  --color-border: #e4eaf0;
+  --color-border-subtle: #eef2f6;
+  --color-border-strong: #c4d2de;
 
   /* Status Colors */
   --color-success: #15803d;
@@ -93,21 +93,21 @@
 }
 
 [data-theme="dark"] {
-  --color-background: #0f172a;
-  --color-surface: #1e293b;
-  --color-surface-elevated: #334155;
-  --color-surface-subtle: #192338;
-  --color-surface-sunken: #0c1222;
+  --color-background: #081e29;
+  --color-surface: #0d2b3a;
+  --color-surface-elevated: #153e52;
+  --color-surface-subtle: #113445;
+  --color-surface-sunken: #05202d;
 
-  --color-text-primary: #f8fafc;
-  --color-text-secondary: #94a3b8;
-  --color-text-muted: #64748b;
+  --color-text-primary: #f4f7f9;
+  --color-text-secondary: #9eb6c4;
+  --color-text-muted: #7f9ba9;
 
-  --color-border: #334155;
-  --color-border-subtle: #243147;
-  --color-border-strong: #475569;
+  --color-border: rgba(255, 255, 255, 0.12);
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.22);
 
-  --glass-bg: rgba(30, 41, 59, 0.82);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-bg: rgba(7, 43, 59, 0.88);
+  --glass-border: rgba(98, 194, 223, 0.18);
   --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
 }

@@ -178,6 +178,7 @@ public class RankingGovernanceService {
             try {
                 snapshotRebuild.run(actor);
                 recomputeCohortSnapshot(actor, 30, 5);
+                data.invalidateCaches();
             } catch (Exception ignored) {
                 // Background projection sync failure is non-fatal to online serving
             }

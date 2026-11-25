@@ -22,7 +22,7 @@ function storedChoice<T extends string>(key: string, choices: readonly T[], fall
 }
 
 export function AppPreferencesProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<AppTheme>(() => storedChoice('smarttravel.theme', ['light', 'dark'], 'dark'));
+  const [theme, setTheme] = useState<AppTheme>(() => storedChoice('smarttravel.theme', ['light', 'dark'], 'light'));
   const [locale, setLocale] = useState<AppLocale>(() => storedChoice('smarttravel.locale', ['vi', 'en'], 'vi'));
 
   useLayoutEffect(() => {

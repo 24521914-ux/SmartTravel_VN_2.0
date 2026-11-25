@@ -2,19 +2,19 @@
    consistent across user, business and administration screens. */
 :root {
   color-scheme: dark;
-  --color-surface-sunken: #102019;
-  --color-border-strong: #60745f;
-  --color-primary-subtle: #1b3023;
-  --color-on-primary: #14231d;
-  --color-success: #acdeb6;
-  --color-success-bg: #213d2c;
-  --color-warning: #eed098;
-  --color-warning-bg: #3b321f;
+  --color-surface-sunken: #05202d;
+  --color-border-strong: rgba(255, 255, 255, 0.24);
+  --color-primary-subtle: #113445;
+  --color-on-primary: #05202d;
+  --color-success: #7ee0b5;
+  --color-success-bg: #12382c;
+  --color-warning: #f4a836;
+  --color-warning-bg: #3b2a14;
   --color-destructive: #f0a49b;
   --color-destructive-bg: #3b2524;
-  --color-secondary-light: #223b30;
-  --color-accent-light: #393323;
-  --focus-ring: 0 0 0 3px #b4c5a32e;
+  --color-secondary-light: #113445;
+  --color-accent-light: #3b2418;
+  --focus-ring: 0 0 0 3px rgba(98, 194, 223, 0.28);
 }
 
 /* Some existing forms omit type="text". They receive the same control style. */
@@ -136,6 +136,18 @@ html { scroll-padding-top: 104px; }
   .header-session { gap: 0; }
   .header-account, .header-logout { padding: 8px 6px; }
   .sub-tab { flex: 1 1 140px; padding: 10px; font-size: .8125rem; }
+}
+@media (max-width: 420px) {
+  .liquid-glass-container,
+  .liquid-glass-header.is-immersive:not(.is-scrolled) .liquid-glass-container {
+    padding-inline: 10px;
+    gap: 6px;
+  }
+  .brand-badge { gap: 6px; font-size: 0.95rem; }
+  .brand-badge .brand-icon-wrapper { width: 28px; height: 28px; }
+  .nav-actions { gap: 4px; }
+  .header-account, .header-logout { padding: 6px 4px; }
+  .mobile-menu-btn { width: 34px; height: 34px; min-height: 34px; }
 }
 
 /* Detail views replace the landing hero and need clearance below the fixed nav. */

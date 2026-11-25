@@ -14,7 +14,7 @@
 }
 [hidden] { display: none !important; }
 button:focus-visible, a:focus-visible, input:focus-visible, summary:focus-visible {
-  outline: 3px solid #087e8b; outline-offset: 4px;
+  outline: 3px solid #2e8eb4; outline-offset: 4px;
 }
 button, a { -webkit-tap-highlight-color: transparent; }
 .skip-link { position: fixed; top: 8px; left: 16px; z-index: 200; transform: translateY(-160%); background: var(--color-surface); padding: 12px 20px; border-radius: 8px; }
@@ -116,10 +116,10 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .journey-collections > div > svg { color: var(--color-primary); }
 footer .btn-subtle { padding: 0; min-height: 36px; text-align: left; }
 @media (prefers-color-scheme: dark) {
-  :root { --color-background: #10221e; --color-surface: #172f29; --color-surface-elevated: #203e35; --color-surface-subtle: #1c352d; --color-primary: #80d4d4; --color-primary-hover: #a2e6e2; --color-primary-light: #23463d; --color-text-primary: #edf4ef; --color-text-secondary: #b2c5bb; --color-text-muted: #abc0b5; --color-border: #375248; --color-border-subtle: #2b453b; --editorial-sand: #223b31; --editorial-tint: #203b32; --glass-bg: #172f29eb; }
-  .btn-primary { background: #087e8b; color: #f8faf9; }
-  .journey-filters button[aria-pressed=true] { background: #087e8b; }
-  .brand-badge .brand-icon-wrapper { background: #087e8b; }
+  :root { --color-background: #081e29; --color-surface: #0d2b3a; --color-surface-elevated: #153e52; --color-surface-subtle: #113445; --color-primary: #62c2df; --color-primary-hover: #83d2ea; --color-primary-light: #113445; --color-text-primary: #f4f7f9; --color-text-secondary: #9eb6c4; --color-text-muted: #7f9ba9; --color-border: rgba(255,255,255,0.12); --color-border-subtle: rgba(255,255,255,0.08); --editorial-sand: #113445; --editorial-tint: #0d2b3a; --glass-bg: rgba(7, 43, 59, 0.92); }
+  .btn-primary { background: #f4813f; color: #ffffff; }
+  .journey-filters button[aria-pressed=true] { background: #072b3b; }
+  .brand-badge .brand-icon-wrapper { background: #072b3b; }
   .journey-plan-notes { border-color: var(--color-border); }
 }
 @media (max-width: 1100px) {

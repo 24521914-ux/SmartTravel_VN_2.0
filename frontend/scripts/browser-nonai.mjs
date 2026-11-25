@@ -142,6 +142,9 @@ try {
   await page.getByRole('tab', { name: /01\/12\/2026/ }).click(); await idle();
   await page.getByRole('heading', { name: 'Ngày 01/12/2026', exact: true }).waitFor();
   assert.equal(await page.locator('input[name=recommendation]').count(), 0);
+  if (!await page.getByRole('button', { name: '+ Thêm vào ngày', exact: true }).count()) {
+    await page.getByRole('button', { name: 'Thêm địa điểm', exact: true }).click();
+  }
   await page.getByRole('button', { name: '+ Thêm vào ngày', exact: true }).first().click(); await idle();
   await page.getByTestId('trip-timeline-item').first().locator('summary').click();
   await page.getByRole('button', { name: 'Khóa địa điểm', exact: true }).click(); await idle();

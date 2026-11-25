@@ -63,8 +63,13 @@ export function AppContent() {
     });
   }
 
+  const isTripStudio = activeSection === 'Chuyến đi' && isAuthenticated;
+  const isAccountSettings = activeSection === 'Tài khoản' && isAuthenticated;
+  const isRecommendationCatalog = activeSection === 'Gợi ý';
+  const isMapDirectory = activeSection === 'Bản đồ';
+
   return (
-    <div className={`app-container ${activeSection === 'Tài khoản' && !isAuthenticated ? 'account-guest-page' : ''}`} aria-busy={isPending}>
+    <div className={`app-container ${activeSection === 'Khám phá' ? 'explore-page-active ' : ''}${isRecommendationCatalog ? 'rec-catalog-page ' : ''}${isMapDirectory ? 'map-directory-page ' : ''}${isTripStudio ? 'trip-studio-active ' : ''}${isAccountSettings ? 'account-settings-active ' : ''}${activeSection === 'Tài khoản' && !isAuthenticated ? 'account-guest-page' : ''}`} aria-busy={isPending}>
       <a className="skip-link" href="#main-content">{text('Chuyển đến nội dung chính', 'Skip to main content')}</a>
       {/* Top Liquid Glass Header Navigation */}
       <AppHeader
@@ -74,13 +79,13 @@ export function AppContent() {
         setIsMenuOpen={setIsMenuOpen}
       />
 
-      <main className={`main-content ${activeSection === 'Khám phá' || activeSection === 'Gợi ý' || activeSection === 'Bộ sưu tập' || (activeSection === 'Chuyến đi' && isAuthenticated) || (activeSection === 'Tài khoản' && !isAuthenticated) ? 'main-content-landing' : ''}`} id="main-content" tabIndex={-1}>
+      <main className={`main-content ${activeSection === 'Khám phá' || activeSection === 'Gợi ý' || activeSection === 'Bản đồ' || activeSection === 'Bộ sưu tập' || isTripStudio || activeSection === 'Tài khoản' ? 'main-content-landing' : ''}`} id="main-content" tabIndex={-1}>
         {activeSection === null && <section className="travel-panel">
           <h1>{text('Không tìm thấy trang', 'Page not found')}</h1>
           <p>{text('Đường dẫn này không tồn tại. Bạn có thể quay lại trang khám phá.', 'This page does not exist. You can return to Explore.')}</p>
           <button type="button" className="btn-subtle" onClick={() => handleNavigate('Khám phá')}>{text('Về trang khám phá', 'Back to Explore')}</button>
         </section>}
-        {activeSection && activeSection !== 'Khám phá' && activeSection !== 'Gợi ý' && activeSection !== 'Bộ sưu tập' && !(activeSection === 'Chuyến đi' && isAuthenticated) && (activeSection !== 'Tài khoản' || isAuthenticated) && <div style={{ marginBottom: '24px' }}>
+        {activeSection && activeSection !== 'Khám phá' && activeSection !== 'Gợi ý' && activeSection !== 'Bản đồ' && activeSection !== 'Bộ sưu tập' && !isTripStudio && activeSection !== 'Tài khoản' && <div style={{ marginBottom: '24px' }}>
           <h1 style={{ fontSize: '2.1rem', fontWeight: 800, color: 'var(--color-text-primary)' }}>
             {text(activeSection, ({ 'Gợi ý': 'Recommendations', 'Bản đồ': 'Map', 'Bộ sưu tập': 'Collections', 'Chuyến đi': 'Trips', 'Tài khoản': 'Account', 'Thông báo': 'Notifications', 'Đóng góp': 'Contribute', 'Doanh nghiệp': 'Business', 'Kiểm duyệt': 'Moderation', 'Quản trị': 'Administration' } as Record<string, string>)[activeSection] ?? activeSection)}
           </h1>
@@ -175,7 +180,7 @@ export function AppContent() {
       </main>
 
       {/* Global Footer */}
-      <AppFooter onNavigate={handleNavigate} />
+      {!isTripStudio && !isAccountSettings && <AppFooter onNavigate={handleNavigate} />}
     </div>
   );
 }

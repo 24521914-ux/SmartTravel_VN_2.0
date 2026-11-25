@@ -4,18 +4,38 @@ export function placeIdOf(place: Resource): string {
   return String(place.place_id ?? place.id ?? '');
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function mediaUrl(key: string): string {
   const trimmed = key.trim();
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (!trimmed) return '';
+  if (/^(https?:\/\/|\/)/i.test(trimmed)) return trimmed;
   const id = trimmed.split('/').at(-1);
-  return id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
-    ? `/api/catalog/api/v1/media/${encodeURIComponent(id)}` : '';
+  return id && UUID_RE.test(id)
+    ? `/api/catalog/api/v1/media/${encodeURIComponent(id)}`
+    : '';
 }
 
-function validImagePath(value: unknown): string {
-  if (typeof value !== 'string') return '';
-  const trimmed = value.trim();
-  return /^(https?:\/\/|\/)/.test(trimmed) ? trimmed : '';
+function extractEntryUrls(entry: unknown): string[] {
+  if (typeof entry === 'string') {
+    const resolved = mediaUrl(entry);
+    return resolved ? [resolved] : [];
+  }
+  if (!entry || typeof entry !== 'object') return [];
+  const rec = entry as Resource;
+  const found: string[] = [];
+  for (const field of [rec.url, rec.image_url, rec.secure_url, rec.src, rec.object_key, rec.media_key]) {
+    if (typeof field === 'string') {
+      const resolved = mediaUrl(field);
+      if (resolved) found.push(resolved);
+    }
+  }
+  for (const idField of [rec.media_id, rec.id]) {
+    if (typeof idField === 'string' && UUID_RE.test(idField.trim())) {
+      found.push(`/api/catalog/api/v1/media/${encodeURIComponent(idField.trim())}`);
+    }
+  }
+  return found;
 }
 
 /**
@@ -48,18 +68,28 @@ export function placeImageCandidates(place: Resource, options: { allowEditorialL
   const candidates: string[] = [];
   if (Array.isArray(place.media_keys)) {
     for (const key of place.media_keys) {
-      const url = typeof key === 'string' ? mediaUrl(key) : '';
-      if (url) candidates.push(url);
+      candidates.push(...extractEntryUrls(key));
     }
   }
-  for (const field of [place.image_url, place.cover_image, place.thumbnail_url]) {
-    const valid = validImagePath(field);
-    if (valid) candidates.push(valid);
+  if (Array.isArray(place.media)) {
+    for (const entry of place.media) {
+      candidates.push(...extractEntryUrls(entry));
+    }
+  }
+  for (const field of [
+    place.image_url,
+    place.primary_image_url,
+    place.cover_image,
+    place.cover_image_url,
+    place.thumbnail_url,
+    place.photo_url,
+    place.image,
+  ]) {
+    candidates.push(...extractEntryUrls(field));
   }
   if (Array.isArray(place.images)) {
     for (const entry of place.images) {
-      const valid = validImagePath(typeof entry === 'object' && entry !== null ? (entry as Resource).url ?? (entry as Resource).image_url : entry);
-      if (valid) candidates.push(valid);
+      candidates.push(...extractEntryUrls(entry));
     }
   }
   if (options.allowEditorialLandmark !== false) {

@@ -36,10 +36,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div
         style={{
           position: 'fixed',
-          bottom: '24px',
-          right: '24px',
+          bottom: '20px',
+          right: '16px',
+          maxWidth: 'calc(100vw - 32px)',
           display: 'flex',
           flexDirection: 'column',
+          alignItems: 'flex-end',
           gap: '10px',
           zIndex: 9999,
           pointerEvents: 'none'
@@ -47,10 +49,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       >
         {toasts.map(toast => {
           const bgColors = {
-            success: 'var(--color-success)',
-            error: 'var(--color-destructive)',
-            warning: 'var(--color-warning)',
-            info: 'var(--color-primary)'
+            success: '#157347',
+            error: '#b91c1c',
+            warning: '#b45309',
+            info: '#072b3b'
           };
           const icons = {
             success: 'check',
@@ -66,7 +68,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 pointerEvents: 'auto',
                 background: bgColors[toast.type],
                 color: '#ffffff',
-                padding: '12px 18px',
+                border: '1px solid rgba(255, 255, 255, 0.16)',
+                padding: '12px 16px',
                 borderRadius: 'var(--radius-button)',
                 boxShadow: 'var(--shadow-lg)',
                 display: 'flex',
@@ -74,12 +77,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 gap: '10px',
                 fontSize: '0.9375rem',
                 fontWeight: 500,
-                maxWidth: '380px',
+                maxWidth: 'min(380px, calc(100vw - 32px))',
+                boxSizing: 'border-box',
                 animation: 'slideUp 220ms ease'
               }}
             >
               <Icon name={icons[toast.type]} size={18} />
-              <span style={{ flex: 1 }}>{toast.message}</span>
+              <span style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>{toast.message}</span>
               <button
                 type="button"
                 onClick={() => removeToast(toast.id)}
