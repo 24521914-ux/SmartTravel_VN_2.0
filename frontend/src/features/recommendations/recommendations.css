@@ -4,135 +4,9 @@
    Scoped strictly to .rec-catalog-page, .rec-editorial-root, and .rec-drawer-*
    ============================================================================ */
 
-/* ── Docked Header on /goi-y (Harmonized with /kham-pha Ocean Navy Palette) ── */
-:root[data-theme] .rec-catalog-page .liquid-glass-header {
-  top: 0;
-  left: 0;
-  right: 0;
-  width: 100%;
-  max-width: none;
-  transform: none;
-  border-radius: 0;
-  height: 64px;
-  padding: 0 28px;
-  background: var(--rec-header-bg, #ffffff);
-  border: 0;
-  border-bottom: 1px solid var(--rec-header-line, #e4eaf0);
-  box-shadow: none;
-  backdrop-filter: none;
-}
-
-:root[data-theme="light"] .rec-catalog-page {
-  --rec-header-bg: #ffffff;
-  --rec-header-line: #e4eaf0;
-  --rec-header-ink: #0f2533;
-  --rec-header-muted: #5b6d7a;
-  --rec-header-pill: #f1f4f7;
-  --rec-header-active-bg: #e7f4f9;
-  --rec-header-active-ink: #072b3b;
-}
-
-:root[data-theme="dark"] .rec-catalog-page {
-  --rec-header-bg: #072b3b;
-  --rec-header-line: rgba(255, 255, 255, 0.12);
-  --rec-header-ink: #f4f7f9;
-  --rec-header-muted: #9eb6c4;
-  --rec-header-pill: #113445;
-  --rec-header-active-bg: #153e52;
-  --rec-header-active-ink: #62c2df;
-}
-
-:root[data-theme] .rec-catalog-page .liquid-glass-header .liquid-glass-container {
-  max-width: 1240px;
-  margin-inline: auto;
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-}
-
-:root[data-theme] .rec-catalog-page .liquid-glass-header .brand-badge span {
-  color: var(--rec-header-ink) !important;
-}
-
-:root[data-theme] .rec-catalog-page .liquid-glass-header .brand-badge span:last-child {
-  color: #2e8eb4 !important;
-}
-
-:root[data-theme="dark"] .rec-catalog-page .liquid-glass-header .brand-badge span:last-child {
-  color: #62c2df !important;
-}
-
-:root[data-theme] .rec-catalog-page .liquid-glass-header .brand-icon-wrapper {
-  background: #072b3b;
-  color: #ffffff;
-}
-
-:root[data-theme="dark"] .rec-catalog-page .liquid-glass-header .brand-icon-wrapper {
-  background: #2e8eb4;
-}
-
-:root[data-theme] .rec-catalog-page .liquid-glass-header .liquid-nav-link {
-  color: var(--rec-header-muted);
-  background: transparent;
-}
-
-:root[data-theme] .rec-catalog-page .liquid-glass-header .liquid-nav-link:hover {
-  color: var(--rec-header-ink);
-  background: var(--rec-header-pill);
-}
-
-:root[data-theme] .rec-catalog-page .liquid-glass-header .liquid-nav-link.active {
-  color: var(--rec-header-active-ink);
-  background: var(--rec-header-active-bg);
-}
-
-:root[data-theme] .rec-catalog-page .liquid-glass-header .nav-preferences {
-  background: var(--rec-header-pill);
-  border: 1px solid var(--rec-header-line);
-}
-
-:root[data-theme] .rec-catalog-page .liquid-glass-header .preference-toggle,
-:root[data-theme] .rec-catalog-page .liquid-glass-header .header-account-name,
-:root[data-theme] .rec-catalog-page .liquid-glass-header .header-account {
-  color: var(--rec-header-ink);
-}
-
-:root[data-theme] .rec-catalog-page .liquid-glass-header .nav-auth-btn {
-  background: var(--rec-header-pill);
-  border: 1px solid var(--rec-header-line);
-  color: var(--rec-header-ink);
-}
-
-:root[data-theme] .rec-catalog-page .liquid-glass-header .nav-auth-btn:hover {
-  border-color: #2e8eb4;
-}
-
-:root[data-theme] .rec-catalog-page .liquid-glass-header .mobile-menu-btn {
-  background: var(--rec-header-pill);
-  border: 1px solid var(--rec-header-line);
-  color: var(--rec-header-ink);
-}
-
-:root[data-theme] .rec-catalog-page .liquid-nav.open,
-:root[data-theme] .rec-catalog-page .nav-dropdown {
-  background: var(--rec-header-bg);
-  border-color: var(--rec-header-line);
-  box-shadow: 0 12px 32px rgba(7, 43, 59, 0.16);
-}
-
-:root[data-theme] .rec-catalog-page .liquid-nav.open .liquid-nav-link.active,
-:root[data-theme] .rec-catalog-page .nav-dropdown .nav-dropdown-item.is-active {
-  background: var(--rec-header-active-bg);
-  color: var(--rec-header-active-ink);
-}
-
+/* ── Unified Floating Liquid Glass Header Spacing on /goi-y ── */
 :root[data-theme] .rec-catalog-page .main-content-landing {
-  padding-top: 64px;
+  padding-top: 74px;
   background: #f7f8fa;
 }
 
@@ -1648,10 +1522,6 @@
 @media (max-width: 639px) {
   .rec-wrap {
     width: calc(100% - 32px);
-  }
-
-  :root[data-theme] .rec-catalog-page .liquid-glass-header {
-    padding: 0 16px;
   }
 
   .rec-page-header {

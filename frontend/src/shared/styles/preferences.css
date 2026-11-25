@@ -93,34 +93,99 @@ body { background-color: var(--color-background); color: var(--color-text-primar
 :root[data-theme="dark"] .skip-link { background: #0d2b3a; color: #f4f7f9; }
 .finder-submit, .finder-apply, .explore-categories button[aria-pressed="true"] { color: var(--color-on-primary); }
 
-.nav-preferences { display: inline-flex; align-items: center; gap: 5px; padding: 3px; border: 1px solid rgba(198, 217, 180, .2); border-radius: 999px; background: rgba(13, 25, 20, .22); }
-.preference-toggle { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 34px; padding: 0 8px; border: 0; border-radius: 999px; background: transparent; color: var(--color-text-primary); font: inherit; font-size: 10px; font-weight: 700; letter-spacing: .04em; cursor: pointer; }
-.preference-toggle:hover { background: rgba(198, 217, 180, .2); }
+.nav-preferences { display: inline-flex; align-items: center; gap: 2px; height: 30px; padding: 2px; border: 1px solid rgba(255, 255, 255, 0.20); border-radius: 999px; background: rgba(255, 255, 255, 0.08); }
+.preference-toggle { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 5px; border: 0; border-radius: 999px; background: transparent; color: #f4f7f9; font: inherit; font-size: 10.5px; font-weight: 400; letter-spacing: .02em; cursor: pointer; }
+.preference-toggle:hover { background: rgba(255, 255, 255, 0.14); }
 .preference-toggle:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-.nav-auth-btn, .mobile-menu-btn { color: var(--color-text-primary); }
-:root[data-theme="light"] .liquid-glass-header.is-scrolled .liquid-glass-container,
-:root[data-theme="light"] .liquid-glass-header:not(.is-immersive) .liquid-glass-container { background: rgba(255,255,255,.92); border-color: var(--color-border); }
-:root[data-theme="light"] .liquid-glass-header.is-scrolled .liquid-nav-link,
-:root[data-theme="light"] .liquid-glass-header:not(.is-immersive) .liquid-nav-link,
-:root[data-theme="light"] .liquid-glass-header.is-scrolled .nav-auth-btn,
-:root[data-theme="light"] .liquid-glass-header:not(.is-immersive) .nav-auth-btn,
-:root[data-theme="light"] .liquid-glass-header.is-scrolled .preference-toggle,
-:root[data-theme="light"] .liquid-glass-header:not(.is-immersive) .preference-toggle { color: var(--color-text-primary); }
-:root[data-theme="light"] .liquid-glass-header.is-scrolled .nav-preferences,
-:root[data-theme="light"] .liquid-glass-header:not(.is-immersive) .nav-preferences { background: var(--color-surface-subtle); border-color: var(--color-border); }
-:root[data-theme="light"] .liquid-glass-header.is-scrolled .mobile-menu-btn,
-:root[data-theme="light"] .liquid-glass-header:not(.is-immersive) .mobile-menu-btn { color: var(--color-text-primary); background: var(--color-surface); border-color: var(--color-border); }
-:root[data-theme="light"] .liquid-glass-header.is-immersive:not(.is-scrolled) :is(.preference-toggle, .nav-auth-btn, .mobile-menu-btn, .liquid-nav-link) { color: #f6f4ee; }
-:root[data-theme="light"] .liquid-glass-header.is-immersive:not(.is-scrolled) .header-logout { color: #ffb4a8 !important; }
-:root[data-theme="light"] .liquid-glass-header.is-immersive:not(.is-scrolled) .mobile-menu-btn { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.28); }
-.account-guest-page .liquid-glass-header.is-immersive:not(.is-scrolled) .liquid-glass-container {
-  background: rgba(7, 43, 59, 0.84);
-  border-color: rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(22px) saturate(135%);
-  -webkit-backdrop-filter: blur(22px) saturate(135%);
-  box-shadow: 0 12px 34px rgba(7, 43, 59, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+.nav-auth-btn, .mobile-menu-btn { color: var(--color-text-primary); font-weight: 400; }
+
+/* Unified Liquid Glass header across every tab and scroll position */
+:root[data-theme="dark"] .liquid-glass-header :is(.brand-badge, .liquid-nav, .nav-actions) {
+  background-color: rgba(12, 33, 46, 0.70);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.03) 50%, rgba(255, 255, 255, 0.07) 100%);
+  border-color: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(24px) saturate(185%);
+  -webkit-backdrop-filter: blur(24px) saturate(185%);
+  box-shadow: 0 14px 34px rgba(2, 10, 16, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.40), inset 0 -1px 0 rgba(255, 255, 255, 0.10);
 }
-:root[data-theme="light"] .liquid-nav.open { background: rgba(255,255,255,.98); border-color: var(--color-border); }
+@media (max-width: 1024px) {
+  :root[data-theme="dark"] .liquid-glass-header .liquid-glass-container,
+  :root[data-theme="dark"] .liquid-glass-header.is-immersive:not(.is-scrolled) .liquid-glass-container {
+    background-color: rgba(12, 33, 46, 0.70);
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.03) 50%, rgba(255, 255, 255, 0.07) 100%);
+    border-color: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(24px) saturate(185%);
+    -webkit-backdrop-filter: blur(24px) saturate(185%);
+    box-shadow: 0 14px 34px rgba(2, 10, 16, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.40);
+  }
+  :root[data-theme="dark"] .liquid-glass-header :is(.brand-badge, .nav-actions) {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+:root[data-theme="dark"] .liquid-glass-header .liquid-nav-link { color: rgba(226, 238, 245, 0.78); font-weight: 400; }
+:root[data-theme="dark"] .liquid-glass-header .liquid-nav-link:hover,
+:root[data-theme="dark"] .liquid-glass-header .liquid-nav-link.active { color: #ffffff; font-weight: 400; }
+:root[data-theme="dark"] .liquid-glass-header .header-account,
+:root[data-theme="dark"] .liquid-glass-header .header-account-name,
+:root[data-theme="dark"] .liquid-glass-header .preference-toggle,
+:root[data-theme="dark"] .liquid-glass-header .nav-auth-btn { color: #f4f7f9; font-weight: 400; }
+:root[data-theme="dark"] .liquid-glass-header .header-logout { color: #ffb4a8 !important; font-weight: 400; }
+:root[data-theme="dark"] .liquid-glass-header .mobile-menu-btn { background: rgba(255, 255, 255, 0.10); border-color: rgba(255, 255, 255, 0.24); color: #f4f7f9; }
+:root[data-theme="dark"] .liquid-glass-header .header-avatar { background: rgba(98, 194, 223, 0.18) !important; color: #9ddcf0 !important; font-weight: 400 !important; }
+
+:root[data-theme="light"] .liquid-glass-header :is(.brand-badge, .liquid-nav, .nav-actions) {
+  background-color: rgba(255, 255, 255, 0.80);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(242, 248, 252, 0.72) 100%);
+  border-color: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(24px) saturate(185%);
+  -webkit-backdrop-filter: blur(24px) saturate(185%);
+  box-shadow: 0 12px 32px rgba(15, 37, 51, 0.12), 0 2px 6px rgba(15, 37, 51, 0.05), inset 0 1.5px 0 #ffffff, inset 0 -1px 0 rgba(15, 37, 51, 0.04);
+}
+@media (max-width: 1024px) {
+  :root[data-theme="light"] .liquid-glass-header .liquid-glass-container,
+  :root[data-theme="light"] .liquid-glass-header.is-immersive:not(.is-scrolled) .liquid-glass-container {
+    background-color: rgba(255, 255, 255, 0.80);
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(242, 248, 252, 0.72) 100%);
+    border-color: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(24px) saturate(185%);
+    -webkit-backdrop-filter: blur(24px) saturate(185%);
+    box-shadow: 0 12px 32px rgba(15, 37, 51, 0.12), 0 2px 6px rgba(15, 37, 51, 0.05), inset 0 1.5px 0 #ffffff;
+  }
+  :root[data-theme="light"] .liquid-glass-header :is(.brand-badge, .nav-actions) {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+:root[data-theme="light"] .liquid-glass-header .liquid-nav-link { color: #475569; font-weight: 400; }
+:root[data-theme="light"] .liquid-glass-header .liquid-nav-link:hover { color: #0b1220; background: rgba(15, 37, 51, 0.04); }
+:root[data-theme="light"] .liquid-glass-header .liquid-nav-link.active { color: #071e2b; font-weight: 400; }
+:root[data-theme="light"] .liquid-glass-header .liquid-nav-indicator,
+:root[data-theme="light"] .liquid-glass-header .liquid-nav-link.more-toggle.active {
+  background-color: rgba(255, 255, 255, 0.90);
+  background-image: linear-gradient(135deg, rgba(220, 248, 238, 0.36) 0%, rgba(255, 255, 255, 0.94) 45%, rgba(226, 241, 252, 0.45) 100%);
+  border-color: rgba(170, 215, 206, 0.72);
+  box-shadow: 0 4px 14px rgba(15, 37, 51, 0.10), 0 1px 3px rgba(15, 37, 51, 0.05), inset 0 1.5px 1px #ffffff, inset 0 -1.5px 2px rgba(162, 215, 210, 0.36);
+}
+:root[data-theme="light"] .liquid-glass-header .nav-preferences { background: rgba(7, 43, 59, 0.06); border-color: rgba(7, 43, 59, 0.12); }
+:root[data-theme="light"] .liquid-glass-header .preference-toggle,
+:root[data-theme="light"] .liquid-glass-header .header-account,
+:root[data-theme="light"] .liquid-glass-header .header-account-name { color: #0f2533; font-weight: 400; }
+:root[data-theme="light"] .liquid-glass-header .preference-toggle:hover { background: rgba(7, 43, 59, 0.08); }
+:root[data-theme="light"] .liquid-glass-header .nav-auth-btn { background: rgba(7, 43, 59, 0.07); border-color: rgba(7, 43, 59, 0.16); color: #0f2533; font-weight: 400; }
+:root[data-theme="light"] .liquid-glass-header .nav-auth-btn:hover { background: rgba(7, 43, 59, 0.12); color: #072b3b; }
+:root[data-theme="light"] .liquid-glass-header .header-logout { color: #b42318 !important; font-weight: 400; }
+:root[data-theme="light"] .liquid-glass-header .header-avatar { background: #e2eff5 !important; color: #072b3b !important; font-weight: 400 !important; }
+:root[data-theme="light"] .liquid-glass-header .mobile-menu-btn { color: #0f2533; background: rgba(7, 43, 59, 0.06); border-color: rgba(7, 43, 59, 0.16); }
+:root[data-theme="light"] .liquid-nav.open,
+:root[data-theme="light"] .liquid-glass-header .nav-dropdown { background: rgba(255, 255, 255, 0.96); border-color: rgba(7, 43, 59, 0.14); box-shadow: 0 16px 36px rgba(7, 43, 59, 0.14); }
+:root[data-theme="light"] .liquid-nav.open .liquid-nav-link.active { background: rgba(7, 43, 59, 0.08); color: #072b3b; }
 
 /* Unified Ocean Navy Footer across all routes (matching /kham-pha) */
 :root[data-theme] .app-footer {
@@ -423,17 +488,18 @@ body { background-color: var(--color-background); color: var(--color-text-primar
 :root[data-theme="light"] .cinematic-showcase h2 { color: #ffffff; }
 :root[data-theme="light"] .cinematic-showcase h2 em { color: #e4eedc; }
 :root[data-theme="light"] .showcase-copy p { color: #f0f3ef; }
-:root[data-theme="light"] .liquid-glass-header:is(.is-scrolled, :not(.is-immersive)) .brand-badge,
-:root[data-theme="light"] .liquid-glass-header:is(.is-scrolled, :not(.is-immersive)) .brand-badge span:first-child { color: var(--color-text-primary); }
-:root[data-theme="light"] .liquid-glass-header:is(.is-scrolled, :not(.is-immersive)) .brand-icon-wrapper {
-  background: #e8f2eb;
-  border-color: #a9c7af;
-  color: #286641;
+:root[data-theme="light"] .liquid-glass-header .brand-badge,
+:root[data-theme="light"] .liquid-glass-header .brand-badge span:first-child { color: #0f2533; font-weight: 400; }
+:root[data-theme="light"] .liquid-glass-header .brand-icon-wrapper {
+  background: rgba(7, 43, 59, 0.08);
+  border-color: rgba(7, 43, 59, 0.18);
+  color: #0f2533;
 }
-:root[data-theme="light"] .liquid-glass-header.is-immersive:not(.is-scrolled) .brand-badge span:last-child { color: #e4eedc !important; }
-:root[data-theme="light"] .nav-dropdown { background: var(--color-surface); border-color: var(--color-border); }
+:root[data-theme="light"] .liquid-glass-header .brand-badge span:last-child,
+:root[data-theme="light"] .liquid-glass-header .brand-badge .brand-subtitle { color: #1d6f90 !important; font-weight: 400; }
+:root[data-theme="light"] .nav-dropdown { background: rgba(255, 255, 255, 0.96); border-color: rgba(7, 43, 59, 0.14); }
 :root[data-theme="light"] .liquid-glass-header .nav-dropdown .liquid-nav-link,
-:root[data-theme="light"] .liquid-glass-header.is-immersive .nav-dropdown .liquid-nav-link { color: var(--color-text-primary); }
+:root[data-theme="light"] .liquid-glass-header.is-immersive .nav-dropdown .liquid-nav-link { color: #0f2533; font-weight: 400; }
 :root[data-theme="light"] .nav-dropdown .liquid-nav-link:hover { background: var(--color-primary-light); }
 :root[data-theme="light"] .journey-filters button { color: var(--color-text-secondary); background: var(--color-surface); border-color: var(--color-border); }
 :root[data-theme="light"] .journey-filters button:hover { color: var(--color-text-primary); background: var(--color-primary-light); }
