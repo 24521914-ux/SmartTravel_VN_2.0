@@ -8,7 +8,14 @@ export interface Page {
 }
 /** Domain requests keep service ownership and optimistic concurrency at the HTTP boundary. */
 export class TravelClient {
+  private readonly mutateListeners = new Set<(service: ServiceName) => void>();
   constructor(private readonly api: ApiClient) {}
+  onMutate(listener: (service: ServiceName) => void): () => void {
+    this.mutateListeners.add(listener);
+    return () => {
+      this.mutateListeners.delete(listener);
+    };
+  }
   read<T = Resource>(service: ServiceName, path: string): Promise<T> {
     return this.api.request<T>(service, `/api/v1${path}`);
   }
@@ -30,7 +37,7 @@ export class TravelClient {
     } while (cursor);
     return { items, next_cursor: null };
   }
-  mutate<T = Resource>(
+  async mutate<T = Resource>(
     service: ServiceName,
     path: string,
     body: unknown,
@@ -38,12 +45,14 @@ export class TravelClient {
     version?: number,
     idempotencyKey: string = crypto.randomUUID(),
   ): Promise<T> {
-    return this.api.request<T>(service, `/api/v1${path}`, {
+    const result = await this.api.request<T>(service, `/api/v1${path}`, {
       method,
       body,
       ifMatch: version,
       idempotencyKey,
     });
+    for (const listener of this.mutateListeners) listener(service);
+    return result;
   }
   places(
     query = "",
