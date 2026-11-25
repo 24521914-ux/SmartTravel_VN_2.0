@@ -46,19 +46,18 @@ export function LiquidGlassNav({
 
   // Shared active indicator animation on primary tabs
   useLayoutEffect(() => {
-    if (!primaryContainerRef.current) return;
-    const activeBtn = primaryContainerRef.current.querySelector<HTMLButtonElement>(`[data-tab-id="${activeTab}"]`);
-    if (activeBtn) {
-      const containerRect = primaryContainerRef.current.getBoundingClientRect();
-      const btnRect = activeBtn.getBoundingClientRect();
-      setIndicatorStyle({
-        left: btnRect.left - containerRect.left,
-        width: btnRect.width
-      });
-    } else {
-      setIndicatorStyle(null);
-    }
-  }, [activeTab]);
+    let cancelled = false;
+    const measure = () => {
+      if (cancelled || !primaryContainerRef.current) return;
+      const activeBtn = [...primaryContainerRef.current.querySelectorAll<HTMLButtonElement>('[data-tab-id]')].find(b => b.dataset.tabId === activeTab);
+      setIndicatorStyle(activeBtn ? { left: activeBtn.offsetLeft, width: activeBtn.offsetWidth } : null);
+    };
+    measure();
+    void document.fonts?.ready?.then(measure);
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, tabs]);
 
   useEffect(() => {
     const container = primaryContainerRef.current;
@@ -99,7 +98,7 @@ export function LiquidGlassNav({
         className={`liquid-nav-link ${isActive ? 'active' : ''}`}
         onClick={() => handleTabClick(tab.id)}
       >
-        {tab.icon && <Icon name={tab.icon} size={14} />}
+        {tab.icon && <Icon name={tab.icon} size={15} weight={isActive ? 'regular' : 'light'} />}
         <span>{tab.label}</span>
       </button>
     );

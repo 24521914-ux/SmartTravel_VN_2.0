@@ -153,110 +153,8 @@
   --mp-coral-hover: #e56f2c;
 }
 
-:root[data-theme] .map-directory-page .liquid-glass-header {
-  top: 0;
-  left: 0;
-  right: 0;
-  width: 100%;
-  max-width: none;
-  transform: none;
-  border-radius: 0;
-  height: 64px;
-  padding: 0 28px;
-  background: var(--mp-card);
-  border: 0;
-  border-bottom: 1px solid var(--mp-line);
-  box-shadow: none;
-  backdrop-filter: none;
-}
-
-:root[data-theme="dark"] .map-directory-page .liquid-glass-header {
-  background: #072b3b;
-}
-
-:root[data-theme] .map-directory-page .liquid-glass-header .liquid-glass-container {
-  max-width: 1320px;
-  margin-inline: auto;
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-}
-
-:root[data-theme] .map-directory-page .liquid-glass-header .brand-badge span {
-  color: var(--mp-ink) !important;
-}
-
-:root[data-theme] .map-directory-page .liquid-glass-header .brand-badge span:last-child {
-  color: var(--mp-sky) !important;
-}
-
-:root[data-theme] .map-directory-page .liquid-glass-header .brand-icon-wrapper {
-  background: #072b3b;
-  color: #ffffff;
-}
-
-:root[data-theme="dark"] .map-directory-page .liquid-glass-header .brand-icon-wrapper {
-  background: #2e8eb4;
-}
-
-:root[data-theme] .map-directory-page .liquid-glass-header .liquid-nav-link {
-  color: var(--mp-muted);
-  background: transparent;
-}
-
-:root[data-theme] .map-directory-page .liquid-glass-header .liquid-nav-link:hover {
-  color: var(--mp-ink);
-  background: var(--mp-subtle);
-}
-
-:root[data-theme] .map-directory-page .liquid-glass-header .liquid-nav-link.active {
-  color: #072b3b;
-  background: #e7f4f9;
-}
-
-:root[data-theme="dark"] .map-directory-page .liquid-glass-header .liquid-nav-link.active {
-  color: #62c2df;
-  background: #153e52;
-}
-
-:root[data-theme] .map-directory-page .liquid-glass-header .nav-preferences {
-  background: var(--mp-subtle);
-  border: 1px solid var(--mp-line);
-}
-
-:root[data-theme] .map-directory-page .liquid-glass-header .preference-toggle,
-:root[data-theme] .map-directory-page .liquid-glass-header .header-account-name,
-:root[data-theme] .map-directory-page .liquid-glass-header .header-account {
-  color: var(--mp-ink);
-}
-
-:root[data-theme] .map-directory-page .liquid-glass-header .nav-auth-btn,
-:root[data-theme] .map-directory-page .liquid-glass-header .mobile-menu-btn {
-  background: var(--mp-subtle);
-  border: 1px solid var(--mp-line);
-  color: var(--mp-ink);
-}
-
-:root[data-theme] .map-directory-page .liquid-nav.open,
-:root[data-theme] .map-directory-page .nav-dropdown {
-  background: var(--mp-card);
-  border-color: var(--mp-line);
-  box-shadow: 0 12px 32px rgba(7, 43, 59, 0.16);
-}
-
-:root[data-theme] .map-directory-page .liquid-nav.open .liquid-nav-link.active,
-:root[data-theme] .map-directory-page .nav-dropdown .nav-dropdown-item.is-active {
-  background: var(--mp-subtle);
-  color: var(--mp-sky);
-}
-
 :root[data-theme] .map-directory-page .main-content-landing {
-  padding-top: 64px;
+  padding-top: 74px;
   background: var(--mp-bg);
 }
 
@@ -856,10 +754,6 @@
 @media (max-width: 639px) {
   .map-shell-wrap {
     width: calc(100% - 32px);
-  }
-
-  :root[data-theme] .map-directory-page .liquid-glass-header {
-    padding: 0 16px;
   }
 
   .map-search {

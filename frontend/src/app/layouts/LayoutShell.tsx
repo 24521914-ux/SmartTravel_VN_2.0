@@ -78,11 +78,11 @@ export function AppHeader({
           aria-label={text('SmartTravel VN Trang chủ', 'SmartTravel VN Home')}
         >
           <div className="brand-icon-wrapper">
-            <Icon name="compass" size={16} />
+            <Icon name="compass" size={15} weight="light" />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
             <span style={{ lineHeight: 1.1 }}>SmartTravel</span>
-            <span style={{ fontSize: '7.5px', fontWeight: 600, color: 'var(--color-primary)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            <span className="brand-subtitle">
               {text('Việt Nam', 'Vietnam')}
             </span>
           </div>
@@ -120,16 +120,16 @@ export function AppHeader({
               >
                 <div className="header-avatar"
                   style={{
-                    width: 26,
-                    height: 26,
+                    width: 22,
+                    height: 22,
                     borderRadius: '50%',
                     background: 'var(--color-primary-light)',
                     color: 'var(--color-primary)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontWeight: 700,
-                    fontSize: '0.75rem'
+                    fontWeight: 400,
+                    fontSize: '0.7rem'
                   }}
                 >
                   {(user?.display_name ?? user?.email ?? 'U')[0].toUpperCase()}
@@ -145,7 +145,7 @@ export function AppHeader({
                 aria-label={text('Đăng xuất khỏi hệ thống', 'Sign out')}
                 style={{ color: 'var(--color-destructive)' }}
               >
-                <Icon name="arrow" size={16} />
+                <Icon name="arrow" size={14} weight="light" />
                 <span className="hide-mobile">{text('Đăng xuất', 'Sign out')}</span>
               </button>
             </div>

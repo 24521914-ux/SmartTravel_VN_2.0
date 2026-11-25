@@ -100,54 +100,111 @@ button > svg { flex-shrink: 0; }
 .collection-detail-header > div { min-width: 0; }
 .card-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 16px; border-top: 1px solid var(--color-border-subtle); }
 
-/* Fixed header: reserve actual space for brand, navigation and session actions. */
+/* Desktop 3-capsule Liquid Glass layout: compact centered nav pill flanked by slim brand & utility pills. */
 .liquid-glass-container,
 .liquid-glass-header.is-immersive:not(.is-scrolled) .liquid-glass-container {
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  width: min(1360px, calc(100% - 24px));
-  height: 64px; min-height: 64px; max-height: none;
-  padding: 0 20px; gap: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  width: min(1400px, calc(100% - 24px));
+  max-width: min(1400px, calc(100% - 24px));
+  height: auto;
+  min-height: 48px;
+  max-height: none;
+  padding: 0;
+  gap: 12px;
+  pointer-events: none;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
-.brand-badge { flex-shrink: 0; white-space: nowrap; }
-.nav-actions { min-width: 0; grid-column: 3; }
-.header-session { display: flex; align-items: center; gap: 4px; min-width: 0; }
-.header-account { min-width: 0; padding: 8px; white-space: nowrap; }
-.header-avatar { flex-shrink: 0; }
-.header-account-name { display: block; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .8125rem; font-weight: 500; }
-.header-logout { white-space: nowrap; flex-shrink: 0; padding: 8px; font-size: .8125rem; }
-.nav-auth-btn, .mobile-menu-btn { min-height: 40px; }
-.main-content:not(.main-content-landing) { padding-top: 112px; padding-bottom: 48px; }
-html { scroll-padding-top: 104px; }
-@media (min-width: 1025px) and (max-width: 1200px) {
+.liquid-glass-header :is(button, a, span) { font-weight: 400; }
+.brand-badge { justify-self: start; flex-shrink: 0; white-space: nowrap; pointer-events: auto; }
+.liquid-nav { justify-self: center; pointer-events: auto; }
+.nav-actions {
+  justify-self: end;
+  flex-shrink: 0;
+  min-width: 0;
+  pointer-events: auto;
+  position: relative;
+  height: 44px;
+  padding: 4px 12px 4px 6px;
+  gap: 6px;
+  border-radius: 999px;
+  background-color: rgba(12, 33, 46, 0.68);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.03) 50%, rgba(255, 255, 255, 0.07) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  backdrop-filter: blur(22px) saturate(185%);
+  -webkit-backdrop-filter: blur(22px) saturate(185%);
+  box-shadow: 0 12px 30px rgba(2, 10, 16, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.38), inset 0 -1px 0 rgba(255, 255, 255, 0.10);
+}
+.header-session { display: flex; align-items: center; gap: 3px; min-width: 0; }
+.header-account { min-width: 0; padding: 3px 5px; white-space: nowrap; font-weight: 400; border-radius: 999px; }
+.header-avatar { flex-shrink: 0; font-weight: 400 !important; }
+.header-account-name { display: block; max-width: 108px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 400; }
+.header-logout { white-space: nowrap; flex-shrink: 0; padding: 3px 6px; font-size: 12px; font-weight: 400; border-radius: 999px; }
+.nav-auth-btn { min-height: 30px; height: 30px; padding: 0 10px; font-weight: 400; }
+.mobile-menu-btn { min-height: 32px; width: 32px; height: 32px; }
+.main-content:not(.main-content-landing) { padding-top: 84px; padding-bottom: 48px; }
+html { scroll-padding-top: 84px; }
+@media (min-width: 1025px) and (max-width: 1260px) {
   .header-account-name { display: none; }
-  .liquid-glass-container { gap: 10px; padding-inline: 14px; }
+  .nav-actions { padding: 4px 10px 4px 5px; gap: 4px; }
 }
 @media (max-width: 1024px) {
   .liquid-glass-container,
-  .liquid-glass-header.is-immersive:not(.is-scrolled) .liquid-glass-container { width: 100%; padding-inline: 14px; gap: 8px; }
-  .liquid-nav.open { max-height: calc(100dvh - 112px); overflow-y: auto; }
+  .liquid-glass-header.is-immersive:not(.is-scrolled) .liquid-glass-container {
+    pointer-events: auto;
+    display: flex;
+    justify-content: space-between;
+    width: min(640px, calc(100% - 16px));
+    max-width: calc(100% - 16px);
+    height: 46px;
+    min-height: 46px;
+    padding: 4px 6px 4px 10px;
+    gap: 8px;
+    border-radius: 999px;
+  }
+  .brand-badge,
+  .nav-actions {
+    height: auto;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .liquid-nav.open { max-height: calc(100dvh - 100px); overflow-y: auto; }
   .liquid-nav.open .liquid-nav-link { height: auto; min-height: 44px; }
 }
 @media (max-width: 600px) {
   .account-summary { flex-direction: column; gap: 12px; }
-  .main-content:not(.main-content-landing) { padding-inline: 16px; padding-top: 104px; }
+  .main-content:not(.main-content-landing) { padding-inline: 16px; padding-top: 76px; }
   .travel-panel { padding: 20px; }
   .main-content .travel-grid { grid-template-columns: minmax(0, 1fr); }
-  .header-session { gap: 0; }
-  .header-account, .header-logout { padding: 8px 6px; }
+  .liquid-glass-container,
+  .liquid-glass-header.is-immersive:not(.is-scrolled) .liquid-glass-container {
+    width: calc(100% - 16px);
+    max-width: none;
+  }
+  .header-session { gap: 2px; }
+  .header-account, .header-logout { padding: 3px 4px; }
   .sub-tab { flex: 1 1 140px; padding: 10px; font-size: .8125rem; }
 }
 @media (max-width: 420px) {
   .liquid-glass-container,
   .liquid-glass-header.is-immersive:not(.is-scrolled) .liquid-glass-container {
-    padding-inline: 10px;
+    padding: 4px 6px 4px 9px;
     gap: 6px;
   }
-  .brand-badge { gap: 6px; font-size: 0.95rem; }
-  .brand-badge .brand-icon-wrapper { width: 28px; height: 28px; }
+  .brand-badge { gap: 5px; font-size: 12px; }
+  .brand-badge .brand-icon-wrapper { width: 22px; height: 22px; }
   .nav-actions { gap: 4px; }
-  .header-account, .header-logout { padding: 6px 4px; }
-  .mobile-menu-btn { width: 34px; height: 34px; min-height: 34px; }
+  .header-account, .header-logout { padding: 3px; }
+  .mobile-menu-btn { width: 32px; height: 32px; min-height: 32px; }
 }
 
 /* Detail views replace the landing hero and need clearance below the fixed nav. */

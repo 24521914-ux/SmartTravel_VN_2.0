@@ -51,96 +51,6 @@
   --as-callout-border: rgba(244, 129, 63, 0.34);
 }
 
-:root[data-theme] .account-settings-active .liquid-glass-header {
-  padding: 0;
-  top: 0;
-  inset-inline: 0;
-}
-
-:root[data-theme] .account-settings-active .liquid-glass-header .liquid-glass-container {
-  width: 100%;
-  max-width: none;
-  height: 56px;
-  min-height: 56px;
-  max-height: 56px;
-  padding: 0 24px;
-  border-radius: 0;
-  border: 0;
-  border-bottom: 1px solid var(--as-line);
-  background: var(--as-header-bg);
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-
-:root[data-theme] .account-settings-active .liquid-glass-header .brand-badge,
-:root[data-theme] .account-settings-active .liquid-glass-header .brand-badge span:first-child {
-  color: var(--as-ink);
-}
-
-:root[data-theme] .account-settings-active .liquid-glass-header .brand-badge span:last-child {
-  color: var(--as-sky) !important;
-}
-
-:root[data-theme] .account-settings-active .liquid-glass-header .brand-icon-wrapper {
-  background: #072b3b;
-  border-color: #072b3b;
-  color: #ffffff;
-}
-
-:root[data-theme="dark"] .account-settings-active .liquid-glass-header .brand-icon-wrapper {
-  background: #2e8eb4;
-  border-color: #62c2df;
-}
-
-:root[data-theme] .account-settings-active .liquid-glass-header .liquid-nav-link {
-  color: var(--as-muted);
-}
-
-:root[data-theme] .account-settings-active .liquid-glass-header .liquid-nav-link:hover,
-:root[data-theme] .account-settings-active .liquid-glass-header .liquid-nav-link.active {
-  color: var(--as-ink);
-}
-
-:root[data-theme] .account-settings-active .liquid-glass-header .liquid-nav-indicator {
-  background: var(--as-nav-active-bg);
-  border-color: var(--as-nav-active-border);
-  box-shadow: none;
-}
-
-:root[data-theme] .account-settings-active .liquid-glass-header .nav-preferences {
-  background: var(--as-subtle);
-  border-color: var(--as-line);
-}
-
-:root[data-theme] .account-settings-active .liquid-glass-header .preference-toggle,
-:root[data-theme] .account-settings-active .liquid-glass-header .header-account-name,
-:root[data-theme] .account-settings-active .liquid-glass-header .header-account {
-  color: var(--as-ink);
-}
-
-:root[data-theme] .account-settings-active .liquid-glass-header .mobile-menu-btn {
-  background: var(--as-subtle);
-  border-color: var(--as-line);
-  color: var(--as-ink);
-}
-
-:root[data-theme] .account-settings-active .liquid-nav.open,
-:root[data-theme] .account-settings-active .nav-dropdown {
-  background: var(--as-card);
-  border-color: var(--as-line);
-}
-
-:root[data-theme] .account-settings-active .liquid-nav.open .liquid-nav-link.active {
-  background: var(--as-nav-active-bg);
-  color: var(--as-nav-active-ink);
-}
-
-:root[data-theme] .account-settings-active .liquid-glass-header .header-avatar {
-  background: var(--as-nav-active-bg) !important;
-  color: var(--as-nav-active-ink) !important;
-}
-
 :root[data-theme] .account-settings-active .main-content.main-content-landing {
   padding: 0;
   max-width: none;
@@ -811,11 +721,6 @@
 
 /* Responsive Breakpoints */
 @media (max-width: 860px) {
-  :root[data-theme] .account-settings-active .liquid-glass-header .liquid-glass-container {
-    padding: 0 14px;
-    gap: 8px;
-  }
-
   .as-layout {
     grid-template-columns: minmax(0, 1fr);
     gap: 20px;
@@ -872,11 +777,6 @@
 }
 
 @media (max-width: 480px) {
-  :root[data-theme] .account-settings-active .liquid-glass-header .liquid-glass-container {
-    padding: 0 10px;
-    gap: 6px;
-  }
-
   .as-workspace {
     padding: 76px 14px 40px;
   }

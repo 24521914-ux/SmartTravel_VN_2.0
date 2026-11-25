@@ -57,115 +57,6 @@
   margin-inline: auto;
 }
 
-/* ==========================================================================
-   HEADER & FOOTER OVERRIDES SCOPED TO /kham-pha (.explore-page-active)
-   ========================================================================== */
-
-.explore-page-active .liquid-glass-header.is-immersive:not(.is-scrolled) {
-  padding: 14px 20px;
-}
-
-.explore-page-active .liquid-glass-header.is-immersive:not(.is-scrolled) .liquid-glass-container {
-  width: min(1240px, calc(100% - 32px));
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-
-.explore-page-active .liquid-glass-header.is-immersive:not(.is-scrolled) .brand-badge,
-.explore-page-active .liquid-glass-header.is-immersive:not(.is-scrolled) .brand-badge span:first-child {
-  color: #ffffff;
-}
-
-.explore-page-active .liquid-glass-header.is-immersive:not(.is-scrolled) .brand-badge span:last-child {
-  color: #9ddcf0 !important;
-}
-
-.explore-page-active .liquid-glass-header.is-immersive:not(.is-scrolled) .brand-icon-wrapper {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.35);
-  color: #ffffff;
-}
-
-.explore-page-active .liquid-glass-header.is-immersive:not(.is-scrolled) .liquid-nav-link {
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.explore-page-active .liquid-glass-header.is-immersive:not(.is-scrolled) .liquid-nav-link:hover,
-.explore-page-active .liquid-glass-header.is-immersive:not(.is-scrolled) .liquid-nav-link.active {
-  color: #ffffff;
-}
-
-.explore-page-active .liquid-glass-header.is-immersive:not(.is-scrolled) .liquid-nav-indicator {
-  background: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.25);
-}
-
-:root[data-theme] .explore-page-active .liquid-glass-header.is-immersive:not(.is-scrolled) .nav-auth-btn {
-  background: #ffffff;
-  color: #072b3b;
-  border-color: #ffffff;
-  font-weight: 700;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
-}
-
-:root[data-theme] .explore-page-active .liquid-glass-header.is-immersive:not(.is-scrolled) .nav-auth-btn svg {
-  color: #f4813f;
-}
-
-:root[data-theme] .explore-page-active .liquid-glass-header.is-immersive:not(.is-scrolled) .nav-preferences {
-  background: rgba(7, 43, 59, 0.42);
-  border-color: rgba(255, 255, 255, 0.22);
-}
-
-:root[data-theme] .explore-page-active .liquid-glass-header.is-immersive:not(.is-scrolled) .preference-toggle {
-  color: #ffffff;
-}
-
-:root[data-theme="light"] .explore-page-active .liquid-glass-header.is-scrolled .liquid-glass-container {
-  background: rgba(255, 255, 255, 0.94);
-  border-color: #e4eaf0;
-  box-shadow: 0 10px 30px rgba(7, 43, 59, 0.08);
-}
-
-:root[data-theme="light"] .explore-page-active .liquid-glass-header.is-scrolled .brand-icon-wrapper {
-  background: #e7f4f9;
-  border-color: #b8dfee;
-  color: #072b3b;
-}
-
-:root[data-theme="light"] .explore-page-active .liquid-glass-header.is-scrolled .liquid-nav-indicator {
-  background: #e7f4f9;
-  border-color: #cde6f1;
-}
-
-:root[data-theme="light"] .explore-page-active .liquid-glass-header.is-scrolled .liquid-nav-link.active {
-  color: #072b3b;
-}
-
-:root[data-theme="light"] .explore-page-active .liquid-glass-header.is-scrolled .nav-auth-btn {
-  background: #072b3b;
-  color: #ffffff;
-  border-color: #072b3b;
-}
-
-:root[data-theme="dark"] .explore-page-active .liquid-glass-header.is-scrolled .liquid-glass-container {
-  background: rgba(7, 36, 50, 0.92);
-  border-color: rgba(255, 255, 255, 0.14);
-}
-
-:root[data-theme="dark"] .explore-page-active .liquid-glass-header.is-scrolled .nav-auth-btn {
-  background: #113445;
-  color: #f4f7f9;
-  border-color: rgba(255, 255, 255, 0.22);
-}
-
-:root[data-theme="dark"] .explore-page-active .liquid-glass-header.is-scrolled .nav-auth-btn svg {
-  color: #f4813f;
-}
-
 /* Seamless Ocean Navy Footer on /kham-pha */
 :root[data-theme] .explore-page-active .app-footer {
   background: #072b3b !important;
@@ -2040,20 +1931,6 @@
 
   .explore-voyage .ev-newsletter-btn {
     width: 100%;
-  }
-
-  .explore-page-active .liquid-glass-container {
-    padding: 0 8px;
-  }
-
-  .explore-page-active .brand-badge span:first-child {
-    font-size: 13px;
-  }
-
-  .explore-page-active .nav-auth-btn {
-    width: 32px;
-    padding: 0;
-    justify-content: center;
   }
 }
 

@@ -20,12 +20,12 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .skip-link { position: fixed; top: 8px; left: 16px; z-index: 200; transform: translateY(-160%); background: var(--color-surface); padding: 12px 20px; border-radius: 8px; }
 .skip-link:focus { transform: none; }
 .liquid-glass-header { box-shadow: none; border-color: var(--color-border-subtle); }
-.liquid-glass-container { height: 80px; max-width: 1440px; padding-inline: 40px; }
-.brand-badge .brand-icon-wrapper { background: var(--color-primary); box-shadow: none; border-radius: 50%; width: 42px; height: 42px; }
-.liquid-nav { background: transparent; border: none; padding: 4px; }
+.liquid-glass-container { height: 46px; max-width: 980px; padding-inline: 12px; }
+.brand-badge .brand-icon-wrapper { background: var(--color-primary); box-shadow: none; border-radius: 50%; width: 24px; height: 24px; }
+.liquid-nav { background: transparent; border: none; padding: 0; }
 .liquid-nav-primary { display: flex; align-items: center; position: relative; }
-.liquid-nav-link { min-height: 44px; padding: 10px 16px; font-size: 13px; }
-.liquid-nav-link.active { background: transparent; box-shadow: none; }
+.liquid-nav-link { min-height: 34px; padding: 0 9px; font-size: 12.5px; font-weight: 400; }
+.liquid-nav-link.active { background: transparent; box-shadow: none; font-weight: 400; }
 .nav-actions { flex-shrink: 0; }
 .nav-actions .btn-primary { white-space: nowrap; }
 .liquid-nav-indicator { left: 0; top: 0; bottom: 0; border-radius: 999px; background: var(--color-primary-light); border: 1px solid var(--color-border-subtle); box-shadow: inset 0 1px 0 #ffffff50; transition: transform 260ms cubic-bezier(.2,.8,.2,1); }
@@ -123,7 +123,7 @@ footer .btn-subtle { padding: 0; min-height: 36px; text-align: left; }
   .journey-plan-notes { border-color: var(--color-border); }
 }
 @media (max-width: 1100px) {
-  .liquid-glass-container { padding-inline: 24px; }
+  .liquid-glass-container { padding-inline: 12px; }
   .main-content-landing { padding-inline: 24px; }
   .journey-hero-copy { padding-left: 40px; }
   .journey-search { width: calc(100% - 80px); }
@@ -139,7 +139,7 @@ footer .btn-subtle { padding: 0; min-height: 36px; text-align: left; }
   .liquid-nav.open .more-toggle { display: none; }
 }
 @media (max-width: 767px) {
-  .liquid-glass-container { height: 68px; padding-inline: 20px; }
+  .liquid-glass-container { height: 46px; padding-inline: 10px; }
   .nav-actions .btn-primary { font-size: 12px; padding: 10px 12px; min-height: 44px; }
   .main-content-landing { padding: 8px 16px 0; }
   .journey-hero { min-height: 540px; border-radius: 16px; align-items: start; }

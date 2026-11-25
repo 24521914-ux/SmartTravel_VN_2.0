@@ -6,35 +6,8 @@
    ============================================================================ */
 
 /* ============================================================================
-   DOCKED FULL-WIDTH HEADER & FULL-VIEWPORT SHELL (.trip-studio-active)
+   FULL-VIEWPORT SHELL (.trip-studio-active)
    ============================================================================ */
-:root[data-theme] .trip-studio-active .liquid-glass-header {
-  padding: 0;
-  top: 0;
-  inset-inline: 0;
-}
-
-:root[data-theme] .trip-studio-active .liquid-glass-header .liquid-glass-container {
-  width: 100%;
-  max-width: none;
-  height: 56px;
-  min-height: 56px;
-  max-height: 56px;
-  padding: 0 20px;
-  border-radius: 0;
-  border: 0;
-  border-bottom: 1px solid #e4eaf0;
-  background: #ffffff;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-
-:root[data-theme="dark"] .trip-studio-active .liquid-glass-header .liquid-glass-container {
-  background: #072b3b;
-  border-bottom-color: rgba(255, 255, 255, 0.12);
-}
-
 .trip-studio-active .main-content.main-content-landing {
   padding: 0;
   max-width: none;
@@ -80,7 +53,7 @@
   font-family: var(--tp-font);
   font-size: 14px;
   line-height: 1.5;
-  padding: 56px 0 0;
+  padding: 70px 0 0;
   margin: 0;
   display: flex;
   flex-direction: column;
@@ -1668,7 +1641,7 @@
 
 @media (max-width: 768px) {
   .tp-planner {
-    padding: 56px 0 0;
+    padding: 66px 0 0;
   }
 
   .tp-shell {

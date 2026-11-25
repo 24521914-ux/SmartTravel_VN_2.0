@@ -39,80 +39,81 @@ body {
   inset-inline: 0;
   z-index: 100;
   pointer-events: none;
+  display: flex;
+  justify-content: center;
+  width: 100%;
   background: transparent;
   border: none;
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  padding: 8px 16px;
-  transition: padding 350ms cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 10px 16px;
+  transition: padding 260ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .liquid-glass-header.is-immersive:not(.is-scrolled) {
-  padding: 10px 20px;
+  padding: 10px 16px;
 }
 
-.liquid-glass-container {
-  pointer-events: auto;
+.liquid-glass-container,
+.liquid-glass-header.is-immersive:not(.is-scrolled) .liquid-glass-container {
+  pointer-events: none;
   box-sizing: border-box;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-items: center;
-  width: min(980px, calc(100% - 32px));
-  height: 46px;
-  min-height: 46px;
-  max-height: 46px;
+  width: min(1400px, calc(100% - 24px));
+  height: auto;
+  min-height: 48px;
+  max-height: none;
   margin-inline: auto;
-  padding: 0 14px;
-  border-radius: 999px;
-  background: rgba(18, 28, 23, 0.46);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(24px) saturate(150%);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.14);
-  transition: all 360ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* ScrollY = 0 on Hero: Fully transparent header blending into landscape */
-.liquid-glass-header.is-immersive:not(.is-scrolled) .liquid-glass-container {
-  width: min(1080px, calc(100% - 32px));
-  height: 46px;
-  min-height: 46px;
-  max-height: 46px;
+  padding: 0;
+  gap: 12px;
+  border-radius: 0;
   background: transparent;
-  border: 1px solid transparent;
+  border: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: none;
 }
 
-/* Brand badge (Logo) */
+/* Brand badge (Logo) — compact left floating glass pill */
 .brand-badge {
   justify-self: start;
+  pointer-events: auto;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  background: none;
-  border: none;
+  gap: 7px;
+  height: 44px;
+  padding: 0 13px 0 8px;
+  border-radius: 999px;
+  background-color: rgba(12, 33, 46, 0.68);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.03) 50%, rgba(255, 255, 255, 0.07) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  backdrop-filter: blur(22px) saturate(185%);
+  -webkit-backdrop-filter: blur(22px) saturate(185%);
+  box-shadow:
+    0 12px 30px rgba(2, 10, 16, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.10);
   cursor: pointer;
-  padding: 2px 0;
-  color: #f6f4ee;
+  color: #f4f7f9;
   text-decoration: none;
   font-family: var(--font-heading);
+  font-weight: 400;
+  transition: background-color 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
 }
 
 .brand-badge .brand-icon-wrapper {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #dbe7d5;
+  color: #e6f2f7;
   transition: transform 260ms ease, border-color 260ms ease;
 }
 
@@ -122,30 +123,42 @@ body {
 }
 
 .brand-badge span:first-child {
-  font-size: 13.5px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: #f6f4ee;
+  font-size: 12.5px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: #f4f7f9;
   line-height: 1.1;
 }
 
-.brand-badge span:last-child {
-  font-size: 7.5px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
+.brand-badge span:last-child,
+.brand-badge .brand-subtitle {
+  font-size: 6.5px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #a8bfa1;
+  color: #9ddcf0;
 }
 
-/* Liquid navigation */
+/* Center Liquid Glass Navigation Capsule (hero focal bar) */
 .liquid-nav {
   justify-self: center;
-  display: flex;
+  pointer-events: auto;
+  display: inline-flex;
   align-items: center;
   gap: 2px;
-  background: transparent;
-  border: none;
-  padding: 0;
+  height: 48px;
+  min-height: 48px;
+  padding: 5px 6px;
+  border-radius: 999px;
+  background-color: rgba(12, 33, 46, 0.70);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.03) 50%, rgba(255, 255, 255, 0.07) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  backdrop-filter: blur(24px) saturate(185%);
+  -webkit-backdrop-filter: blur(24px) saturate(185%);
+  box-shadow:
+    0 14px 36px rgba(2, 10, 16, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.40),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.12);
   position: relative;
 }
 
@@ -154,6 +167,7 @@ body {
   align-items: center;
   position: relative;
   gap: 2px;
+  height: 38px;
 }
 
 .liquid-nav-link {
@@ -162,21 +176,21 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  height: 32px;
-  min-height: 32px;
+  height: 38px;
+  min-height: 38px;
   padding: 0 11px;
   border-radius: 999px;
   font-family: var(--font-heading);
-  font-size: 13px;
-  font-weight: 480;
-  letter-spacing: 0.01em;
-  color: rgba(246, 244, 238, 0.72);
+  font-size: 12.5px;
+  font-weight: 400;
+  letter-spacing: 0.005em;
+  color: rgba(226, 238, 245, 0.76);
   background: transparent;
   border: none;
   cursor: pointer;
   white-space: nowrap;
   user-select: none;
-  transition: color 180ms ease, background 180ms ease;
+  transition: color 180ms ease, background-color 180ms ease;
 }
 
 .liquid-nav-link:hover {
@@ -186,71 +200,86 @@ body {
 
 .liquid-nav-link.active {
   color: #ffffff;
-  font-weight: 550;
+  font-weight: 400;
   background: transparent;
 }
 
-/* Liquid glass active indicator */
+/* Optical Liquid Glass droplet indicator with subtle edge dispersion */
 .liquid-nav-indicator {
   position: absolute;
-  top: 2px;
-  bottom: 2px;
+  top: 0;
+  bottom: 0;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  background-color: rgba(255, 255, 255, 0.14);
+  background-image: linear-gradient(135deg, rgba(145, 235, 225, 0.20) 0%, rgba(255, 255, 255, 0.08) 50%, rgba(160, 210, 255, 0.18) 100%);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 3px 12px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(190, 238, 238, 0.42);
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.22),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.56),
+    inset 0 -1px 2px rgba(140, 220, 235, 0.22);
   pointer-events: none;
   z-index: 0;
   transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1), width 280ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.liquid-nav-link.more-toggle.active {
+  background-color: rgba(255, 255, 255, 0.14);
+  background-image: linear-gradient(135deg, rgba(145, 235, 225, 0.20) 0%, rgba(255, 255, 255, 0.08) 50%, rgba(160, 210, 255, 0.18) 100%);
+  border: 1px solid rgba(190, 238, 238, 0.42);
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.22),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.56),
+    inset 0 -1px 2px rgba(140, 220, 235, 0.22);
+}
+
 /* Nav dropdown */
 .nav-dropdown {
-  background: rgba(20, 32, 26, 0.94);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
-  border-radius: 14px;
+  background: rgba(11, 29, 40, 0.92);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.38);
+  border-radius: 16px;
 }
 
 .nav-dropdown .liquid-nav-link {
-  color: rgba(246, 244, 238, 0.8);
+  color: rgba(235, 243, 248, 0.85);
+  font-weight: 400;
 }
 
 .nav-dropdown .liquid-nav-link:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.09);
   color: #ffffff;
 }
 
 .nav-dropdown .liquid-nav-link.active {
-  background: rgba(180, 197, 163, 0.18);
-  color: #dbe7d5;
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  font-weight: 400;
 }
 
 /* Actions & Auth button */
 .nav-actions {
-  justify-self: end;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .nav-auth-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   height: 32px;
-  padding: 0 13px;
+  padding: 0 11px;
   border-radius: 999px;
   font-family: var(--font-heading);
-  font-size: 12.5px;
-  font-weight: 500;
-  color: #f6f4ee;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  font-size: 12px;
+  font-weight: 400;
+  color: #f4f7f9;
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.24);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   cursor: pointer;
@@ -259,11 +288,11 @@ body {
 }
 
 .nav-auth-btn:hover {
-  background: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.20);
+  border-color: rgba(255, 255, 255, 0.42);
   color: #ffffff;
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.20);
 }
 
 /* ==========================================================================
@@ -1104,43 +1133,70 @@ body {
    ========================================================================== */
 
 @media (max-width: 1024px) {
-  .liquid-glass-header {
-    padding: 12px 20px;
+  .liquid-glass-header,
+  .liquid-glass-header.is-immersive:not(.is-scrolled) {
+    padding: 10px 14px;
   }
-  .liquid-glass-container {
-    grid-template-columns: auto 1fr auto;
-    width: 100%;
-    padding: 0 16px;
+  .liquid-glass-container,
+  .liquid-glass-header.is-immersive:not(.is-scrolled) .liquid-glass-container {
+    pointer-events: auto;
+    display: flex;
+    justify-content: space-between;
+    width: min(640px, calc(100% - 16px));
+    max-width: calc(100% - 16px);
+    height: 46px;
+    min-height: 46px;
+    padding: 4px 6px 4px 10px;
+    border-radius: 999px;
+    background-color: rgba(12, 33, 46, 0.70);
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.03) 50%, rgba(255, 255, 255, 0.07) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.26);
+    backdrop-filter: blur(22px) saturate(185%);
+    -webkit-backdrop-filter: blur(22px) saturate(185%);
+    box-shadow: 0 12px 30px rgba(2, 10, 16, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.38);
+  }
+  .brand-badge,
+  .nav-actions {
+    height: auto;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
   .mobile-menu-btn {
     display: inline-flex;
     background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #f6f4ee;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #f4f7f9;
     border-radius: 999px;
   }
   .liquid-nav {
     display: none;
+    height: auto;
+    min-height: 0;
   }
   .liquid-nav.open {
     display: flex;
     flex-direction: column;
     position: absolute;
-    top: calc(100% + 12px);
-    left: 16px;
-    right: 16px;
-    background: rgba(18, 30, 24, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    top: calc(100% + 10px);
+    left: 12px;
+    right: 12px;
+    background: rgba(11, 29, 40, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.22);
     border-radius: 20px;
-    padding: 18px;
-    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
+    padding: 16px;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.42);
     align-items: stretch;
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
   }
   .liquid-nav.open .liquid-nav-primary {
     flex-direction: column;
     align-items: stretch;
+    height: auto;
   }
   .liquid-nav.open .liquid-nav-link {
     width: 100%;
@@ -1162,21 +1218,24 @@ body {
 @media (max-width: 767px) {
   .liquid-glass-header,
   .liquid-glass-header.is-immersive:not(.is-scrolled) {
-    padding: 10px 14px;
+    padding: 8px 10px;
   }
-  .liquid-glass-container {
-    height: 56px;
-    padding: 0 12px;
+  .liquid-glass-container,
+  .liquid-glass-header.is-immersive:not(.is-scrolled) .liquid-glass-container {
+    height: 44px;
+    min-height: 44px;
+    max-height: 44px;
+    padding: 4px 6px 4px 10px;
   }
   .brand-badge span:first-child {
-    font-size: 15px;
+    font-size: 12.5px;
   }
   .brand-badge span:last-child {
     display: none;
   }
   .nav-auth-btn {
-    padding: 6px 14px;
-    font-size: 12.5px;
+    padding: 0 11px;
+    font-size: 12px;
   }
   .journey-hero-copy {
     padding: 140px 20px 100px;
