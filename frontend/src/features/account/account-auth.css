@@ -1050,3 +1050,246 @@
   .account-guest-page .auth-account-badge,
   .account-guest-page .auth-brand-logo { display: none; }
 }
+
+/* Official Google GIS Button Slot & Dedicated Google Sign-In Dialog */
+.auth-social-row {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.auth-google-official-slot {
+  display: none;
+  min-height: 40px;
+  align-items: center;
+}
+
+.auth-google-official-slot.is-ready {
+  display: inline-flex;
+}
+
+.auth-google-official-slot.is-busy,
+.auth-google-button-host.is-busy {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.auth-google-helper-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-top: 10px;
+}
+
+.auth-google-dialog-trigger,
+.auth-google-origin-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--auth-leaf, #2e8eb4);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.auth-google-dialog-trigger:hover,
+.auth-google-origin-link:hover {
+  opacity: 0.8;
+}
+
+.auth-google-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(15, 23, 42, 0.54);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.auth-google-modal {
+  width: 100%;
+  max-width: 440px;
+  background: #ffffff;
+  color: #17221b;
+  border-radius: 22px;
+  border: 1px solid #e2e7dd;
+  box-shadow: 0 24px 64px rgba(15, 35, 24, 0.24);
+  padding: 26px 26px 22px;
+  text-align: left;
+}
+
+.auth-google-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.auth-google-modal-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.auth-google-modal-brand h3 {
+  margin: 0;
+  font-family: var(--font-display, inherit);
+  font-size: 22px;
+  font-weight: 600;
+  color: inherit;
+}
+
+.auth-google-modal-close {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid #e2e7dd;
+  background: #f8faf6;
+  color: #475569;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-google-modal-close:hover:not(:disabled) {
+  background: #edf1e8;
+  color: #0f172a;
+}
+
+.auth-google-modal-desc {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #5d6b5d;
+}
+
+.auth-google-origin-note {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f4f7f1;
+  border: 1px solid #dbe5d5;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #34432f;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.auth-google-origin-note a {
+  color: #2f5728;
+  font-weight: 700;
+  word-break: break-all;
+}
+
+.auth-google-modal-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 18px 14px;
+  border-radius: 16px;
+  background: #f8faf6;
+  border: 1px dashed #d7e0d0;
+  min-height: 86px;
+}
+
+.auth-google-button-host {
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+}
+
+.auth-google-modal-status {
+  margin: 0;
+  font-size: 13px;
+  color: #5d6b5d;
+  text-align: center;
+}
+
+.auth-google-modal-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #b91c1c;
+  text-align: center;
+}
+
+.auth-google-modal-error p {
+  margin: 0;
+}
+
+.auth-google-retry-btn {
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-google-modal-footnote {
+  margin: 14px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #788577;
+}
+
+:root[data-theme="dark"] .auth-google-dialog-trigger,
+:root[data-theme="dark"] .auth-google-origin-link {
+  color: #62c2df;
+}
+
+:root[data-theme="dark"] .auth-google-modal {
+  background: #0b2431;
+  color: #f4f7f9;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+:root[data-theme="dark"] .auth-google-modal-close {
+  background: #123344;
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #dce8ee;
+}
+
+:root[data-theme="dark"] .auth-google-modal-desc,
+:root[data-theme="dark"] .auth-google-modal-status,
+:root[data-theme="dark"] .auth-google-modal-footnote {
+  color: #9eb6c4;
+}
+
+:root[data-theme="dark"] .auth-google-origin-note {
+  background: #103041;
+  border-color: rgba(98, 194, 223, 0.24);
+  color: #dce8ee;
+}
+
+:root[data-theme="dark"] .auth-google-origin-note a {
+  color: #62c2df;
+}
+
+:root[data-theme="dark"] .auth-google-modal-stage {
+  background: #081c26;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+:root[data-theme="dark"] .auth-google-retry-btn {
+  background: #123344;
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #f4f7f9;
+}

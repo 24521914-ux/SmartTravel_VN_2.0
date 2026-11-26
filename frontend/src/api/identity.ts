@@ -17,6 +17,16 @@ export class IdentityClient {
     return pair;
   }
 
+  async socialLogin(provider: 'google' | 'facebook', token: string): Promise<AuthTokens> {
+    const generation = ++this.generation;
+    const pair = await this.api.request<AuthTokens>('identity', `/api/v1/auth/social/${provider}`, {
+      body: { token },
+      authenticated: false
+    });
+    if (generation === this.generation) this.tokens.set(pair);
+    return pair;
+  }
+
   refresh(): Promise<AuthTokens> {
     const current = this.tokens.get();
     if (!current) return Promise.reject(new Error('No session to refresh'));

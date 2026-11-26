@@ -4,15 +4,23 @@ import { ApiError, TravelClient, type Resource, type Page } from '../../shared/a
 import { useAuth } from '../../app/providers/AuthProvider';
 import { useToast } from '../../app/providers/ToastProvider';
 import { useAppPreferences } from '../../app/providers/AppPreferences';
+import {
+  getFacebookAppId,
+  getGoogleClientId,
+  getLocalhostEquivalentUrl,
+  renderGoogleSignInButton,
+  requestFacebookAccessToken
+} from './socialAuth';
+import { GoogleSignInDialog } from './GoogleSignInDialog';
 import './account-auth.css';
 import './account-settings.css';
 
 type GuestMode = 'login' | 'register' | 'verify-email' | 'resend-verification' | 'forgot-password' | 'reset-password';
 
 export function AccountPanel() {
-  const { user, isAuthenticated, login, logout, isLoading, reloadUser, apiClient } = useAuth();
+  const { user, isAuthenticated, login, socialLogin, logout, isLoading, reloadUser, apiClient } = useAuth();
   const { showToast } = useToast();
-  const { text } = useAppPreferences();
+  const { text, locale, theme } = useAppPreferences();
   const [travel] = useState(() => new TravelClient(apiClient));
   const [mode, setMode] = useState<GuestMode>('login');
   const [showPassword, setShowPassword] = useState(false);
@@ -30,9 +38,107 @@ export function AccountPanel() {
   const [sessions, setSessions] = useState<Resource[]>([]);
   const [deletion, setDeletion] = useState<Resource | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [googleDialogOpen, setGoogleDialogOpen] = useState(false);
+  const [inlineGoogleReady, setInlineGoogleReady] = useState(false);
+  const inlineGoogleRef = useRef<HTMLDivElement>(null);
   const displayNameInputRef = useRef<HTMLInputElement>(null);
   const owner = user?.user_id ?? user?.id ?? null;
   const currentOwner = useRef(owner); currentOwner.current = owner;
+  const googleClientId = getGoogleClientId();
+  const localhostUrl = getLocalhostEquivalentUrl();
+  const socialCredentialHandler = useRef<(token: string) => void>(() => {});
+
+  useEffect(() => {
+    if (isAuthenticated || !['login', 'register'].includes(mode) || !googleClientId) {
+      setInlineGoogleReady(false);
+      return;
+    }
+    const container = inlineGoogleRef.current;
+    if (!container) return;
+    let cancelled = false;
+    renderGoogleSignInButton({
+      clientId: googleClientId,
+      container,
+      onCredential: idToken => socialCredentialHandler.current(idToken),
+      theme: theme === 'dark' ? 'filled_black' : 'outline',
+      text: 'continue_with',
+      width: 240,
+      locale
+    })
+      .then(() => { if (!cancelled) setInlineGoogleReady(true); })
+      .catch(() => { if (!cancelled) setInlineGoogleReady(false); });
+    return () => { cancelled = true; };
+  }, [isAuthenticated, mode, googleClientId, locale, theme]);
+
+  function handleSocialError(err: unknown, providerLabel: string) {
+    if (err instanceof ApiError) {
+      if (err.body.code === 'SOCIAL_PROVIDER_NOT_CONFIGURED') {
+        setError(text(`Máy chủ chưa cấu hình đăng nhập ${providerLabel}.`, `${providerLabel} sign-in is not configured on the server.`));
+        return;
+      }
+      if (err.body.code === 'SOCIAL_EMAIL_REQUIRED') {
+        setError(text(`Tài khoản ${providerLabel} cần cấp quyền chia sẻ email để đăng nhập.`, `Your ${providerLabel} account must share an email address to sign in.`));
+        return;
+      }
+      if (err.body.code === 'SOCIAL_EMAIL_NOT_VERIFIED') {
+        setError(text(`Email trên tài khoản ${providerLabel} chưa được xác minh.`, `Your ${providerLabel} account email is not verified.`));
+        return;
+      }
+      if (err.body.code === 'SOCIAL_ACCOUNT_CONFLICT') {
+        setError(text(`Email này đã được liên kết với một tài khoản ${providerLabel} khác.`, `This email is already linked to another ${providerLabel} account.`));
+        return;
+      }
+      if (err.status === 401) {
+        setError(text(`Không thể xác thực tài khoản ${providerLabel} hoặc tài khoản đã bị khóa.`, `Unable to verify your ${providerLabel} account or the account is disabled.`));
+        return;
+      }
+    }
+    if (err instanceof Error && err.message === 'FACEBOOK_CANCELLED') {
+      setError(text('Bạn đã hủy đăng nhập Facebook.', 'Facebook sign-in was cancelled.'));
+      return;
+    }
+    setError(err instanceof Error ? err.message : text(`Không thể đăng nhập bằng ${providerLabel}.`, `Unable to sign in with ${providerLabel}.`));
+  }
+
+  async function completeSocialLogin(provider: 'google' | 'facebook', token: string) {
+    const label = provider === 'google' ? 'Google' : 'Facebook';
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await socialLogin(provider, token);
+      setGoogleDialogOpen(false);
+      showToast(text(`Đăng nhập ${label} thành công!`, `Signed in with ${label}!`), 'success');
+    } catch (err) {
+      handleSocialError(err, label);
+    } finally {
+      setBusy(false);
+    }
+  }
+  socialCredentialHandler.current = idToken => { void completeSocialLogin('google', idToken); };
+
+  function handleOpenGoogleDialog() {
+    if (busy || isLoading) return;
+    setError(''); setNotice('');
+    setGoogleDialogOpen(true);
+  }
+
+  async function handleFacebookLogin() {
+    if (busy || isLoading) return;
+    const appId = getFacebookAppId();
+    if (!appId) {
+      setError(text('Chưa cấu hình VITE_FACEBOOK_APP_ID trong file .env của frontend.', 'VITE_FACEBOOK_APP_ID is not configured in frontend .env.'));
+      return;
+    }
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const accessToken = await requestFacebookAccessToken(appId);
+      await socialLogin('facebook', accessToken);
+      showToast(text('Đăng nhập Facebook thành công!', 'Signed in with Facebook!'), 'success');
+    } catch (err) {
+      handleSocialError(err, 'Facebook');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function run(action: () => Promise<void>) {
     setBusy(true); setError('');
@@ -326,23 +432,55 @@ export function AccountPanel() {
                     {text('Hoặc tiếp tục với tài khoản khác', 'Or continue with another account')}
                   </div>
                   <div className="auth-social-row">
-                    <button
-                      type="button"
-                      className="auth-social-btn google"
-                      onClick={() => showToast(text('Đăng nhập Google sẽ sớm khả dụng trong bản cập nhật.', 'Google sign-in will be available in a future update.'), 'info')}
-                    >
-                      <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.17 0 9.99 0 12s.45 3.83 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
-                      <span>Google</span>
-                    </button>
+                    {googleClientId && (
+                      <div
+                        ref={inlineGoogleRef}
+                        className={`auth-google-official-slot ${inlineGoogleReady ? 'is-ready' : ''} ${busy || isLoading ? 'is-busy' : ''}`}
+                      />
+                    )}
+                    {(!googleClientId || !inlineGoogleReady) && (
+                      <button
+                        type="button"
+                        className="auth-social-btn google"
+                        disabled={busy || isLoading}
+                        onClick={handleOpenGoogleDialog}
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.17 0 9.99 0 12s.45 3.83 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
+                        <span>Google</span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="auth-social-btn facebook"
-                      onClick={() => showToast(text('Đăng nhập Facebook sẽ sớm khả dụng trong bản cập nhật.', 'Facebook sign-in will be available in a future update.'), 'info')}
+                      disabled={busy || isLoading}
+                      onClick={() => { void handleFacebookLogin(); }}
                     >
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="#1877F2" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
                       <span>Facebook</span>
                     </button>
                   </div>
+                  <div className="auth-google-helper-row">
+                    <button
+                      type="button"
+                      className="auth-google-dialog-trigger"
+                      disabled={busy || isLoading}
+                      onClick={handleOpenGoogleDialog}
+                    >
+                      {text('Mở hộp thoại đăng nhập bằng tài khoản Google khác', 'Open Google sign-in dialog for another account')}
+                    </button>
+                    {localhostUrl && (
+                      <a href={localhostUrl} className="auth-google-origin-link">
+                        {text('Dùng localhost:5173 cho Google OAuth', 'Switch to localhost:5173 for Google OAuth')}
+                      </a>
+                    )}
+                  </div>
+                  <GoogleSignInDialog
+                    open={googleDialogOpen}
+                    busy={busy || isLoading}
+                    error={error}
+                    onClose={() => setGoogleDialogOpen(false)}
+                    onCredential={idToken => { void completeSocialLogin('google', idToken); }}
+                  />
                 </>
               )}
 

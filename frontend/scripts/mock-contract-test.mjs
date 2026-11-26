@@ -263,3 +263,32 @@ test('a newer login rotates independently of an older pending identity refresh',
   old.resolve(); await first;
   assert.deepEqual(rotating, ['refresh-A', 'refresh-B']); assert.equal(tokens.get().access_token, 'access-B-rotated');
 });
+
+test('socialLogin exchanges provider token without bearer and stores resulting session pair', async () => {
+  const tokens = memoryTokenStore();
+  const sent = [];
+  const api = new ApiClient({
+    tokenStore: tokens,
+    correlationId: () => 'social-trace',
+    fetchImpl: async (url, options) => {
+      sent.push({ url, method: options.method, headers: options.headers, body: JSON.parse(options.body) });
+      return response(pair(url.endsWith('/google') ? 'google' : 'facebook'));
+    }
+  });
+  const identity = new IdentityClient(api, tokens);
+  const googlePair = await identity.socialLogin('google', 'google-id-token-sample');
+  assert.equal(googlePair.access_token, 'access-google');
+  assert.equal(tokens.get().access_token, 'access-google');
+
+  const fbPair = await identity.socialLogin('facebook', 'fb-access-token-sample');
+  assert.equal(fbPair.access_token, 'access-facebook');
+  assert.equal(tokens.get().access_token, 'access-facebook');
+
+  assert.equal(sent.length, 2);
+  assert.equal(sent[0].url, '/api/identity/api/v1/auth/social/google');
+  assert.equal(sent[0].headers.Authorization, undefined);
+  assert.deepEqual(sent[0].body, { token: 'google-id-token-sample' });
+  assert.equal(sent[1].url, '/api/identity/api/v1/auth/social/facebook');
+  assert.equal(sent[1].headers.Authorization, undefined);
+  assert.deepEqual(sent[1].body, { token: 'fb-access-token-sample' });
+});
