@@ -67,4 +67,18 @@ class GatewayHttpTests {
                 .expectStatus().isOk()
                 .expectHeader().valueEquals("Access-Control-Allow-Origin", "http://localhost:5173");
     }
+
+    @Test
+    void socialAuthEndpointsArePublicAtGateway() {
+        for (String path : java.util.List.of(
+                "/api/identity/api/v1/auth/social",
+                "/api/identity/api/v1/auth/social/google",
+                "/api/identity/api/v1/auth/social/facebook")) {
+            client.post().uri(path)
+                    .bodyValue("{}")
+                    .exchange()
+                    .expectStatus().value(status -> org.assertj.core.api.Assertions.assertThat(status)
+                            .isNotIn(401, 403));
+        }
+    }
 }

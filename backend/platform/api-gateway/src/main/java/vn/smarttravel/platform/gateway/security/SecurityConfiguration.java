@@ -41,6 +41,7 @@ public class SecurityConfiguration {
                         .pathMatchers("/api/identity/.well-known/jwks.json").permitAll()
                         .pathMatchers("/api/*/internal/**", "/api/*/actuator/**").denyAll()
                         .pathMatchers(HttpMethod.POST,"/api/identity/api/v1/auth/register","/api/identity/api/v1/auth/login",
+                                "/api/identity/api/v1/auth/social","/api/identity/api/v1/auth/social/google","/api/identity/api/v1/auth/social/facebook",
                                 "/api/identity/api/v1/auth/refresh","/api/identity/api/v1/auth/logout",
                                 "/api/identity/api/v1/auth/verify-email","/api/identity/api/v1/auth/resend-verification","/api/identity/api/v1/auth/forgot-password",
                                 "/api/identity/api/v1/auth/reset-password",

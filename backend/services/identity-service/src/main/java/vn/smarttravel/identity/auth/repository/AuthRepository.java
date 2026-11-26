@@ -166,4 +166,24 @@ public class AuthRepository {
     public boolean ownsSession(UUID user, UUID session) {
         return first("SELECT session_id FROM identity.auth_sessions WHERE session_id=? AND user_id=?", session, user) != null;
     }
+
+    public Map<String, Object> findSocialAccount(String provider, String providerUserId) {
+        return first("SELECT * FROM identity.social_accounts WHERE provider=? AND provider_user_id=?", provider, providerUserId);
+    }
+
+    public Map<String, Object> findSocialAccountByUser(UUID user, String provider) {
+        return first("SELECT * FROM identity.social_accounts WHERE user_id=? AND provider=?", user, provider);
+    }
+
+    public void linkSocialAccount(UUID user, String provider, String providerUserId, String providerEmail) {
+        db.update("""
+            INSERT INTO identity.social_accounts(social_account_id,user_id,provider,provider_user_id,provider_email)
+            VALUES (?,?,?,?,?)
+            """, UUID.randomUUID(), user, provider, providerUserId, providerEmail);
+    }
+
+    public void touchSocialAccountLogin(UUID socialAccountId, String providerEmail) {
+        db.update("UPDATE identity.social_accounts SET provider_email=?,last_login_at=now() WHERE social_account_id=?",
+                providerEmail, socialAccountId);
+    }
 }

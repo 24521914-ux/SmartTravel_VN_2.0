@@ -14,6 +14,7 @@ public class DeletionRepository {
             db.update("INSERT INTO identity.data_deletion_acks(deletion_request_id,service_name,status) VALUES (?,?,'PENDING')",request,service);
     }
     public void eraseLocal(UUID user, UUID request) {
+        db.update("DELETE FROM identity.social_accounts WHERE user_id=?",user);
         db.update("DELETE FROM identity.account_mail_jobs WHERE user_id=?",user);
         db.update("DELETE FROM identity.account_tokens WHERE user_id=?",user);
         db.update("DELETE FROM identity.notifications WHERE user_id=?",user);

@@ -85,12 +85,17 @@ public class AuthService {
             if (user != null && "PENDING".equals(user.get("status")))
                 throw new IdentityException(403, "EMAIL_NOT_VERIFIED");
             if (!active(user)) throw IdentityException.unauthorized();
-            UUID userId = id(user, "user_id"), session = UUID.randomUUID();
-            Instant absoluteExpiry = Instant.now().plus(Duration.ofDays(30));
-            repository.createSession(session, userId, absoluteExpiry);
-            mutations.audit(userId, userId, "LOGIN");
-            return tokenPair(userId, session, null, absoluteExpiry);
+            UUID userId = id(user, "user_id");
+            return issueSessionTokens(userId, "LOGIN");
         });
+    }
+
+    Map<String, Object> issueSessionTokens(UUID userId, String auditAction) {
+        UUID session = UUID.randomUUID();
+        Instant absoluteExpiry = Instant.now().plus(Duration.ofDays(30));
+        repository.createSession(session, userId, absoluteExpiry);
+        mutations.audit(userId, userId, auditAction);
+        return tokenPair(userId, session, null, absoluteExpiry);
     }
 
     private Map<String, Object> tokenPair(UUID user, UUID session, UUID parent, Instant absoluteExpiry) {

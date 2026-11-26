@@ -22,6 +22,7 @@ interface AuthContextType {
   isBusiness: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<AuthTokens>;
+  socialLogin: (provider: 'google' | 'facebook', token: string) => Promise<AuthTokens>;
   logout: () => Promise<void>;
   reloadUser: () => Promise<void>;
   apiClient: ApiClient;
@@ -83,6 +84,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function handleSocialLogin(provider: 'google' | 'facebook', token: string) {
+    setIsLoading(true);
+    try {
+      const pair = await identityClient.socialLogin(provider, token);
+      setTokens(pair);
+      await fetchCurrentUser(true);
+      return pair;
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   async function handleLogout() {
     ++profileRequest.current;
     setIsLoading(true);
@@ -111,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isBusiness,
         isLoading,
         login: handleLogin,
+        socialLogin: handleSocialLogin,
         logout: handleLogout,
         reloadUser: fetchCurrentUser,
         apiClient,
