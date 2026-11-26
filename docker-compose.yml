@@ -154,6 +154,9 @@ services:
       # Synthetic demo accounts fixture-*@example.invalid (password IDENTITY_FIXTURE_PASSWORD).
       IDENTITY_FIXTURES_ENABLED: ${IDENTITY_FIXTURES_ENABLED:-false}
       IDENTITY_FIXTURE_PASSWORD: ${IDENTITY_FIXTURE_PASSWORD:?run backend/platform/init_env.py}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      FACEBOOK_APP_ID: ${FACEBOOK_APP_ID:-}
+      FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET:-}
       CATALOG_WORKLOAD_SECRET: ${CATALOG_WORKLOAD_SECRET:?run backend/platform/init_env.py}
       COMMUNITY_WORKLOAD_SECRET: ${COMMUNITY_WORKLOAD_SECRET:?run backend/platform/init_env.py}
       TRIP_WORKLOAD_SECRET: ${TRIP_WORKLOAD_SECRET:?run backend/platform/init_env.py}

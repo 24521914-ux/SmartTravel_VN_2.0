@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import vn.smarttravel.identity.auth.dto.*;
 import vn.smarttravel.identity.auth.service.AuthRateLimit;
 import vn.smarttravel.identity.auth.service.AuthService;
+import vn.smarttravel.identity.auth.service.SocialAuthService;
 import vn.smarttravel.identity.security.support.Tokens;
 import vn.smarttravel.identity.shared.web.ApiResponses;
 import vn.smarttravel.identity.shared.web.RequestHeaders;
@@ -17,9 +18,12 @@ import vn.smarttravel.identity.shared.web.RequestHeaders;
 @RestController
 public class AuthController {
     private final AuthService service;
+    private final SocialAuthService socialAuth;
     private final AuthRateLimit limits;
 
-    public AuthController(AuthService service, AuthRateLimit limits) { this.service = service; this.limits = limits; }
+    public AuthController(AuthService service, SocialAuthService socialAuth, AuthRateLimit limits) {
+        this.service = service; this.socialAuth = socialAuth; this.limits = limits;
+    }
 
     // Never trust X-Forwarded-For from public clients; deployment must configure a trusted proxy explicitly.
     private void limit(String action, String account, HttpServletRequest request) { limits.check(action, account, request.getRemoteAddr()); }
@@ -33,6 +37,24 @@ public class AuthController {
     @PostMapping("/api/v1/auth/login")
     Map<String, Object> login(@Valid @RequestBody LoginRequest body, HttpServletRequest request) {
         limit("login", AuthService.canonical(body.email()), request); return service.login(body.email(), body.password());
+    }
+
+    @PostMapping("/api/v1/auth/social")
+    Map<String, Object> socialLogin(@Valid @RequestBody SocialLoginRequest body, HttpServletRequest request) {
+        limit("social-login", body.provider().trim().toLowerCase(java.util.Locale.ROOT) + ":" + Tokens.hash(body.token()), request);
+        return socialAuth.login(body.provider(), body.token());
+    }
+
+    @PostMapping("/api/v1/auth/social/google")
+    Map<String, Object> googleLogin(@Valid @RequestBody SocialTokenRequest body, HttpServletRequest request) {
+        limit("social-login", "google:" + Tokens.hash(body.token()), request);
+        return socialAuth.login("google", body.token());
+    }
+
+    @PostMapping("/api/v1/auth/social/facebook")
+    Map<String, Object> facebookLogin(@Valid @RequestBody SocialTokenRequest body, HttpServletRequest request) {
+        limit("social-login", "facebook:" + Tokens.hash(body.token()), request);
+        return socialAuth.login("facebook", body.token());
     }
 
     @PostMapping("/api/v1/auth/refresh")

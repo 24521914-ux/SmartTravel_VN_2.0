@@ -26,7 +26,8 @@ LOCAL_ONLY = {*(s + '-db' for s in SERVICES), 'community-keygen', 'mongo-init', 
 # Settings the static stack states explicitly where the generated P03 stack relies on defaults.
 EXTRA_SETTINGS = {
     'identity': {'WORKLOAD_TOKEN_URI', 'IDENTITY_MAIL_FROM', 'MAIL_USERNAME', 'MAIL_PASSWORD',
-                 'MAIL_AUTH', 'MAIL_TLS_REQUIRED', 'MAIL_TIMEOUT_MS'},
+                 'MAIL_AUTH', 'MAIL_TLS_REQUIRED', 'MAIL_TIMEOUT_MS',
+                 'GOOGLE_CLIENT_ID', 'FACEBOOK_APP_ID', 'FACEBOOK_APP_SECRET'},
     'catalog': {'CATALOG_MEDIA_PROVIDER', 'CATALOG_MEDIA_SCANNER_URL', 'CLOUDINARY_CLOUD_NAME',
                 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET', 'CLOUDINARY_FOLDER'},
     'gateway': {'AI_ENABLED', 'GATEWAY_RESPONSE_TIMEOUT'},
