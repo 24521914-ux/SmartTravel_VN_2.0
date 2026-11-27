@@ -448,7 +448,7 @@ def build_app_spec(
                     "minReplicas": 0,
                     "maxReplicas": 2 if name in ("gateway", "catalog", "identity") else 1,
                     "cooldownPeriod": 300,
-                    "pollingInterval": 30,
+                    "pollingInterval": 60,
                     "rules": scale_rules,
                 },
                 "volumes": volumes,
