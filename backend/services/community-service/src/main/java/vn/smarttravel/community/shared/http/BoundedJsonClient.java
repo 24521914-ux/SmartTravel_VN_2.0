@@ -11,7 +11,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 /** Bounds dependency response bytes and the complete request/body deadline. */
 public final class BoundedJsonClient {
-    private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2))
+    private static final Duration TIMEOUT = Duration.ofSeconds(Long.parseLong(System.getenv().getOrDefault("INTERNAL_HTTP_TIMEOUT_SECONDS", "2")));
+    private final HttpClient http = HttpClient.newBuilder().connectTimeout(TIMEOUT)
             .followRedirects(HttpClient.Redirect.NEVER).build();
     private final ObjectMapper json = new ObjectMapper();
     private final String base;
@@ -24,12 +25,12 @@ public final class BoundedJsonClient {
     }
     public Map<String, Object> request(String method, String path, Map<String, ?> body) {
         try {
-            var request = HttpRequest.newBuilder(URI.create(base + path)).timeout(Duration.ofSeconds(2))
+            var request = HttpRequest.newBuilder(URI.create(base + path)).timeout(TIMEOUT)
                     .header("Authorization", "Bearer " + token.get()).header("Accept", "application/json");
             if (body == null) request.method(method, HttpRequest.BodyPublishers.noBody());
             else request.header("Content-Type", "application/json")
                     .method(method, HttpRequest.BodyPublishers.ofByteArray(json.writeValueAsBytes(body)));
-            var response = http.send(request.build(), new LimitedBodyHandler(1_000_000, Duration.ofSeconds(2)));
+            var response = http.send(request.build(), new LimitedBodyHandler(1_000_000, TIMEOUT));
             if (response.statusCode() != 200) throw new IllegalStateException("Unexpected dependency status");
             Map<String, Object> result = json.readValue(response.body(), new TypeReference<>() {});
             if (result == null) throw new IllegalStateException("Missing dependency response");

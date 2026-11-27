@@ -26,7 +26,8 @@ import org.springframework.web.server.ResponseStatusException;
 @Component
 public class WorkloadTokens {
     private static final Duration RENEW_BEFORE = Duration.ofSeconds(60);
-    private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2))
+    private static final Duration TIMEOUT = Duration.ofSeconds(Long.parseLong(System.getenv().getOrDefault("INTERNAL_HTTP_TIMEOUT_SECONDS", "3")));
+    private final HttpClient http = HttpClient.newBuilder().connectTimeout(TIMEOUT)
             .followRedirects(HttpClient.Redirect.NEVER).build();
     private final ObjectMapper json = new ObjectMapper();
     private final String uri, authorization;
@@ -75,7 +76,7 @@ public class WorkloadTokens {
 
     private Cached fetch(String audience, String scope) {
         try {
-            var request = HttpRequest.newBuilder(URI.create(uri)).timeout(Duration.ofSeconds(3))
+            var request = HttpRequest.newBuilder(URI.create(uri)).timeout(TIMEOUT)
                     .header("Authorization", authorization).header("Accept", "application/json")
                     .header("Content-Type", "application/x-www-form-urlencoded")
                     .POST(HttpRequest.BodyPublishers.ofString("grant_type=client_credentials&audience=" + form(audience)

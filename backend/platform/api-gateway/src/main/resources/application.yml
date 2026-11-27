@@ -15,8 +15,8 @@ spring:
       server:
         webflux:
           httpclient:
-            connect-timeout: 1000
-            response-timeout: 2s
+            connect-timeout: ${GATEWAY_CONNECT_TIMEOUT_MS:1000}
+            response-timeout: ${GATEWAY_RESPONSE_TIMEOUT:2s}
           default-filters:
             - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin RETAIN_UNIQUE
 management:
