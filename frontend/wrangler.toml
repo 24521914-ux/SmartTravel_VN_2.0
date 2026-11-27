@@ -1,0 +1,6 @@
+name = "smarttravel-vn"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-01-01"
+
+[vars]
+GATEWAY_ORIGIN = "https://gateway.politerock-6952405d.malaysiawest.azurecontainerapps.io"
