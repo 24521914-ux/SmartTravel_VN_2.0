@@ -1,0 +1,245 @@
+name: Deploy SmartTravel (Plan B1 Auto-Deploy)
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'docs/**'
+      - 'plan/**'
+      - 'design-system/**'
+      - '**/*.md'
+      - '.agents/**'
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: 'Targets to deploy: all, frontend, or comma-separated services (e.g. catalog,gateway)'
+        required: true
+        default: all
+
+concurrency:
+  group: deploy-b1-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+env:
+  AZURE_RG: rg-smarttravel-b1
+  CF_PAGES_PROJECT: smarttravel-vn
+  PUBLIC_SITE_URL: https://smarttravel-vn.pages.dev
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      deploy_frontend: ${{ steps.filter.outputs.deploy_frontend }}
+      has_backend: ${{ steps.filter.outputs.has_backend }}
+      backend_matrix: ${{ steps.filter.outputs.backend_matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed targets
+        id: filter
+        shell: python
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TARGETS: ${{ github.event.inputs.targets }}
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          import json, os, subprocess
+
+          SERVICES = {
+              "gateway": "backend/platform/api-gateway",
+              "identity": "backend/services/identity-service",
+              "catalog": "backend/services/catalog-service",
+              "community": "backend/services/community-service",
+              "trip": "backend/services/trip-service",
+              "ingestion": "backend/services/ingestion-service",
+              "intelligence": "backend/services/intelligence-service",
+          }
+
+          event = os.environ["EVENT_NAME"]
+          selected_fe = False
+          selected_be = set()
+
+          if event == "workflow_dispatch":
+              raw = (os.environ.get("INPUT_TARGETS") or "all").strip().lower()
+              if raw == "all":
+                  selected_fe = True
+                  selected_be = set(SERVICES.keys())
+              else:
+                  for item in [x.strip() for x in raw.split(",") if x.strip()]:
+                      if item == "frontend":
+                          selected_fe = True
+                      elif item in SERVICES:
+                          selected_be.add(item)
+                      else:
+                          raise SystemExit(f"Unknown target: {item}")
+          else:
+              before = os.environ.get("BEFORE_SHA", "")
+              current = os.environ.get("CURRENT_SHA", "HEAD")
+              zero = "0" * 40
+              if before and before != zero:
+                  diff_range = f"{before}..{current}"
+              else:
+                  diff_range = f"{current}~1..{current}"
+              changed = subprocess.check_output(
+                  ["git", "diff", "--name-only", diff_range], text=True
+              ).splitlines()
+              print("Changed files:", changed)
+
+              shared_backend = (
+                  "backend/mvnw",
+                  "backend/mvnw.cmd",
+                  "backend/.mvn/",
+                  "backend/services/pom.xml",
+                  "backend/contracts/events/",
+              )
+              for f in changed:
+                  if f.startswith("frontend/") and not f.startswith("frontend/scripts/") and not f.endswith(".md"):
+                      selected_fe = True
+                  if any(f.startswith(p) for p in shared_backend):
+                      selected_be.update(SERVICES.keys())
+                  for name, ctx in SERVICES.items():
+                      if f.startswith(ctx + "/"):
+                          selected_be.add(name)
+
+          matrix = [{"name": n, "context": SERVICES[n]} for n in SERVICES if n in selected_be]
+          print("deploy_frontend =", selected_fe)
+          print("backend_matrix =", matrix)
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"deploy_frontend={'true' if selected_fe else 'false'}\n")
+              out.write(f"has_backend={'true' if matrix else 'false'}\n")
+              out.write(f"backend_matrix={json.dumps(matrix)}\n")
+
+  deploy-backend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has_backend == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.backend_matrix) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Normalize image owner
+        id: meta
+        run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push ${{ matrix.service.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.service.context }}
+          build-contexts: backend=./backend
+          target: source
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/${{ steps.meta.outputs.owner }}/smarttravel-${{ matrix.service.name }}:azure-b1
+            ghcr.io/${{ steps.meta.outputs.owner }}/smarttravel-${{ matrix.service.name }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          cache-from: type=gha,scope=${{ matrix.service.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service.name }}
+
+      - name: Azure Login (OIDC Passwordless)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Update Azure Container App (${{ matrix.service.name }})
+        run: |
+          IMAGE="ghcr.io/${{ steps.meta.outputs.owner }}/smarttravel-${{ matrix.service.name }}:${{ github.sha }}"
+          echo "Rolling out $IMAGE to Container App ${{ matrix.service.name }} in ${{ env.AZURE_RG }}..."
+          az containerapp update \
+            --resource-group "${{ env.AZURE_RG }}" \
+            --name "${{ matrix.service.name }}" \
+            --image "$IMAGE" \
+            --only-show-errors \
+            --output table
+
+  deploy-frontend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.deploy_frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check Cloudflare API Token
+        id: cf_check
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$CF_TOKEN" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN secret is not set yet; skipping Cloudflare Pages deploy."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Node.js
+        if: steps.cf_check.outputs.ready == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build Frontend
+        if: steps.cf_check.outputs.ready == 'true'
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Deploy to Cloudflare Pages
+        if: steps.cf_check.outputs.ready == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: frontend
+          command: pages deploy dist --project-name=${{ env.CF_PAGES_PROJECT }} --branch=main
+
+  smoke-verify:
+    needs: [detect-changes, deploy-backend, deploy-frontend]
+    if: >-
+      always()
+      && (needs.detect-changes.outputs.has_backend == 'true' || needs.detect-changes.outputs.deploy_frontend == 'true')
+      && needs.deploy-backend.result != 'failure'
+      && needs.deploy-backend.result != 'cancelled'
+      && needs.deploy-frontend.result != 'failure'
+      && needs.deploy-frontend.result != 'cancelled'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Smoke check live production URL
+        run: |
+          echo "Checking ${{ env.PUBLIC_SITE_URL }}/kham-pha ..."
+          curl -fsS -o /dev/null -w "FE /kham-pha -> HTTP %{http_code} (%{time_total}s)\n" \
+            -A "SmartTravel-CD-Smoke/1.0" "${{ env.PUBLIC_SITE_URL }}/kham-pha"
+          echo "Checking ${{ env.PUBLIC_SITE_URL }}/api/catalog/api/v1/places?limit=1 ..."
+          curl -fsS -o /dev/null -w "API Catalog /places -> HTTP %{http_code} (%{time_total}s)\n" \
+            -A "SmartTravel-CD-Smoke/1.0" --max-time 45 "${{ env.PUBLIC_SITE_URL }}/api/catalog/api/v1/places?limit=1"

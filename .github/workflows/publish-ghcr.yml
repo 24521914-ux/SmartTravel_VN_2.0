@@ -1,12 +1,6 @@
 name: Publish SmartTravel Images to GHCR (Azure B1)
 
 on:
-  push:
-    branches:
-      - feature/azure-b1-container-apps
-    paths:
-      - 'backend/**'
-      - '.github/workflows/publish-ghcr.yml'
   workflow_dispatch:
     inputs:
       tag:
