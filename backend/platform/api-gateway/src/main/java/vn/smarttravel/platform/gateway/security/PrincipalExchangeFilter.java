@@ -24,14 +24,22 @@ public class PrincipalExchangeFilter implements GlobalFilter, Ordered {
     private static final ObjectMapper JSON=new ObjectMapper();
     private final String uri;
     private final String credential;
-    private final WebClient client=WebClient.builder()
-            .clientConnector(new ReactorClientHttpConnector(HttpClient.create().option(ChannelOption.CONNECT_TIMEOUT_MILLIS,1000)))
-            .build();
-    public PrincipalExchangeFilter(@Value("${gateway.identity-exchange-uri:}") String uri,
-            @Value("${gateway.exchange-secret:}") String credential) {
+    private final Duration exchangeTimeout;
+    private final WebClient client;
+    @org.springframework.beans.factory.annotation.Autowired
+    public PrincipalExchangeFilter(
+            @Value("${gateway.identity-exchange-uri:}") String uri,
+            @Value("${gateway.exchange-secret:}") String credential,
+            @Value("${gateway.identity-exchange-timeout-seconds:3}") long timeoutSeconds,
+            @Value("${gateway.identity-exchange-connect-timeout-ms:1000}") int connectTimeoutMs) {
         this.uri=uri; this.credential=credential;
+        this.exchangeTimeout=Duration.ofSeconds(Math.max(1, timeoutSeconds));
+        this.client=WebClient.builder()
+                .clientConnector(new ReactorClientHttpConnector(HttpClient.create().option(ChannelOption.CONNECT_TIMEOUT_MILLIS, Math.max(500, connectTimeoutMs))))
+                .build();
         if (!uri.isBlank() && credential.length()<32) throw new IllegalStateException("Gateway exchange credential is required");
     }
+    public PrincipalExchangeFilter(String uri, String credential) { this(uri, credential, 3, 1000); }
     public int getOrder() { return -100; }
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         if (uri.isBlank()) return chain.filter(exchange);
@@ -53,7 +61,7 @@ public class PrincipalExchangeFilter implements GlobalFilter, Ordered {
                                 try { return JSON.readTree(bytes); }
                                 catch (java.io.IOException error) { throw new ExchangeFailure(503,"INVALID_JSON",0); }
                             });
-                        }).switchIfEmpty(Mono.error(new ExchangeFailure(503,"EMPTY_RESPONSE",0))).timeout(Duration.ofSeconds(3))
+                        }).switchIfEmpty(Mono.error(new ExchangeFailure(503,"EMPTY_RESPONSE",0))).timeout(exchangeTimeout)
                         .map(body -> {
                             String token=body.path("access_token").asText();
                             if(token.isBlank()||token.length()>1024) throw new ExchangeFailure(503,"INVALID_TOKEN",0);

@@ -14,9 +14,11 @@ import vn.smarttravel.identity.shared.exception.IdentityException;
 /** Uses the frozen public Catalog pagination contract, never a cross-service DB or admin credential. */
 @Component
 public class CategoryClient {
+    private static final long REQ_TIMEOUT_SECS = Long.parseLong(System.getenv().getOrDefault("INTERNAL_HTTP_TIMEOUT_SECONDS", "2"));
+    private static final long DEADLINE_SECS = Math.max(5L, REQ_TIMEOUT_SECS + 3L);
     private final String baseUrl;
     private final ObjectMapper json;
-    private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).followRedirects(HttpClient.Redirect.NEVER).build();
+    private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(REQ_TIMEOUT_SECS)).followRedirects(HttpClient.Redirect.NEVER).build();
     public CategoryClient(String baseUrl, ObjectMapper json) {
         this.baseUrl=baseUrl; this.json=json;
     }
@@ -41,17 +43,17 @@ public class CategoryClient {
         Set<String> cursors = new HashSet<>();
         String cursor = null;
         // Bound total latency and pages; fail closed rather than guessing when Catalog is unavailable.
-        long deadline=System.nanoTime()+Duration.ofSeconds(5).toNanos();
+        long deadline=System.nanoTime()+Duration.ofSeconds(DEADLINE_SECS).toNanos();
         try {
             for (int page=0; page<50; page++) {
                 long nanos=deadline-System.nanoTime();
                 if(nanos<=0) throw new IllegalStateException();
                 String url=baseUrl.replaceAll("/$","")+"/api/v1/categories?limit=100";
                 if(cursor!=null) url+="&cursor="+URLEncoder.encode(cursor,StandardCharsets.UTF_8);
-                var request=HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofNanos(Math.min(nanos,Duration.ofSeconds(2).toNanos()))).GET().build();
+                var request=HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofNanos(Math.min(nanos,Duration.ofSeconds(REQ_TIMEOUT_SECS).toNanos()))).GET().build();
                 // Limit streaming bytes and the body deadline, including chunked responses after headers.
                 var response=http.send(request,new vn.smarttravel.identity.shared.http.LimitedBodyHandler(
-                        1_000_000,Duration.ofNanos(Math.min(deadline-System.nanoTime(),Duration.ofSeconds(2).toNanos()))));
+                        1_000_000,Duration.ofNanos(Math.min(deadline-System.nanoTime(),Duration.ofSeconds(REQ_TIMEOUT_SECS).toNanos()))));
                 if(response.statusCode()!=200) throw new IllegalStateException();
                 var body=json.readTree(response.body());
                 if(!body.path("items").isArray() || body.path("items").size()>100 || !body.has("next_cursor")) throw new IllegalStateException();

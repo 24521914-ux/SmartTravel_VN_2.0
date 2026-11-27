@@ -11,12 +11,13 @@ COPY --from=backend services services
 RUN --mount=type=cache,target=/root/.m2 \
     sh mvnw -B -q -f services/pom.xml -pl catalog-service -am -Dmaven.test.skip=true package
 
-FROM eclipse-temurin:21-jre AS base
+FROM eclipse-temurin:21-jre-alpine AS base
+RUN apk add --no-cache curl ca-certificates
 WORKDIR /app
 RUN mkdir -p /app/.local && chown 10001:10001 /app/.local
 USER 10001:10001
 EXPOSE 8102
-ENTRYPOINT ["java", "-jar", "/app/application.jar"]
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=60", "-XX:+UseSerialGC", "-Xss256k", "-XX:+ExitOnOutOfMemoryError", "-jar", "/app/application.jar"]
 
 FROM base AS source
 COPY --from=build --chown=10001:10001 /workspace/services/catalog-service/target/catalog-service-0.0.1-SNAPSHOT.jar /app/application.jar

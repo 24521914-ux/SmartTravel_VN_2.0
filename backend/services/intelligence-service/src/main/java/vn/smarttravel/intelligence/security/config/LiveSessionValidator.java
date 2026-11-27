@@ -22,7 +22,8 @@ final class LiveSessionValidator implements OAuth2TokenValidator<Jwt> {
     private final String uri;
     private final Duration cacheFor;
     private final Map<String,Instant> active=new ConcurrentHashMap<>();
-    private final HttpClient client=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();
+    private static final Duration TIMEOUT=Duration.ofSeconds(Long.parseLong(System.getenv().getOrDefault("INTERNAL_HTTP_TIMEOUT_SECONDS","3")));
+    private final HttpClient client=HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
     LiveSessionValidator(String uri) { this(uri, Duration.ZERO); }
     LiveSessionValidator(String uri, Duration cacheFor) {
         this.uri=uri; this.cacheFor=cacheFor.isNegative() ? Duration.ZERO : cacheFor;
@@ -34,7 +35,7 @@ final class LiveSessionValidator implements OAuth2TokenValidator<Jwt> {
         Instant now=Instant.now(), until=active.get(key);
         if (until!=null && now.isBefore(until)) return OAuth2TokenValidatorResult.success();
         try {
-            var request=HttpRequest.newBuilder(URI.create(uri)).timeout(Duration.ofSeconds(3))
+            var request=HttpRequest.newBuilder(URI.create(uri)).timeout(TIMEOUT)
                     .header("Authorization","Bearer "+jwt.getTokenValue()).POST(HttpRequest.BodyPublishers.noBody()).build();
             var response=client.send(request,HttpResponse.BodyHandlers.discarding());
             if (response.statusCode()!=200) { active.remove(key); return denied(); }
