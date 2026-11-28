@@ -279,3 +279,35 @@ Ký hiệu kết nối: ✅ Hoàn thiện (FE gọi qua Gateway và test FE PASS
 - Dòng "Trạng thái" trong `plan/` liên quan đã khớp.
 - Bảng tổng kết nối BE ↔ FE khớp số dòng từng ký hiệu.
 - Không có secret/PII. `git grep "progress/"` và `git grep "PROGRESS.md"` không trỏ tới file đã xóa.
+
+## 11. Quy tắc tối ưu chi phí vận hành Cloud (Plan B1)
+
+Hệ thống đang triển khai theo **Plan B1 — Scale-to-Zero** trên **Azure Container Apps** (`rg-smarttravel-b1`, Consumption Free Grant: `180,000 vCPU-s`, `360,000 GiB-s`, `2,000,000 requests/tháng` + Azure for Students `$100`), **Cloudflare Pages**, **Neon** (`100 CU-giờ` & `1 GB`/project), **MongoDB Atlas M0** (`512 MiB`), **CloudAMQP Little Lemur** (`20 connections`, `1M msgs/tháng`) và **Cloudinary** (`25 credits/tháng`). Mọi coding agent khi thêm tính năng, sửa cấu hình hoặc deploy bắt buộc tuân thủ:
+
+### 11.1. Quy trình gom thay đổi & CI/CD
+
+- **Không push lẻ tẻ nhiều commit liên tiếp lên `main`.** Mỗi lần push vào `main` kích hoạt `.github/workflows/deploy-b1.yml`. Luôn code và test trên nhánh `feature/...` / `fix/...`, sau đó gom vào **1 PR** để merge vào `main` (tiết kiệm phút GitHub Actions và tránh rollout lặp lại trên Azure).
+- **Tránh sửa không cần thiết các file dùng chung** (`backend/services/pom.xml`, `backend/mvnw`, `backend/contracts/events/`) nếu thay đổi chỉ thuộc một service — vì các file này kích hoạt rebuild/rollout cả 7 Container Apps.
+
+### 11.2. Bảo vệ cơ chế Scale-to-Zero (Azure ACA & Neon)
+
+- **Giữ nguyên `minReplicas: 0`** cho cả 7 Container Apps trong `backend/platform/azure/deploy_b1.py` (không tự ý đổi lên `minReplicas: 1` khi chưa có yêu cầu rõ ràng từ người dùng).
+- **Không tự thêm `@Scheduled` / polling nền dày đặc** truy vấn DB hoặc gọi sang service khác khi không thực sự cần thiết; nếu có worker nền, bắt buộc có cờ tắt qua biến môi trường và chu kỳ đủ thưa.
+- **Giữ nguyên cấu hình Hikari thân thiện Neon trên cloud** (`SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE=0`, `SPRING_DATASOURCE_HIKARI_KEEPALIVE_TIME=0`, `MAXIMUM_POOL_SIZE<=5`) để Neon tự scale-to-zero sau 5 phút rảnh, tránh cạn `100 CU-giờ/tháng`.
+- **Không tạo cron/uptime ping định kỳ vào `/api/*`** hoặc `/actuator/health` của backend với chu kỳ ≤ 15 phút (sẽ đánh thức liên tục `gateway`, `catalog` và Neon). Nếu cần kiểm tra uptime tự động, chỉ ping trang tĩnh Frontend trên Cloudflare Pages.
+
+### 11.3. Bảo vệ giới hạn RAM `512 MiB` & Cold Start
+
+- Mỗi Container App chạy mức **`0.25 vCPU / 0.5 GiB`** với `JAVA_TOOL_OPTIONS` tối ưu (`SerialGC`, `-Xmx224m`, `-XX:MaxMetaspaceSize=112m`, `-Xss256k`).
+- **Không gắn Java APM/OpenTelemetry agent nặng** (như Application Insights Java Agent) vào 7 container `0.5 GiB` vì sẽ cộng thêm `60–100 MiB` RAM và `3–5s` cold start (nguy cơ `OOMKilled`).
+- **Không tạo cache in-memory không giới hạn kích thước** hoặc đọc toàn bộ file media lớn vào RAM; luôn đặt giới hạn kích thước/TTL rõ ràng cho mọi cache cục bộ và đẩy ảnh/media mới lên Cloudinary (hoặc volume bền đã gắn).
+
+### 11.4. Kiểm soát Log & Hạn mức dịch vụ ngoài
+
+- **Không bật log mức `DEBUG`/`TRACE` mặc định trên production**, không in log trong vòng lặp polling/heartbeat để giữ lượng log nạp vào `law-smarttravel-b1` dưới hạn mức miễn phí `5 GB/tháng` (Daily Cap `0.15 GB/ngày`).
+- **Không mở thêm connection pool vượt quá giới hạn broker** (CloudAMQP Little Lemur tối đa `20 connections` dùng chung cho cả 6 service).
+- Trước và sau các thay đổi lớn ảnh hưởng hạ tầng, có thể kiểm tra nhanh tác động tài nguyên/chi phí bằng:
+  ```bash
+  python backend/platform/azure/ops_monitor.py --hours 24
+  ```
+

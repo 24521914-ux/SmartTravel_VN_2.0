@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartTravel VN 2.0 — All-in-One Ops &amp; Cost Control Center</title>
+  <style>
+    :root {
+      --bg: #0b0f17;
+      --surface: #121826;
+      --surface-2: #182033;
+      --border: #243047;
+      --text: #e6edf7;
+      --muted: #8b9bb4;
+      --accent: #38bdf8;
+      --green: #22c55e;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --purple: #a78bfa;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .wrap { max-width: 1460px; margin: 0 auto; padding: 20px 24px 56px; }
+
+    /* Header */
+    header {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border); margin-bottom: 16px;
+    }
+    .brand h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+    .brand .sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+    .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .btn, select {
+      background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+      border-radius: 8px; padding: 7px 12px; font-size: 13px; cursor: pointer;
+    }
+    .btn:hover { border-color: var(--accent); }
+    .btn.primary { background: #0284c7; border-color: #0ea5e9; font-weight: 600; }
+    .btn.primary:hover { background: #0369a1; }
+    .btn.warn { border-color: rgba(245, 158, 11, 0.5); color: #fcd34d; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px;
+      border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap;
+    }
+    .pill.green { background: rgba(34, 197, 94, 0.14); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.35); }
+    .pill.gray { background: rgba(139, 155, 180, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25); }
+    .pill.amber { background: rgba(245, 158, 11, 0.14); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); }
+    .pill.red { background: rgba(239, 68, 68, 0.14); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); }
+    .pill.blue { background: rgba(56, 189, 248, 0.14); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.35); }
+
+    /* In-page Platform Navigation Strip (replaces external links) */
+    .platform-strip {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px;
+    }
+    .plat-chip {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 9px;
+      padding: 6px 11px; font-size: 12px; color: var(--text);
+      display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: border-color 0.15s;
+    }
+    .plat-chip:hover { border-color: var(--accent); text-decoration: none; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .dot.ok { background: var(--green); box-shadow: 0 0 6px rgba(34,197,94,0.6); }
+    .dot.warn { background: var(--amber); }
+    .dot.err { background: var(--red); }
+    .dot.idle { background: #64748b; }
+
+    /* KPI Grid */
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+      gap: 14px; margin-bottom: 20px;
+    }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px;
+    }
+    .kpi-label { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .kpi-val { font-size: 24px; font-weight: 700; margin: 6px 0 4px; font-variant-numeric: tabular-nums; }
+    .kpi-sub { color: var(--muted); font-size: 12px; }
+
+    /* Section */
+    .section { margin-bottom: 20px; }
+    .section-head {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: 10px; margin-bottom: 12px;
+    }
+    .section-head h2 { margin: 0; font-size: 15.5px; font-weight: 600; }
+
+    /* Tables */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+    tr:hover td { background: rgba(255, 255, 255, 0.02); }
+    .mono { font-family: var(--mono); font-size: 12px; }
+
+    /* Progress bar */
+    .bar-bg {
+      width: 100%; height: 7px; background: #1e293b; border-radius: 999px; overflow: hidden; margin-top: 4px;
+    }
+    .bar-fill { height: 100%; border-radius: 999px; transition: width 0.3s ease; }
+
+    /* Chart */
+    .tabs { display: inline-flex; gap: 4px; background: var(--bg); padding: 4px; border-radius: 9px; border: 1px solid var(--border); }
+    .tab {
+      background: transparent; color: var(--muted); border: none; padding: 5px 11px;
+      border-radius: 6px; cursor: pointer; font-size: 12.5px; font-weight: 600;
+    }
+    .tab.active { background: var(--surface-2); color: var(--text); }
+    .chart-box { width: 100%; height: 265px; position: relative; }
+    .chart-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+    .legend-item { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+    /* Grids */
+    .grid-2 { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; }
+    .grid-platforms { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px; }
+    @media (max-width: 1040px) { .grid-2, .grid-platforms { grid-template-columns: 1fr; } }
+
+    .grant-row { margin-bottom: 11px; }
+    .grant-top { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 3px; gap: 8px; }
+
+    .kv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin: 10px 0; }
+    .kv { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; }
+    .kv .k { font-size: 11px; color: var(--muted); text-transform: uppercase; }
+    .kv .v { font-size: 16px; font-weight: 700; margin-top: 2px; font-family: var(--mono); }
+
+    .env-hint {
+      background: rgba(245, 158, 11, 0.08); border: 1px dashed rgba(245, 158, 11, 0.35);
+      border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #fde68a; margin-top: 10px;
+    }
+    .env-hint code {
+      background: rgba(0, 0, 0, 0.35); padding: 1px 5px; border-radius: 4px; color: #fff; font-family: var(--mono);
+    }
+
+    /* Logs */
+    .log-list { max-height: 360px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
+    .log-row {
+      padding: 8px 12px; border-bottom: 1px solid var(--border);
+      display: grid; grid-template-columns: 145px 100px 64px 1fr; gap: 10px; font-size: 12px;
+    }
+    .log-row:last-child { border-bottom: none; }
+    .log-msg { word-break: break-word; font-family: var(--mono); color: #cbd5e1; }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.72); display: none;
+      align-items: center; justify-content: center; z-index: 50; padding: 20px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      width: min(1050px, 96vw); max-height: 85vh; display: flex; flex-direction: column;
+    }
+    .modal-head {
+      padding: 14px 18px; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-body { padding: 14px 18px; overflow-y: auto; flex: 1; }
+    .err-banner {
+      background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35);
+      color: #fca5a5; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; display: none;
+    }
+    .muted { color: var(--muted); }
+    input[type="search"] {
+      background: var(--bg); color: var(--text); border: 1px solid var(--border);
+      border-radius: 7px; padding: 6px 10px; font-size: 12.5px; width: 230px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <h1>SmartTravel VN 2.0 — All-in-One Ops &amp; Cost Control Center</h1>
+        <div class="sub" id="meta-line">Đang thu thập thông số trực tiếp từ toàn bộ nền tảng...</div>
+      </div>
+      <div class="controls">
+        <select id="hours-select" title="Khoảng thời gian metrics">
+          <option value="1">1 giờ qua</option>
+          <option value="6">6 giờ qua</option>
+          <option value="24" selected>24 giờ qua</option>
+          <option value="168">7 ngày qua</option>
+        </select>
+        <select id="auto-refresh" title="Tự động làm mới">
+          <option value="0" selected>Auto: Tắt</option>
+          <option value="30">Auto: 30s</option>
+          <option value="60">Auto: 60s</option>
+        </select>
+        <button class="btn warn" id="probe-gw-btn" title="Gửi 1 request tới Gateway /actuator/health (đánh thức gateway nếu đang ngủ)">Ping Gateway</button>
+        <button class="btn primary" id="refresh-btn">Làm mới</button>
+      </div>
+    </header>
+
+    <div id="err-banner" class="err-banner"></div>
+
+    <!-- Live In-Page Platform Health Strip -->
+    <div class="platform-strip" id="platform-strip"></div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+      <div class="card">
+        <div class="kpi-label">Azure Credit (Students)</div>
+        <div class="kpi-val" id="kpi-credit">$-</div>
+        <div class="kpi-sub" id="kpi-credit-sub">Đang đọc số dư MCA Billing...</div>
+      </div>
+      <div class="card">
+        <div class="kpi-label">Services đang thức (Live)</div>
+        <div class="kpi-val" id="kpi-awake">- / 7</div>
+        <div class="kpi-sub" id="kpi-awake-sub">Scale-to-Zero (minReplicas = 0)</div>
+      </div>
+      <div class="card">
+        <div class="kpi-label">HTTP Requests (<span class="win-label">24h</span>)</div>
+        <div class="kpi-val" id="kpi-reqs">-</div>
+        <div class="kpi-sub" id="kpi-latency">Gateway latency: -</div>
+      </div>
+      <div class="card">
+        <div class="kpi-label">Peak RAM &amp; Restarts</div>
+        <div class="kpi-val" id="kpi-ram">-</div>
+        <div class="kpi-sub" id="kpi-restarts">Restarts: -</div>
+      </div>
+      <div class="card">
+        <div class="kpi-label">Chi phí tháng này (MTD)</div>
+        <div class="kpi-val" id="kpi-cost">$-</div>
+        <div class="kpi-sub" id="kpi-budget">Budget: -</div>
+      </div>
+      <div class="card">
+        <div class="kpi-label">Deploy &amp; Website Live</div>
+        <div class="kpi-val" id="kpi-deploy" style="font-size:18px;">-</div>
+        <div class="kpi-sub" id="kpi-fe">Cloudflare Pages: -</div>
+      </div>
+    </div>
+
+    <!-- 1. Azure Container Apps Matrix -->
+    <div class="card section" id="sec-services">
+      <div class="section-head">
+        <h2>1. 7 Microservices — Azure Container Apps (`rg-smarttravel-b1`, 0.25 vCPU / 0.5 GiB)</h2>
+        <span class="muted" id="collect-time"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Service</th>
+              <th>Trạng thái Live</th>
+              <th>Bản Deploy (Image Tag)</th>
+              <th>CPU Avg / Max</th>
+              <th>RAM Avg / Peak (512 MiB)</th>
+              <th>Requests (<span class="win-label">24h</span>)</th>
+              <th>Latency</th>
+              <th>Restarts</th>
+              <th>Inbox Queue</th>
+              <th>Logs</th>
+            </tr>
+          </thead>
+          <tbody id="services-tbody">
+            <tr><td colspan="10" class="muted">Đang thu thập dữ liệu...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 2. Metrics Chart -->
+    <div class="card section" id="sec-charts">
+      <div class="section-head">
+        <h2>2. Biểu đồ Tài nguyên &amp; Lưu lượng theo thời gian</h2>
+        <div class="tabs" id="chart-tabs">
+          <button class="tab active" data-metric="cpu">CPU (%)</button>
+          <button class="tab" data-metric="ram">RAM (MiB)</button>
+          <button class="tab" data-metric="requests">Requests</button>
+          <button class="tab" data-metric="replicas">Replicas (Thức/Ngủ)</button>
+        </div>
+      </div>
+      <div class="chart-box" id="chart-box"></div>
+      <div class="chart-legend" id="chart-legend"></div>
+    </div>
+
+    <!-- 3. Azure Credit, Cost & GitHub Deploys -->
+    <div class="grid-2 section" id="sec-cost-deploy">
+      <div class="card" id="sec-deploys">
+        <div class="section-head">
+          <h2>3. Hoạt động Deploy (GitHub Actions — deploy-b1.yml)</h2>
+          <span class="muted" id="gh-repo-label"></span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Trạng thái</th>
+                <th>Commit / Tiêu đề</th>
+                <th>Thời điểm</th>
+                <th>Run ID</th>
+              </tr>
+            </thead>
+            <tbody id="deploys-tbody">
+              <tr><td colspan="4" class="muted">Đang tải lịch sử deploy...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" id="sec-cost">
+        <div class="section-head">
+          <h2>4. Credit Azure $100, Chi phí MTD &amp; ACA Free Grant</h2>
+        </div>
+        <div id="credit-detail"></div>
+        <div id="free-grants" style="margin-top:12px;"></div>
+        <div class="table-wrap" style="margin-top:12px;">
+          <table>
+            <thead>
+              <tr><th>Hạng mục (Azure Meter)</th><th>Resource</th><th>Chi phí MTD</th></tr>
+            </thead>
+            <tbody id="cost-tbody">
+              <tr><td colspan="3" class="muted">Đang tải Cost Management...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. All External Platforms Directly Inside Dashboard -->
+    <div class="section" id="sec-platforms">
+      <div class="section-head">
+        <h2>5. Toàn bộ Nền tảng Hạ tầng (Xem trực tiếp tại đây — không cần chuyển trang)</h2>
+      </div>
+      <div class="grid-platforms">
+        <!-- CloudAMQP -->
+        <div class="card" id="card-cloudamqp">
+          <div class="section-head">
+            <h2>CloudAMQP (RabbitMQ Little Lemur)</h2>
+            <span id="cloudamqp-badge"></span>
+          </div>
+          <div id="cloudamqp-body" class="muted">Đang tải...</div>
+        </div>
+
+        <!-- Cloudinary -->
+        <div class="card" id="card-cloudinary">
+          <div class="section-head">
+            <h2>Cloudinary (Media CDN — 25 Credits/tháng)</h2>
+            <span id="cloudinary-badge"></span>
+          </div>
+          <div id="cloudinary-body" class="muted">Đang tải...</div>
+        </div>
+
+        <!-- Neon PostgreSQL -->
+        <div class="card" id="card-neon">
+          <div class="section-head">
+            <h2>Neon PostgreSQL (5 Databases — 100 CU-h/project)</h2>
+            <span id="neon-badge"></span>
+          </div>
+          <div id="neon-body" class="muted">Đang tải...</div>
+        </div>
+
+        <!-- Cloudflare Pages -->
+        <div class="card" id="card-cloudflare">
+          <div class="section-head">
+            <h2>Cloudflare Pages &amp; Functions (`smarttravel-vn`)</h2>
+            <span id="cloudflare-badge"></span>
+          </div>
+          <div id="cloudflare-body" class="muted">Đang tải...</div>
+        </div>
+
+        <!-- MongoDB Atlas -->
+        <div class="card" id="card-atlas">
+          <div class="section-head">
+            <h2>MongoDB Atlas M0 (`community_db` — 512 MiB)</h2>
+            <span id="atlas-badge"></span>
+          </div>
+          <div id="atlas-body" class="muted">Đang tải...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Logs & Scale Events -->
+    <div class="card section" id="sec-logs">
+      <div class="section-head">
+        <h2>6. Logs lỗi &amp; Sự kiện Scale (Azure Log Analytics — `law-smarttravel-b1`)</h2>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <div class="tabs" id="log-tabs">
+            <button class="tab active" data-log="errors">Console Errors/Warn</button>
+            <button class="tab" data-log="system">System &amp; KEDA Scale</button>
+          </div>
+          <input type="search" id="log-filter" placeholder="Lọc theo service, traceId, lỗi..." />
+        </div>
+      </div>
+      <div class="log-list" id="log-list">
+        <div style="padding:14px;" class="muted">Đang tải logs từ Log Analytics...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Per-service Log Modal -->
+  <div class="modal-backdrop" id="log-modal">
+    <div class="modal">
+      <div class="modal-head">
+        <strong id="modal-title">Logs của service</strong>
+        <button class="btn" id="modal-close">Đóng</button>
+      </div>
+      <div class="modal-body" id="modal-body">Đang tải...</div>
+    </div>
+  </div>
+
+  <script>
+    const COLORS = {
+      gateway: '#38bdf8',
+      identity: '#a78bfa',
+      catalog: '#22c55e',
+      community: '#f59e0b',
+      trip: '#fb7185',
+      ingestion: '#14b8a6',
+      intelligence: '#f472b6',
+    };
+
+    let state = {
+      snapshot: null,
+      metricTab: 'cpu',
+      logTab: 'errors',
+      hiddenSeries: new Set(),
+      timer: null,
+    };
+
+    function esc(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function fmtNum(n, digits = 0) {
+      if (n === null || n === undefined || Number.isNaN(Number(n))) return '-';
+      return Number(n).toLocaleString('vi-VN', { maximumFractionDigits: digits });
+    }
+    function fmtTime(iso) {
+      if (!iso) return '-';
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return iso;
+      return d.toLocaleString('vi-VN', { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+    function fmtDate(iso) {
+      if (!iso) return '-';
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return iso.slice(0, 10);
+      return d.toLocaleDateString('vi-VN');
+    }
+    function barColor(pct) {
+      if (pct >= 85) return 'var(--red)';
+      if (pct >= 65) return 'var(--amber)';
+      return 'var(--green)';
+    }
+
+    async function loadSnapshot() {
+      const hours = document.getElementById('hours-select').value;
+      const btn = document.getElementById('refresh-btn');
+      btn.disabled = true;
+      btn.textContent = 'Đang tải...';
+      document.getElementById('err-banner').style.display = 'none';
+      document.querySelectorAll('.win-label').forEach(el => {
+        el.textContent = hours === '168' ? '7d' : `${hours}h`;
+      });
+
+      try {
+        const res = await fetch(`/api/snapshot?hours=${encodeURIComponent(hours)}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        state.snapshot = data;
+        renderAll();
+      } catch (err) {
+        const banner = document.getElementById('err-banner');
+        banner.textContent = `Không thể tải dữ liệu: ${err.message}`;
+        banner.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Làm mới';
+      }
+    }
+
+    function renderPlatformStrip(d) {
+      const svcs = d.services || [];
+      const awake = svcs.filter(s => s.activeReplicas > 0).length;
+      const cr = d.azureCredit || {};
+      const mq = d.cloudamqp || {};
+      const cld = d.cloudinary || {};
+      const neon = d.neon || {};
+      const cf = d.cloudflare || {};
+      const atlas = d.atlas || {};
+      const fe = d.frontendProbe || {};
+
+      const atlasDs = atlas.directStats || {};
+      const neonSp = neon.sqlProbe || {};
+      const chips = [
+        { target: '#sec-services', dot: 'ok', label: `Azure ACA: ${awake}/${svcs.length} đang thức` },
+        { target: '#sec-cost', dot: cr.available ? 'ok' : 'warn', label: cr.available ? `Credit Azure: $${fmtNum(cr.estimatedBalanceUsd, 2)} / $${fmtNum(cr.originalAmountUsd, 0)}` : 'Credit Azure: N/A' },
+        { target: '#card-cloudamqp', dot: mq.configured && !mq.error ? (mq.totalDlqMessages > 0 ? 'err' : 'ok') : 'idle', label: mq.configured && !mq.error ? `CloudAMQP: ${mq.connections}/20 conn · DLQ ${mq.totalDlqMessages || 0}` : 'CloudAMQP: Chưa cấu hình' },
+        { target: '#card-cloudinary', dot: cld.configured && !cld.error ? 'ok' : 'idle', label: cld.configured && !cld.error ? `Cloudinary: ${fmtNum(cld.creditsUsed, 2)}/${fmtNum(cld.creditsLimit, 0)} cr` : 'Cloudinary: Chưa cấu hình' },
+        { target: '#card-atlas', dot: atlasDs.ok ? 'ok' : (atlas.configured ? 'ok' : 'warn'), label: atlasDs.ok ? `Atlas M0: ${fmtNum(atlasDs.totalSizeMb, 2)}/512 MiB · ${fmtNum(atlasDs.objects)} docs` : 'Atlas M0: Chưa đo' },
+        { target: '#card-cloudflare', dot: fe.ok && cf.configured ? 'ok' : (fe.ok ? 'warn' : 'err'), label: `Cloudflare Pages: ${fe.ok ? `OK ${fe.latencyMs}ms` : 'Lỗi'}${cf.deployments?.length ? ` · ${cf.deployments[0].commitHash}` : ''}` },
+        { target: '#card-neon', dot: (neon.configured && !neon.error) || neonSp.ok ? 'ok' : 'warn', label: neon.configured && !neon.error ? `Neon: ${neon.projectCount} DBs (max ${fmtNum(neon.maxComputePct, 1)}% CU)` : (neonSp.ok ? `Neon: ${fmtNum(neonSp.totalSizeMb, 1)} MB · ${fmtNum(neonSp.totalLiveRows)} rows` : `Neon: ${neon.configuredDbs?.length || 0} DBs (bấm Đo SQL)`) },
+        { target: '#sec-deploys', dot: d.deploys?.[0]?.conclusion === 'success' ? 'ok' : 'warn', label: `GitHub Deploys: ${d.deploys?.length || 0} runs` },
+      ];
+      document.getElementById('platform-strip').innerHTML = chips
+        .map(c => `<a class="plat-chip" href="${c.target}"><span class="dot ${c.dot}"></span>${esc(c.label)}</a>`)
+        .join('');
+    }
+
+    function renderKPIs(data) {
+      const cr = data.azureCredit || {};
+      if (cr.available) {
+        document.getElementById('kpi-credit').textContent = `$${fmtNum(cr.estimatedBalanceUsd, 2)}`;
+        document.getElementById('kpi-credit-sub').textContent =
+          `Còn lại / $${fmtNum(cr.originalAmountUsd, 0)} · Hạn ${fmtDate(cr.expirationDate)} (${cr.daysRemaining ?? '-'} ngày)`;
+      } else {
+        document.getElementById('kpi-credit').textContent = 'N/A';
+        document.getElementById('kpi-credit-sub').textContent = cr.error || 'Không đọc được MCA Billing API';
+      }
+
+      const svcs = data.services || [];
+      const awake = svcs.filter(s => (s.activeReplicas || 0) > 0);
+      const totalReqs = svcs.reduce((a, s) => a + (s.metrics?.requestsTotal || 0), 0);
+      const gw = svcs.find(s => s.name === 'gateway');
+      const peakRam = Math.max(0, ...svcs.map(s => s.metrics?.ramMaxMib || 0));
+      const totalRestarts = svcs.reduce((a, s) => a + (s.metrics?.restartsMax || 0), 0);
+
+      document.getElementById('kpi-awake').textContent = `${awake.length} / ${svcs.length}`;
+      document.getElementById('kpi-awake-sub').textContent = awake.length
+        ? `Đang chạy: ${awake.map(s => s.name).join(', ')}`
+        : 'Tất cả đang ngủ (Scale-to-Zero → $0 idle)';
+
+      document.getElementById('kpi-reqs').textContent = fmtNum(totalReqs);
+      const gwLat = gw?.metrics?.responseTimeAvgMs;
+      document.getElementById('kpi-latency').textContent = gwLat != null
+        ? `Gateway avg: ${fmtNum(gwLat, 0)} ms · GW reqs: ${fmtNum(gw.metrics.requestsTotal)}`
+        : 'Chưa có latency trong khung giờ này';
+
+      document.getElementById('kpi-ram').textContent = `${fmtNum(peakRam, 0)} MiB`;
+      document.getElementById('kpi-restarts').innerHTML = totalRestarts > 0
+        ? `<span style="color:var(--red);font-weight:600;">Cảnh báo: ${totalRestarts} restart!</span>`
+        : '0 restarts · Trần container: 512 MiB';
+
+      const cost = data.cost || {};
+      document.getElementById('kpi-cost').textContent = `$${fmtNum(cost.totalUsd || 0, 2)}`;
+      const budget = cost.budget;
+      document.getElementById('kpi-budget').textContent = budget
+        ? `Budget ${budget.name}: $${fmtNum(budget.currentSpendUsd, 2)} / $${fmtNum(budget.amountUsd, 0)} (alerts: ${budget.alertCount})`
+        : 'Chưa có budget trong RG';
+
+      const last = (data.deploys || [])[0];
+      if (last) {
+        const ok = last.conclusion === 'success';
+        const pillCls = ok ? 'green' : (last.status === 'in_progress' ? 'blue' : 'red');
+        document.getElementById('kpi-deploy').innerHTML = `<span class="pill ${pillCls}">${esc(last.conclusion || last.status)}</span> <span class="mono">${esc((last.headSha || '').slice(0, 7))}</span>`;
+      } else {
+        document.getElementById('kpi-deploy').textContent = '-';
+      }
+      const fe = data.frontendProbe;
+      document.getElementById('kpi-fe').textContent = fe
+        ? (fe.ok ? `Pages HTTP ${fe.statusCode} (${fe.latencyMs} ms)` : `Pages lỗi (${fe.error || fe.statusCode})`)
+        : '-';
+    }
+
+    function renderServices(data) {
+      const mqQueues = Object.fromEntries((data.cloudamqp?.queues || []).map(q => [q.name, q]));
+      const rows = (data.services || []).map(s => {
+        const awake = (s.activeReplicas || 0) > 0;
+        const statusPill = awake
+          ? `<span class="pill green">ĐANG CHẠY (${s.activeReplicas})</span>`
+          : `<span class="pill gray">ĐANG NGỦ (0)</span>`;
+        const m = s.metrics || {};
+        const ramPct = Math.min(100, m.ramMaxPct || ((m.ramMaxMib || 0) / 512 * 100));
+        const q = mqQueues[`${s.name}.inbox`];
+        const qCell = q
+          ? `<span class="mono">${q.messagesReady} ready / ${q.messagesUnacked} unack</span>`
+          : (s.name === 'gateway' ? '<span class="muted">—</span>' : '<span class="muted">N/A</span>');
+        const restartsBadge = (m.restartsMax || 0) > 0
+          ? `<span class="pill red">${m.restartsMax}</span>`
+          : `<span class="muted">0</span>`;
+
+        return `
+          <tr>
+            <td>
+              <strong>${esc(s.name)}</strong>
+              <div class="muted" style="font-size:11.5px;">${s.externalIngress ? 'External HTTPS' : 'Internal Mesh'} · scale ${s.minReplicas}-${s.maxReplicas}</div>
+            </td>
+            <td>${statusPill}</td>
+            <td>
+              <div class="mono">${esc(s.imageTag || '-')}</div>
+              <div class="muted" style="font-size:11px;">${esc(s.latestRevisionName || '')}</div>
+            </td>
+            <td class="mono">${fmtNum(m.cpuAvgPct, 1)}% / <strong>${fmtNum(m.cpuMaxPct, 1)}%</strong></td>
+            <td style="min-width:150px;">
+              <div class="mono">${fmtNum(m.ramAvgMib, 0)} / <strong>${fmtNum(m.ramMaxMib, 0)} MiB</strong> (${fmtNum(ramPct, 0)}%)</div>
+              <div class="bar-bg"><div class="bar-fill" style="width:${ramPct}%;background:${barColor(ramPct)}"></div></div>
+            </td>
+            <td class="mono"><strong>${fmtNum(m.requestsTotal)}</strong></td>
+            <td class="mono">${m.responseTimeAvgMs != null ? `${fmtNum(m.responseTimeAvgMs, 0)} ms` : '-'}</td>
+            <td>${restartsBadge}</td>
+            <td>${qCell}</td>
+            <td><button class="btn" onclick="openServiceLogs('${esc(s.name)}')">Logs</button></td>
+          </tr>
+        `;
+      }).join('');
+      document.getElementById('services-tbody').innerHTML = rows || '<tr><td colspan="10" class="muted">Không tìm thấy Container App nào.</td></tr>';
+    }
+
+    function renderChart(data) {
+      const svcs = data.services || [];
+      const metricKey = { cpu: 'cpu', ram: 'ramMib', requests: 'requests', replicas: 'replicas' }[state.metricTab];
+      const unitLabel = { cpu: '%', ram: 'MiB', requests: 'req', replicas: 'rep' }[state.metricTab];
+
+      const seriesList = svcs
+        .filter(s => !state.hiddenSeries.has(s.name))
+        .map(s => ({ name: s.name, color: COLORS[s.name] || '#38bdf8', points: (s.series && s.series[metricKey]) || [] }))
+        .filter(s => s.points.length > 0);
+
+      document.getElementById('chart-legend').innerHTML = svcs.map(s => {
+        const hidden = state.hiddenSeries.has(s.name);
+        return `<span class="legend-item" style="opacity:${hidden ? 0.35 : 1}" onclick="toggleSeries('${esc(s.name)}')">
+          <span class="legend-dot" style="background:${COLORS[s.name] || '#38bdf8'}"></span>${esc(s.name)}
+        </span>`;
+      }).join('');
+
+      const box = document.getElementById('chart-box');
+      if (!seriesList.length) {
+        box.innerHTML = '<div style="padding:100px 0;text-align:center;" class="muted">Chưa có điểm dữ liệu trong khoảng thời gian đã chọn (các service đang ngủ).</div>';
+        return;
+      }
+
+      const allTimes = Array.from(new Set(seriesList.flatMap(s => s.points.map(p => p.t)))).sort();
+      const maxValRaw = Math.max(...seriesList.flatMap(s => s.points.map(p => p.v)), 0);
+      const maxVal = state.metricTab === 'ram' ? Math.max(512, maxValRaw * 1.1)
+        : state.metricTab === 'cpu' ? Math.max(20, maxValRaw * 1.15)
+        : Math.max(1, maxValRaw * 1.15);
+
+      const W = 1000, H = 245, padL = 52, padR = 16, padT = 16, padB = 30;
+      const plotW = W - padL - padR, plotH = H - padT - padB;
+      const xOf = idx => padL + (allTimes.length <= 1 ? plotW / 2 : (idx / (allTimes.length - 1)) * plotW);
+      const yOf = v => padT + plotH - (Math.min(v, maxVal) / maxVal) * plotH;
+
+      let grid = '';
+      for (let i = 0; i <= 4; i++) {
+        const v = (maxVal / 4) * i;
+        const y = yOf(v);
+        grid += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#243047" stroke-dasharray="3,3" />`;
+        grid += `<text x="${padL - 8}" y="${y + 4}" fill="#8b9bb4" font-size="11" text-anchor="end">${fmtNum(v, maxVal < 10 ? 1 : 0)}</text>`;
+      }
+      if (state.metricTab === 'ram') {
+        const yLimit = yOf(435);
+        grid += `<line x1="${padL}" y1="${yLimit}" x2="${W - padR}" y2="${yLimit}" stroke="#ef4444" stroke-dasharray="6,4" opacity="0.7" />`;
+        grid += `<text x="${W - padR - 4}" y="${yLimit - 5}" fill="#f87171" font-size="10.5" text-anchor="end">Ngưỡng cảnh báo 85% (435 MiB)</text>`;
+      }
+
+      const timeIdx = new Map(allTimes.map((t, i) => [t, i]));
+      let paths = '';
+      for (const s of seriesList) {
+        const d = s.points.map((p, i) => `${i === 0 ? 'M' : 'L'}${xOf(timeIdx.get(p.t)).toFixed(1)},${yOf(p.v).toFixed(1)}`).join(' ');
+        paths += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" />`;
+      }
+
+      let xLabels = '';
+      const step = Math.max(1, Math.floor((allTimes.length - 1) / 4));
+      for (let i = 0; i < allTimes.length; i += step) {
+        const lbl = new Date(allTimes[i]).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
+        xLabels += `<text x="${xOf(i)}" y="${H - 8}" fill="#8b9bb4" font-size="11" text-anchor="middle">${lbl}</text>`;
+      }
+
+      box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="none">
+        ${grid}${paths}${xLabels}
+        <text x="${padL}" y="11" fill="#8b9bb4" font-size="11">Đơn vị: ${unitLabel}</text>
+      </svg>`;
+    }
+
+    function toggleSeries(name) {
+      if (state.hiddenSeries.has(name)) state.hiddenSeries.delete(name);
+      else state.hiddenSeries.add(name);
+      if (state.snapshot) renderChart(state.snapshot);
+    }
+
+    function renderDeploys(data) {
+      const deploys = data.deploys || [];
+      document.getElementById('gh-repo-label').textContent = data.meta?.githubRepo || '';
+      if (!deploys.length) {
+        document.getElementById('deploys-tbody').innerHTML = `<tr><td colspan="4" class="muted">${esc(data.deploysNote || 'Không có dữ liệu GitHub Actions.')}</td></tr>`;
+        return;
+      }
+      document.getElementById('deploys-tbody').innerHTML = deploys.map(d => {
+        const cls = d.conclusion === 'success' ? 'green' : (d.status === 'in_progress' ? 'blue' : (d.conclusion === 'failure' ? 'red' : 'amber'));
+        return `
+          <tr>
+            <td><span class="pill ${cls}">${esc(d.conclusion || d.status)}</span></td>
+            <td>
+              <div>${esc(d.displayTitle || d.event)}</div>
+              <div class="mono muted">${esc((d.headSha || '').slice(0, 7))} · ${esc(d.headBranch || '')}</div>
+            </td>
+            <td class="mono muted">${fmtTime(d.createdAt)}</td>
+            <td class="mono muted">#${esc(d.databaseId)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderCostAndCredit(data) {
+      const cr = data.azureCredit || {};
+      const creditBox = document.getElementById('credit-detail');
+      if (cr.available) {
+        creditBox.innerHTML = `
+          <div class="kv-grid">
+            <div class="kv"><div class="k">Số dư Credit</div><div class="v" style="color:var(--green)">$${fmtNum(cr.estimatedBalanceUsd, 2)}</div></div>
+            <div class="kv"><div class="k">Đã dùng</div><div class="v">$${fmtNum(cr.usedUsd, 2)} (${fmtNum(cr.usedPct, 1)}%)</div></div>
+            <div class="kv"><div class="k">Chờ trừ</div><div class="v">$${fmtNum(cr.pendingChargesUsd, 2)}</div></div>
+            <div class="kv"><div class="k">Hết hạn</div><div class="v" style="font-size:13.5px;">${fmtDate(cr.expirationDate)} (${cr.daysRemaining}d)</div></div>
+          </div>
+          <div class="bar-bg"><div class="bar-fill" style="width:${cr.usedPct}%;background:${barColor(cr.usedPct)}"></div></div>
+        `;
+      } else {
+        creditBox.innerHTML = `<div class="muted">Không lấy được số dư Azure Credit (${esc(cr.error || 'N/A')}).</div>`;
+      }
+
+      const fg = data.freeGrant || {};
+      const law = data.logAnalytics || {};
+      const grants = [
+        ['ACA Free Grant — vCPU-seconds (từ đầu tháng)', fg.estVcpuSeconds || 0, 180000, 'vCPU-s', fg.vcpuRemaining],
+        ['ACA Free Grant — GiB-seconds (từ đầu tháng)', fg.estGibSeconds || 0, 360000, 'GiB-s', fg.gibRemaining],
+        ['ACA Free Grant — HTTP Requests (từ đầu tháng)', fg.requestsTotal || 0, 2000000, 'req', fg.requestsRemaining],
+        ['Log Analytics Free Tier (từ đầu tháng)', law.ingestedMbMtd || 0, 5120, 'MB', Math.max(0, 5120 - (law.ingestedMbMtd || 0))],
+      ];
+      const grantBarsHtml = grants.map(([label, used, limit, unit, rem]) => {
+        const pct = Math.min(100, (used / limit) * 100);
+        return `
+          <div class="grant-row">
+            <div class="grant-top">
+              <span>${esc(label)}</span>
+              <span class="mono"><strong>${fmtNum(used, unit === 'req' ? 0 : 1)}</strong> / ${fmtNum(limit)} ${unit} (${fmtNum(pct, 2)}% · còn ${fmtNum(rem, 0)})</span>
+            </div>
+            <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${barColor(pct)}"></div></div>
+          </div>
+        `;
+      }).join('');
+      const svcBreakdown = (fg.perService || []).filter(s => (s.estVcpuSeconds || 0) > 0 || (s.requestsTotal || 0) > 0);
+      const svcTableHtml = svcBreakdown.length ? `
+        <details style="margin-top:8px;">
+          <summary class="muted" style="cursor:pointer;font-size:12px;">Xem chi tiết Free Grant từ đầu tháng theo từng service (${svcBreakdown.length} services)</summary>
+          <div class="table-wrap" style="margin-top:6px;">
+            <table>
+              <thead><tr><th>Service</th><th>vCPU-s MTD</th><th>GiB-s MTD</th><th>Requests MTD</th></tr></thead>
+              <tbody>
+                ${svcBreakdown.map(s => `
+                  <tr>
+                    <td><strong>${esc(s.service)}</strong></td>
+                    <td class="mono">${fmtNum(s.estVcpuSeconds, 0)}</td>
+                    <td class="mono">${fmtNum(s.estGibSeconds, 0)}</td>
+                    <td class="mono">${fmtNum(s.requestsTotal || 0)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      ` : '';
+      document.getElementById('free-grants').innerHTML = grantBarsHtml + svcTableHtml;
+
+      const rows = data.cost?.breakdown || [];
+      document.getElementById('cost-tbody').innerHTML = rows.length
+        ? rows.map(r => `
+            <tr>
+              <td>${esc(r.meterSubCategory || r.meter || 'Other')}</td>
+              <td class="mono muted">${esc(r.resourceName || '-')}</td>
+              <td class="mono"><strong>$${fmtNum(r.costUsd, 4)}</strong></td>
+            </tr>
+          `).join('')
+        : '<tr><td colspan="3" class="muted">Chi phí MTD hiện tại $0.00.</td></tr>';
+    }
+
+    function renderPlatforms(data) {
+      // 1. CloudAMQP
+      const mq = data.cloudamqp || {};
+      const mqBadge = document.getElementById('cloudamqp-badge');
+      const mqBody = document.getElementById('cloudamqp-body');
+      if (!mq.configured) {
+        mqBadge.innerHTML = '<span class="pill gray">Chưa cấu hình</span>';
+        mqBody.innerHTML = '<div class="env-hint">Thêm <code>CLOUDAMQP_URL</code> vào <code>.env</code> rồi bấm <strong>Làm mới</strong>.</div>';
+      } else if (mq.error) {
+        mqBadge.innerHTML = '<span class="pill red">Lỗi kết nối</span>';
+        mqBody.innerHTML = `<div style="color:var(--red)">${esc(mq.error)}</div>`;
+      } else {
+        const dlqCnt = mq.totalDlqMessages || 0;
+        mqBadge.innerHTML = dlqCnt > 0
+          ? `<span class="pill red">DLQ: ${dlqCnt} msg</span>`
+          : `<span class="pill green">Online · v${esc(mq.rabbitmqVersion || '4')}</span>`;
+        const qRows = (mq.queues || []).map(q => `
+          <tr>
+            <td class="mono">${esc(q.name)}</td>
+            <td class="mono">${q.consumers}</td>
+            <td class="mono">${q.messagesReady}</td>
+            <td class="mono">${q.messagesUnacked}</td>
+          </tr>
+        `).join('');
+        mqBody.innerHTML = `
+          <div class="kv-grid">
+            <div class="kv"><div class="k">Connections</div><div class="v">${mq.connections} / 20</div></div>
+            <div class="kv"><div class="k">Queues</div><div class="v">${mq.queueCount} / 100</div></div>
+            <div class="kv"><div class="k">Ready Msgs</div><div class="v">${mq.totalMessagesReady}</div></div>
+            <div class="kv"><div class="k">Pub / Deliv</div><div class="v" style="font-size:13px;">${fmtNum(mq.publishTotal)} / ${fmtNum(mq.deliverTotal)}</div></div>
+          </div>
+          <div class="table-wrap" style="max-height:210px;overflow-y:auto;">
+            <table>
+              <thead><tr><th>Queue (${esc(mq.host)})</th><th>Cons</th><th>Ready</th><th>Unack</th></tr></thead>
+              <tbody>${qRows || '<tr><td colspan="4" class="muted">Không có queue</td></tr>'}</tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      // 2. Cloudinary
+      const cld = data.cloudinary || {};
+      const cldBadge = document.getElementById('cloudinary-badge');
+      const cldBody = document.getElementById('cloudinary-body');
+      if (!cld.configured) {
+        cldBadge.innerHTML = '<span class="pill gray">Chưa cấu hình</span>';
+        cldBody.innerHTML = '<div class="env-hint">Thêm <code>CLOUDINARY_CLOUD_NAME</code>, <code>CLOUDINARY_API_KEY</code>, <code>CLOUDINARY_API_SECRET</code> vào <code>.env</code>.</div>';
+      } else if (cld.error) {
+        cldBadge.innerHTML = '<span class="pill red">Lỗi</span>';
+        cldBody.innerHTML = `<div style="color:var(--red)">${esc(cld.error)}</div>`;
+      } else {
+        cldBadge.innerHTML = `<span class="pill green">${esc(cld.plan)} · ${esc(cld.cloudName)}</span>`;
+        cldBody.innerHTML = `
+          <div class="grant-row">
+            <div class="grant-top">
+              <span>Credits tháng này (cập nhật ${esc(cld.lastUpdated)})</span>
+              <span class="mono"><strong>${fmtNum(cld.creditsUsed, 2)}</strong> / ${fmtNum(cld.creditsLimit, 0)} (${fmtNum(cld.creditsPct, 2)}%)</span>
+            </div>
+            <div class="bar-bg"><div class="bar-fill" style="width:${Math.min(100, cld.creditsPct)}%;background:${barColor(cld.creditsPct)}"></div></div>
+          </div>
+          <div class="kv-grid">
+            <div class="kv"><div class="k">Storage</div><div class="v">${fmtNum(cld.storageMb, 1)} MB</div></div>
+            <div class="kv"><div class="k">Bandwidth</div><div class="v">${fmtNum(cld.bandwidthMb, 1)} MB</div></div>
+            <div class="kv"><div class="k">Tổng ảnh/File</div><div class="v">${fmtNum(cld.objects)}</div></div>
+            <div class="kv"><div class="k">Requests</div><div class="v">${fmtNum(cld.requests)}</div></div>
+            <div class="kv"><div class="k">Transforms</div><div class="v">${fmtNum(cld.transformations)}</div></div>
+          </div>
+        `;
+      }
+
+      // 3. Neon PostgreSQL
+      const neon = data.neon || {};
+      const neonBadge = document.getElementById('neon-badge');
+      const neonBody = document.getElementById('neon-body');
+      const sp = neon.sqlProbe;
+      const neonProbeBtn = `<button class="btn warn" id="probe-neon-btn" onclick="probeNeonNow()" title="Đo dung lượng MB, số bảng, số dòng, kết nối thực tế của cả 5 DB Neon qua SQL (đánh thức DB ~5 phút)">Đo 5 DB Neon (SQL)</button>`;
+
+      if (neon.configured && !neon.error) {
+        neonBadge.innerHTML = `<span class="pill green">${neon.projectCount} projects · ${neon.activeCount} active</span>`;
+        const rows = (neon.projects || []).map(p => `
+          <tr>
+            <td><strong>${esc(p.name)}</strong><div class="muted" style="font-size:11px;">PG ${esc(p.pgVersion)} · ${esc(p.regionId)}</div></td>
+            <td><span class="pill ${p.state === 'active' ? 'green' : 'gray'}">${esc(p.state)}</span></td>
+            <td>
+              <div class="mono">${fmtNum(p.computeCuHours, 2)} / 100 CU-h (${fmtNum(p.computePct, 1)}%)</div>
+              <div class="bar-bg"><div class="bar-fill" style="width:${p.computePct}%;background:${barColor(p.computePct)}"></div></div>
+            </td>
+            <td class="mono">${fmtNum(p.storageMb, 1)} MB</td>
+            <td class="mono">${fmtNum(p.egressMb, 1)} MB</td>
+          </tr>
+        `).join('');
+        neonBody.innerHTML = `
+          <div class="table-wrap">
+            <table><thead><tr><th>Project</th><th>State</th><th>Compute (CU-h)</th><th>Storage</th><th>Egress</th></tr></thead><tbody>${rows}</tbody></table>
+          </div>
+          <div style="margin-top:10px;display:flex;justify-content:flex-end;">${neonProbeBtn}</div>
+        `;
+      } else if (sp && sp.ok) {
+        neonBadge.innerHTML = `<span class="pill green">SQL Live · ${fmtNum(sp.totalSizeMb, 1)} MB · ${fmtNum(sp.totalLiveRows)} rows</span>`;
+        const rows = (sp.databases || []).map(db => {
+          if (!db.ok) {
+            return `<tr><td><strong>${esc(db.service)}</strong></td><td colspan="5" style="color:var(--red);">${esc(db.error)}</td></tr>`;
+          }
+          const pct = Math.min(100, db.storagePct || 0);
+          return `
+            <tr>
+              <td><strong>${esc(db.service)}</strong><div class="muted" style="font-size:11px;">${esc(db.database)} · PG ${esc(db.pgVersion)}</div></td>
+              <td>
+                <div class="mono">${fmtNum(db.sizeMb, 2)} / 1,024 MB</div>
+                <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${barColor(pct)}"></div></div>
+              </td>
+              <td class="mono">${fmtNum(db.tables)}</td>
+              <td class="mono">${fmtNum(db.liveRows)}</td>
+              <td class="mono">${fmtNum(db.connections)}</td>
+              <td class="mono muted">${esc(db.extensions || '-')} · ${db.latencyMs}ms</td>
+            </tr>
+          `;
+        }).join('');
+        neonBody.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;flex-wrap:wrap;">
+            <span class="muted" style="font-size:12px;">Đo trực tiếp lúc ${fmtTime(sp.probedAt)} (Tổng: ${fmtNum(sp.totalSizeMb, 2)} MB · ${fmtNum(sp.totalTables)} bảng · ${fmtNum(sp.totalLiveRows)} dòng)</span>
+            ${neonProbeBtn}
+          </div>
+          <div class="table-wrap">
+            <table><thead><tr><th>Service / DB</th><th>Dung lượng (1 GB)</th><th>Bảng</th><th>Dòng</th><th>Conn</th><th>Ext / Ping</th></tr></thead><tbody>${rows}</tbody></table>
+          </div>
+          <div class="env-hint"><strong>Tùy chọn thêm CU-hours (/100 CU-h) &amp; trạng thái ngủ/thức không cần đánh thức DB:</strong> thêm <code>NEON_API_KEY</code> vào <code>.env</code>.</div>
+        `;
+      } else {
+        neonBadge.innerHTML = `<span class="pill blue">${neon.configuredDbs?.length || 0} DBs sẵn sàng · Chế độ bảo vệ CU-h</span>`;
+        const dbList = (neon.configuredDbs || []).map(d => `
+          <tr><td><strong>${esc(d.service)}</strong></td><td class="mono">${esc(d.database)}</td><td class="mono muted">${esc(d.host)}</td></tr>
+        `).join('');
+        neonBody.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;flex-wrap:wrap;">
+            <span class="muted" style="font-size:12px;">Không tự query SQL khi tải trang để giữ Neon ngủ (tiết kiệm 100 CU-h).</span>
+            ${neonProbeBtn}
+          </div>
+          <div class="table-wrap">
+            <table><thead><tr><th>Service</th><th>Database</th><th>Neon Endpoint</th></tr></thead><tbody>${dbList}</tbody></table>
+          </div>
+          ${sp && sp.error ? `<div style="color:var(--red);margin-top:8px;font-size:12px;">Lỗi đo SQL: ${esc(sp.error)}</div>` : ''}
+          <div class="env-hint">Bấm <strong>Đo 5 DB Neon (SQL)</strong> ở trên để xem ngay dung lượng MB/bảng/dòng thật bằng <code>.env</code> hiện tại, hoặc thêm <code>NEON_API_KEY</code> để xem thêm CU-hours (/100).</div>
+        `;
+      }
+
+      // 4. Cloudflare Pages
+      const cf = data.cloudflare || {};
+      const fe = data.frontendProbe || {};
+      const cfBadge = document.getElementById('cloudflare-badge');
+      const cfBody = document.getElementById('cloudflare-body');
+      const probeHtml = `
+        <div class="kv-grid">
+          <div class="kv"><div class="k">Live Probe</div><div class="v" style="color:${fe.ok ? 'var(--green)' : 'var(--red)'}">${fe.ok ? `HTTP ${fe.statusCode}` : 'ERROR'}</div></div>
+          <div class="kv"><div class="k">Edge Latency</div><div class="v">${fe.latencyMs ?? '-'} ms</div></div>
+          ${cf.domains ? `<div class="kv"><div class="k">Domain</div><div class="v" style="font-size:12px;">${esc(cf.domains)}</div></div>` : ''}
+          ${cf.analytics?.available ? `
+            <div class="kv"><div class="k">Fn Requests</div><div class="v">${fmtNum(cf.analytics.functionRequests)}</div></div>
+            <div class="kv"><div class="k">Fn Errors</div><div class="v" style="color:${cf.analytics.functionErrors > 0 ? 'var(--red)' : 'var(--green)'}">${fmtNum(cf.analytics.functionErrors)}</div></div>
+          ` : ''}
+        </div>
+      `;
+      if (!cf.configured) {
+        cfBadge.innerHTML = `<span class="pill ${fe.ok ? 'amber' : 'red'}">${fe.ok ? 'Probe OK · Thiếu CF Auth' : 'Probe lỗi'}</span>`;
+        cfBody.innerHTML = probeHtml + `
+          <div class="env-hint">Chạy <code>npx wrangler login</code> hoặc thêm <code>CLOUDFLARE_API_TOKEN</code> + <code>CLOUDFLARE_ACCOUNT_ID</code> vào <code>.env</code>.</div>
+        `;
+      } else if (cf.error) {
+        cfBadge.innerHTML = '<span class="pill red">Lỗi CF API</span>';
+        cfBody.innerHTML = probeHtml + `<div style="color:var(--red)">${esc(cf.error)}</div>`;
+      } else {
+        const srcTag = cf.source === 'wrangler-cli' ? 'Wrangler Live' : 'CF API Live';
+        cfBadge.innerHTML = `<span class="pill green">${srcTag} · ${esc(cf.project)}</span>`;
+        const depRows = (cf.deployments || []).map(dep => `
+          <tr>
+            <td><span class="pill ${dep.status === 'success' ? 'green' : 'amber'}">${esc(dep.environment || dep.status || 'prod')}</span></td>
+            <td><span class="mono">${esc(dep.commitHash || dep.id)}</span> · ${esc(dep.commitMessage || dep.branch)}</td>
+            <td class="mono muted">${esc(dep.createdOn && dep.createdOn.includes('T') ? fmtTime(dep.createdOn) : dep.createdOn)}</td>
+          </tr>
+        `).join('');
+        cfBody.innerHTML = probeHtml + `
+          <div class="table-wrap">
+            <table><thead><tr><th>Env</th><th>Commit / Nhánh</th><th>Thời điểm</th></tr></thead><tbody>${depRows || '<tr><td colspan="3" class="muted">Không có deployment</td></tr>'}</tbody></table>
+          </div>
+        `;
+      }
+
+      // 5. MongoDB Atlas
+      const at = data.atlas || {};
+      const ds = at.directStats || {};
+      const atBadge = document.getElementById('atlas-badge');
+      const atBody = document.getElementById('atlas-body');
+      if (ds.ok) {
+        const pct = Math.min(100, ds.quotaPct || 0);
+        atBadge.innerHTML = `<span class="pill green">MongoDB Live · ${esc(ds.replicaSet || 'M0')} (${ds.latencyMs}ms)</span>`;
+        const collRows = (ds.topCollections || []).map(c => `
+          <tr><td class="mono">${esc(c.name)}</td><td class="mono"><strong>${fmtNum(c.docs)}</strong> docs</td></tr>
+        `).join('');
+        atBody.innerHTML = `
+          <div class="grant-row">
+            <div class="grant-top">
+              <span>Dung lượng lưu trữ thực tế (Storage + Index / 512 MiB M0)</span>
+              <span class="mono"><strong>${fmtNum(ds.totalSizeMb, 2)}</strong> / 512 MiB (${fmtNum(pct, 2)}%)</span>
+            </div>
+            <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${barColor(pct)}"></div></div>
+          </div>
+          <div class="kv-grid">
+            <div class="kv"><div class="k">Collections</div><div class="v">${fmtNum(ds.collections)}</div></div>
+            <div class="kv"><div class="k">Documents</div><div class="v">${fmtNum(ds.objects)}</div></div>
+            <div class="kv"><div class="k">Data Size</div><div class="v">${fmtNum(ds.dataSizeMb, 2)} MB</div></div>
+            <div class="kv"><div class="k">Index Size</div><div class="v">${fmtNum(ds.indexSizeMb, 2)} MB</div></div>
+          </div>
+          <div class="table-wrap" style="max-height:175px;overflow-y:auto;">
+            <table><thead><tr><th>Top Collections (${esc(ds.database)})</th><th>Số bản ghi</th></tr></thead><tbody>${collRows}</tbody></table>
+          </div>
+        `;
+      } else if (at.configured && !at.error && at.clusters?.length) {
+        atBadge.innerHTML = at.openAlertCount > 0
+          ? `<span class="pill red">${at.openAlertCount} Open Alerts</span>`
+          : '<span class="pill green">Online · 0 Alerts</span>';
+        const cRows = (at.clusters || []).map(c => `
+          <tr>
+            <td><strong>${esc(c.name)}</strong><div class="muted" style="font-size:11px;">${esc(c.provider)} · ${esc(c.region)}</div></td>
+            <td><span class="pill ${c.stateName === 'IDLE' ? 'green' : 'amber'}">${esc(c.stateName)}</span></td>
+            <td class="mono">${esc(c.tier)}</td>
+            <td class="mono">v${esc(c.mongoDBVersion)}</td>
+            <td class="mono">${fmtNum(c.diskLimitMb)} MiB</td>
+          </tr>
+        `).join('');
+        atBody.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Cluster</th><th>State</th><th>Tier</th><th>MongoDB</th><th>Quota</th></tr></thead><tbody>${cRows}</tbody></table></div>`;
+      } else {
+        atBadge.innerHTML = '<span class="pill amber">Chưa đo được</span>';
+        atBody.innerHTML = `
+          <div class="kv-grid">
+            <div class="kv"><div class="k">Cluster Host</div><div class="v" style="font-size:12px;">${esc(at.clusterHost || '-')}</div></div>
+            <div class="kv"><div class="k">Database</div><div class="v" style="font-size:13px;">${esc(at.database || 'community_db')}</div></div>
+          </div>
+          ${ds.error ? `<div style="color:var(--red);font-size:12px;">Lỗi kết nối trực tiếp: ${esc(ds.error)}</div>` : ''}
+        `;
+      }
+    }
+
+    function renderLogs(data) {
+      const filter = (document.getElementById('log-filter').value || '').trim().toLowerCase();
+      const list = state.logTab === 'errors' ? (data.logs?.consoleErrors || []) : (data.logs?.systemEvents || []);
+      const filtered = filter
+        ? list.filter(item => JSON.stringify(item).toLowerCase().includes(filter))
+        : list;
+      const box = document.getElementById('log-list');
+      if (!filtered.length) {
+        box.innerHTML = `<div style="padding:16px;" class="muted">${esc(data.logs?.note || 'Không có dòng log nào khớp bộ lọc.')}</div>`;
+        return;
+      }
+      box.innerHTML = filtered.map(item => {
+        const lvl = item.level || item.reason || 'INFO';
+        const pillCls = lvl === 'ERROR' || /OOM|BackOff|Failed/i.test(lvl) ? 'red'
+          : (lvl === 'WARN' ? 'amber' : 'blue');
+        return `
+          <div class="log-row">
+            <span class="mono muted">${fmtTime(item.time)}</span>
+            <strong>${esc(item.service || '-')}</strong>
+            <span><span class="pill ${pillCls}">${esc(lvl)}</span></span>
+            <span class="log-msg">${esc(item.message || '')}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderAll() {
+      const d = state.snapshot;
+      if (!d) return;
+      document.getElementById('meta-line').textContent =
+        `Subscription: ${d.meta.subscriptionName} · RG: ${d.meta.resourceGroup} · LAW: ${d.logAnalytics?.name || '-'} (cap ${d.logAnalytics?.dailyQuotaGb ?? '-'} GB/ngày, ${d.logAnalytics?.retentionDays ?? '-'}d)`;
+      document.getElementById('collect-time').textContent =
+        `Cập nhật lúc ${fmtTime(d.generatedAt)} (${d.meta.elapsedMs} ms)`;
+      renderPlatformStrip(d);
+      renderKPIs(d);
+      renderServices(d);
+      renderChart(d);
+      renderDeploys(d);
+      renderCostAndCredit(d);
+      renderPlatforms(d);
+      renderLogs(d);
+    }
+
+    async function probeNeonNow() {
+      const btn = document.getElementById('probe-neon-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Đang đo 5 DB Neon...'; }
+      try {
+        const res = await fetch('/api/probe-neon', { method: 'POST' });
+        const d = await res.json();
+        if (state.snapshot && state.snapshot.neon) {
+          state.snapshot.neon.sqlProbe = d;
+          renderAll();
+        } else {
+          await loadSnapshot();
+        }
+      } catch (err) {
+        alert(`Lỗi đo Neon SQL: ${err.message}`);
+      } finally {
+        const b2 = document.getElementById('probe-neon-btn');
+        if (b2) { b2.disabled = false; b2.textContent = 'Đo 5 DB Neon (SQL)'; }
+      }
+    }
+
+    async function openServiceLogs(serviceName) {
+      const modal = document.getElementById('log-modal');
+      document.getElementById('modal-title').textContent = `Console Logs gần nhất — ${serviceName}`;
+      document.getElementById('modal-body').innerHTML = '<div class="muted">Đang truy vấn Log Analytics...</div>';
+      modal.classList.add('open');
+      try {
+        const res = await fetch(`/api/logs?service=${encodeURIComponent(serviceName)}&hours=${encodeURIComponent(document.getElementById('hours-select').value)}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        const rows = data.rows || [];
+        if (!rows.length) {
+          document.getElementById('modal-body').innerHTML = '<div class="muted">Không có console log trong khoảng thời gian này.</div>';
+          return;
+        }
+        document.getElementById('modal-body').innerHTML = `<div class="log-list" style="max-height:68vh;">` +
+          rows.map(r => `
+            <div class="log-row">
+              <span class="mono muted">${fmtTime(r.time)}</span>
+              <span class="mono muted">${esc(r.revision || '')}</span>
+              <span><span class="pill ${r.level === 'ERROR' ? 'red' : (r.level === 'WARN' ? 'amber' : 'gray')}">${esc(r.level || 'INFO')}</span></span>
+              <span class="log-msg">${esc(r.message)}</span>
+            </div>
+          `).join('') + `</div>`;
+      } catch (err) {
+        document.getElementById('modal-body').innerHTML = `<div style="color:var(--red);">Lỗi tải logs: ${esc(err.message)}</div>`;
+      }
+    }
+
+    document.getElementById('refresh-btn').addEventListener('click', loadSnapshot);
+    document.getElementById('hours-select').addEventListener('change', loadSnapshot);
+    document.getElementById('auto-refresh').addEventListener('change', e => {
+      if (state.timer) clearInterval(state.timer);
+      const sec = Number(e.target.value);
+      if (sec > 0) state.timer = setInterval(loadSnapshot, sec * 1000);
+    });
+    document.getElementById('probe-gw-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('probe-gw-btn');
+      btn.disabled = true;
+      btn.textContent = 'Đang ping...';
+      try {
+        const res = await fetch('/api/probe-gateway', { method: 'POST' });
+        const d = await res.json();
+        alert(d.ok
+          ? `Gateway OK! HTTP ${d.statusCode} trong ${d.latencyMs} ms (${d.url})`
+          : `Gateway không phản hồi OK: ${d.error || d.statusCode}`);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Ping Gateway';
+      }
+    });
+    document.getElementById('chart-tabs').addEventListener('click', e => {
+      const btn = e.target.closest('.tab');
+      if (!btn) return;
+      document.querySelectorAll('#chart-tabs .tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.metricTab = btn.dataset.metric;
+      if (state.snapshot) renderChart(state.snapshot);
+    });
+    document.getElementById('log-tabs').addEventListener('click', e => {
+      const btn = e.target.closest('.tab');
+      if (!btn) return;
+      document.querySelectorAll('#log-tabs .tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.logTab = btn.dataset.log;
+      if (state.snapshot) renderLogs(state.snapshot);
+    });
+    document.getElementById('log-filter').addEventListener('input', () => {
+      if (state.snapshot) renderLogs(state.snapshot);
+    });
+    document.getElementById('modal-close').addEventListener('click', () => {
+      document.getElementById('log-modal').classList.remove('open');
+    });
+    document.getElementById('log-modal').addEventListener('click', e => {
+      if (e.target.id === 'log-modal') e.target.classList.remove('open');
+    });
+
+    loadSnapshot();
+  </script>
+</body>
+</html>
