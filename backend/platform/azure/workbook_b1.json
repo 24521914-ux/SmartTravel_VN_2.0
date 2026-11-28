@@ -1,0 +1,518 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 1,
+      "content": {
+        "json": "# SmartTravel VN 2.0 — Operations, Resources & Cost Dashboard (Plan B1)\nTheo dõi trạng thái hoạt động, CPU/RAM/Requests, Logs/Cold-start và kiểm soát chi phí cho **7 Azure Container Apps** trong `rg-smarttravel-b1` (Consumption Scale-to-Zero, `0.25 vCPU / 0.5 GiB`)."
+      },
+      "name": "header"
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "parameters": [
+          {
+            "id": "param-sub",
+            "version": "KqlParameterItem/1.0",
+            "name": "Subscription",
+            "type": 6,
+            "isRequired": true,
+            "value": "value::1",
+            "typeSettings": {
+              "additionalResourceOptions": []
+            }
+          },
+          {
+            "id": "param-rg",
+            "version": "KqlParameterItem/1.0",
+            "name": "ResourceGroup",
+            "label": "Resource Group",
+            "type": 1,
+            "isRequired": true,
+            "value": "rg-smarttravel-b1"
+          },
+          {
+            "id": "param-timerange",
+            "version": "KqlParameterItem/1.0",
+            "name": "TimeRange",
+            "label": "Khoảng thời gian",
+            "type": 4,
+            "isRequired": true,
+            "value": {
+              "durationMs": 86400000
+            },
+            "typeSettings": {
+              "selectableValues": [
+                { "durationMs": 3600000 },
+                { "durationMs": 21600000 },
+                { "durationMs": 86400000 },
+                { "durationMs": 259200000 },
+                { "durationMs": 604800000 },
+                { "durationMs": 2592000000 }
+              ]
+            }
+          },
+          {
+            "id": "param-apps",
+            "version": "KqlParameterItem/1.0",
+            "name": "ContainerApps",
+            "label": "Services (Container Apps)",
+            "type": 5,
+            "isRequired": true,
+            "multiSelect": true,
+            "quote": "'",
+            "delimiter": ",",
+            "query": "Resources\n| where type =~ 'microsoft.app/containerapps' and resourceGroup =~ '{ResourceGroup}'\n| project value = id, label = name, selected = true\n| order by label asc",
+            "crossComponentResources": [
+              "{Subscription}"
+            ],
+            "queryType": 1,
+            "resourceType": "microsoft.resourcegraph/resources",
+            "typeSettings": {
+              "additionalResourceOptions": ["value::all"],
+              "selectAllValue": "*"
+            }
+          },
+          {
+            "id": "param-law",
+            "version": "KqlParameterItem/1.0",
+            "name": "Workspace",
+            "label": "Log Analytics Workspace",
+            "type": 5,
+            "isRequired": true,
+            "query": "Resources\n| where type =~ 'microsoft.operationalinsights/workspaces' and resourceGroup =~ '{ResourceGroup}'\n| project value = id, label = name, selected = true",
+            "crossComponentResources": [
+              "{Subscription}"
+            ],
+            "queryType": 1,
+            "resourceType": "microsoft.resourcegraph/resources"
+          }
+        ],
+        "style": "pills",
+        "queryType": 0
+      },
+      "name": "global-parameters"
+    },
+    {
+      "type": 11,
+      "content": {
+        "version": "LinkItem/1.0",
+        "style": "tabs",
+        "links": [
+          {
+            "id": "tab-overview",
+            "cellValue": "SelectedTab",
+            "linkTarget": "parameter",
+            "linkLabel": "1. Trạng thái Services & Deploy",
+            "subTarget": "overview",
+            "style": "link"
+          },
+          {
+            "id": "tab-resources",
+            "cellValue": "SelectedTab",
+            "linkTarget": "parameter",
+            "linkLabel": "2. CPU, RAM, Requests & Latency",
+            "subTarget": "resources",
+            "style": "link"
+          },
+          {
+            "id": "tab-logs",
+            "cellValue": "SelectedTab",
+            "linkTarget": "parameter",
+            "linkLabel": "3. Logs lỗi & KEDA Scale Events",
+            "subTarget": "logs",
+            "style": "link"
+          },
+          {
+            "id": "tab-cost",
+            "cellValue": "SelectedTab",
+            "linkTarget": "parameter",
+            "linkLabel": "4. Credit Azure & Free Grant",
+            "subTarget": "cost",
+            "style": "link"
+          }
+        ]
+      },
+      "name": "navigation-tabs"
+    },
+    {
+      "type": 12,
+      "content": {
+        "version": "NotebookGroup/1.0",
+        "groupType": "editable",
+        "items": [
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "Resources\n| where type =~ 'microsoft.app/containerapps' and resourceGroup =~ '{ResourceGroup}'\n| extend container = properties.template.containers[0]\n| extend scale = properties.template.scale\n| extend ingress = properties.configuration.ingress\n| project\n    Service = name,\n    LatestRevision = tostring(properties.latestRevisionName),\n    ReadyRevision = tostring(properties.latestReadyRevisionName),\n    Image = tostring(container.image),\n    CPU = todouble(container.resources.cpu),\n    Memory = tostring(container.resources.memory),\n    ScaleRange = strcat(tostring(scale.minReplicas), ' - ', tostring(scale.maxReplicas)),\n    Ingress = iff(tobool(ingress.external), 'External HTTPS', 'Internal Mesh'),\n    State = tostring(properties.runningStatus)\n| order by Service asc",
+              "size": 1,
+              "title": "Danh sách 7 Microservices & Bản Deploy mới nhất",
+              "queryType": 1,
+              "resourceType": "microsoft.resourcegraph/resources",
+              "crossComponentResources": [
+                "{Subscription}"
+              ],
+              "visualization": "table"
+            },
+            "name": "services-inventory"
+          },
+          {
+            "type": 10,
+            "content": {
+              "chartId": "workbook-replicas",
+              "version": "MetricsItem/2.0",
+              "size": 0,
+              "chartType": 2,
+              "resourceType": "microsoft.app/containerapps",
+              "metricScope": 0,
+              "resourceIds": [
+                "{ContainerApps}"
+              ],
+              "timeContextFromParameter": "TimeRange",
+              "metrics": [
+                {
+                  "namespace": "microsoft.app/containerapps",
+                  "metric": "microsoft.app/containerapps--Replicas",
+                  "aggregation": 3,
+                  "splitBy": null
+                }
+              ],
+              "title": "Số Replica đang chạy (0 = Đang ngủ Scale-to-Zero, >=1 = Đang thức)",
+              "gridSettings": {
+                "rowLimit": 100
+              }
+            },
+            "name": "replicas-chart"
+          },
+          {
+            "type": 10,
+            "content": {
+              "chartId": "workbook-restarts",
+              "version": "MetricsItem/2.0",
+              "size": 0,
+              "chartType": 2,
+              "resourceType": "microsoft.app/containerapps",
+              "metricScope": 0,
+              "resourceIds": [
+                "{ContainerApps}"
+              ],
+              "timeContextFromParameter": "TimeRange",
+              "metrics": [
+                {
+                  "namespace": "microsoft.app/containerapps",
+                  "metric": "microsoft.app/containerapps--RestartCount",
+                  "aggregation": 3,
+                  "splitBy": null
+                }
+              ],
+              "title": "Số lần Restart Container (Cảnh báo OOMKill / Crash nếu > 0)"
+            },
+            "name": "restarts-chart"
+          }
+        ]
+      },
+      "conditionalVisibility": {
+        "parameterName": "SelectedTab",
+        "comparison": "isEqualTo",
+        "value": "overview"
+      },
+      "name": "group-overview"
+    },
+    {
+      "type": 12,
+      "content": {
+        "version": "NotebookGroup/1.0",
+        "groupType": "editable",
+        "items": [
+          {
+            "type": 10,
+            "content": {
+              "chartId": "workbook-cpu-pct",
+              "version": "MetricsItem/2.0",
+              "size": 0,
+              "chartType": 2,
+              "resourceType": "microsoft.app/containerapps",
+              "metricScope": 0,
+              "resourceIds": [
+                "{ContainerApps}"
+              ],
+              "timeContextFromParameter": "TimeRange",
+              "metrics": [
+                {
+                  "namespace": "microsoft.app/containerapps",
+                  "metric": "microsoft.app/containerapps--CpuPercentage",
+                  "aggregation": 4,
+                  "splitBy": null
+                }
+              ],
+              "title": "CPU Utilization (%) — giới hạn 0.25 vCPU/container"
+            },
+            "name": "cpu-chart"
+          },
+          {
+            "type": 10,
+            "content": {
+              "chartId": "workbook-mem-bytes",
+              "version": "MetricsItem/2.0",
+              "size": 0,
+              "chartType": 2,
+              "resourceType": "microsoft.app/containerapps",
+              "metricScope": 0,
+              "resourceIds": [
+                "{ContainerApps}"
+              ],
+              "timeContextFromParameter": "TimeRange",
+              "metrics": [
+                {
+                  "namespace": "microsoft.app/containerapps",
+                  "metric": "microsoft.app/containerapps--WorkingSetBytes",
+                  "aggregation": 4,
+                  "splitBy": null
+                }
+              ],
+              "title": "RAM Working Set (Bytes) — trần 512 MiB (536,870,912 Bytes)"
+            },
+            "name": "ram-bytes-chart"
+          },
+          {
+            "type": 10,
+            "content": {
+              "chartId": "workbook-mem-pct",
+              "version": "MetricsItem/2.0",
+              "size": 0,
+              "chartType": 2,
+              "resourceType": "microsoft.app/containerapps",
+              "metricScope": 0,
+              "resourceIds": [
+                "{ContainerApps}"
+              ],
+              "timeContextFromParameter": "TimeRange",
+              "metrics": [
+                {
+                  "namespace": "microsoft.app/containerapps",
+                  "metric": "microsoft.app/containerapps--MemoryPercentage",
+                  "aggregation": 4,
+                  "splitBy": null
+                }
+              ],
+              "title": "RAM Utilization (%) — nên giữ < 85% để tránh OOMKilled"
+            },
+            "name": "ram-pct-chart"
+          },
+          {
+            "type": 10,
+            "content": {
+              "chartId": "workbook-requests",
+              "version": "MetricsItem/2.0",
+              "size": 0,
+              "chartType": 1,
+              "resourceType": "microsoft.app/containerapps",
+              "metricScope": 0,
+              "resourceIds": [
+                "{ContainerApps}"
+              ],
+              "timeContextFromParameter": "TimeRange",
+              "metrics": [
+                {
+                  "namespace": "microsoft.app/containerapps",
+                  "metric": "microsoft.app/containerapps--Requests",
+                  "aggregation": 1,
+                  "splitBy": null
+                }
+              ],
+              "title": "Tổng số HTTP Requests theo từng Service"
+            },
+            "name": "requests-chart"
+          },
+          {
+            "type": 10,
+            "content": {
+              "chartId": "workbook-latency",
+              "version": "MetricsItem/2.0",
+              "size": 0,
+              "chartType": 2,
+              "resourceType": "microsoft.app/containerapps",
+              "metricScope": 0,
+              "resourceIds": [
+                "{ContainerApps}"
+              ],
+              "timeContextFromParameter": "TimeRange",
+              "metrics": [
+                {
+                  "namespace": "microsoft.app/containerapps",
+                  "metric": "microsoft.app/containerapps--ResponseTime",
+                  "aggregation": 4,
+                  "splitBy": null
+                }
+              ],
+              "title": "Độ trễ phản hồi trung bình (ResponseTime ms)"
+            },
+            "name": "latency-chart"
+          },
+          {
+            "type": 10,
+            "content": {
+              "chartId": "workbook-net",
+              "version": "MetricsItem/2.0",
+              "size": 0,
+              "chartType": 2,
+              "resourceType": "microsoft.app/containerapps",
+              "metricScope": 0,
+              "resourceIds": [
+                "{ContainerApps}"
+              ],
+              "timeContextFromParameter": "TimeRange",
+              "metrics": [
+                {
+                  "namespace": "microsoft.app/containerapps",
+                  "metric": "microsoft.app/containerapps--RxBytes",
+                  "aggregation": 1,
+                  "splitBy": null
+                },
+                {
+                  "namespace": "microsoft.app/containerapps",
+                  "metric": "microsoft.app/containerapps--TxBytes",
+                  "aggregation": 1,
+                  "splitBy": null
+                }
+              ],
+              "title": "Lưu lượng mạng vào/ra (RxBytes / TxBytes)"
+            },
+            "name": "network-chart"
+          }
+        ]
+      },
+      "conditionalVisibility": {
+        "parameterName": "SelectedTab",
+        "comparison": "isEqualTo",
+        "value": "resources"
+      },
+      "name": "group-resources"
+    },
+    {
+      "type": 12,
+      "content": {
+        "version": "NotebookGroup/1.0",
+        "groupType": "editable",
+        "items": [
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "ContainerAppConsoleLogs_CL\n| extend parsed = parse_json(Log_s)\n| extend level = coalesce(tostring(parsed.level), iff(Log_s contains 'ERROR', 'ERROR', iff(Log_s contains 'WARN', 'WARN', 'INFO')))\n| extend msg = coalesce(tostring(parsed.message), Log_s)\n| extend traceId = coalesce(tostring(parsed.traceId), tostring(parsed.correlationId), '')\n| where level in ('ERROR', 'WARN') or Log_s has_any ('Exception', 'OutOfMemoryError', '503', '502')\n| project TimeGenerated, Service = ContainerAppName_s, Level = level, TraceId = traceId, Message = substring(msg, 0, 260)\n| order by TimeGenerated desc\n| take 50",
+              "size": 0,
+              "title": "50 dòng Log ERROR / WARN / Exception gần nhất (Logstash JSON)",
+              "timeContextFromParameter": "TimeRange",
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ],
+              "visualization": "table"
+            },
+            "name": "console-errors"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "ContainerAppSystemLogs_CL\n| project TimeGenerated, Service = ContainerAppName_s, Revision = RevisionName_s, Reason = Reason_s, Event = Log_s\n| order by TimeGenerated desc\n| take 50",
+              "size": 0,
+              "title": "50 sự kiện hệ thống gần nhất (Scale 0↔1, KEDA, Pull Image, Restart/OOM)",
+              "timeContextFromParameter": "TimeRange",
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ],
+              "visualization": "table"
+            },
+            "name": "system-events"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "ContainerAppConsoleLogs_CL\n| summarize LogLines = count() by Service = ContainerAppName_s, bin(TimeGenerated, 1h)\n| render timechart",
+              "size": 0,
+              "title": "Mật độ Log theo giờ (giúp phát hiện service bị poll/lặp bất thường)",
+              "timeContextFromParameter": "TimeRange",
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ],
+              "visualization": "timechart"
+            },
+            "name": "log-volume-chart"
+          }
+        ]
+      },
+      "conditionalVisibility": {
+        "parameterName": "SelectedTab",
+        "comparison": "isEqualTo",
+        "value": "logs"
+      },
+      "name": "group-logs"
+    },
+    {
+      "type": 12,
+      "content": {
+        "version": "NotebookGroup/1.0",
+        "groupType": "editable",
+        "items": [
+          {
+            "type": 1,
+            "content": {
+              "json": "### Theo dõi Credit Azure for Students ($100) & Hạn mức Miễn phí\n- **Xem số dư Credit $100 còn lại:** [Azure Education Hub](https://portal.azure.com/#view/Microsoft_Azure_Education/EducationMenuBlade/~/overview) hoặc [Azure Sponsorships Balance](https://www.microsoftazuresponsorships.com/Balance)\n- **Xem chi phí từng dịch vụ (`rg-smarttravel-b1`):** [Azure Cost Analysis](https://portal.azure.com/#view/Microsoft_Azure_CostManagement/Menu/~/costanalysis)\n- **Hạn mức miễn phí hàng tháng (ACA Consumption Free Grant):** `180,000 vCPU-s` (50 vCPU-giờ) · `360,000 GiB-s` (100 GiB-giờ) · `2,000,000 Requests`.\n- **Hạn mức Log Analytics:** Miễn phí `5 GB/tháng` (Daily Cap đã đặt `0.15 GB/ngày` ≈ `4.5 GB/tháng`, retention `30 ngày`)."
+            },
+            "name": "cost-links"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "Usage\n| where TimeGenerated >= startofmonth(now())\n| summarize IngestedMB = round(sum(Quantity), 2) by DataType, IsBillable\n| order by IngestedMB desc",
+              "size": 1,
+              "title": "Dung lượng Log Analytics đã nạp từ đầu tháng (MB / 5,120 MB Free)",
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ],
+              "visualization": "table"
+            },
+            "name": "law-usage"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "ContainerAppConsoleLogs_CL\n| where TimeGenerated >= startofmonth(now())\n| summarize ActiveMinutes = dcount(bin(TimeGenerated, 1m)) by Service = ContainerAppName_s\n| extend Est_vCPU_Seconds = ActiveMinutes * 60 * 0.25, Est_GiB_Seconds = ActiveMinutes * 60 * 0.5\n| order by ActiveMinutes desc",
+              "size": 1,
+              "title": "Ước tính thời gian thức (Active Minutes) từ đầu tháng theo Log (0.25 vCPU / 0.5 GiB)",
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ],
+              "visualization": "table"
+            },
+            "name": "active-minutes-est"
+          }
+        ]
+      },
+      "conditionalVisibility": {
+        "parameterName": "SelectedTab",
+        "comparison": "isEqualTo",
+        "value": "cost"
+      },
+      "name": "group-cost"
+    }
+  ],
+  "fallbackResourceIds": [],
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}

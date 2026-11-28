@@ -236,10 +236,121 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Smoke check live production URL
+        id: smoke
         run: |
           echo "Checking ${{ env.PUBLIC_SITE_URL }}/kham-pha ..."
-          curl -fsS -o /dev/null -w "FE /kham-pha -> HTTP %{http_code} (%{time_total}s)\n" \
-            -A "SmartTravel-CD-Smoke/1.0" "${{ env.PUBLIC_SITE_URL }}/kham-pha"
+          FE_LINE=$(curl -fsS -o /dev/null -w "HTTP %{http_code} (%{time_total}s)" \
+            -A "SmartTravel-CD-Smoke/1.0" "${{ env.PUBLIC_SITE_URL }}/kham-pha")
+          echo "FE /kham-pha -> $FE_LINE"
           echo "Checking ${{ env.PUBLIC_SITE_URL }}/api/catalog/api/v1/places?limit=1 ..."
-          curl -fsS -o /dev/null -w "API Catalog /places -> HTTP %{http_code} (%{time_total}s)\n" \
-            -A "SmartTravel-CD-Smoke/1.0" --max-time 45 "${{ env.PUBLIC_SITE_URL }}/api/catalog/api/v1/places?limit=1"
+          API_LINE=$(curl -fsS -o /dev/null -w "HTTP %{http_code} (%{time_total}s)" \
+            -A "SmartTravel-CD-Smoke/1.0" --max-time 45 "${{ env.PUBLIC_SITE_URL }}/api/catalog/api/v1/places?limit=1")
+          echo "API Catalog /places -> $API_LINE"
+          echo "summary=FE: $FE_LINE | API: $API_LINE" >> "$GITHUB_OUTPUT"
+    outputs:
+      summary: ${{ steps.smoke.outputs.summary }}
+
+  notify-deploy:
+    needs: [detect-changes, deploy-backend, deploy-frontend, smoke-verify]
+    if: >-
+      always()
+      && (needs.detect-changes.outputs.has_backend == 'true' || needs.detect-changes.outputs.deploy_frontend == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Discord / Telegram deploy notification
+        shell: python
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DEPLOY_DISCORD_WEBHOOK_URL }}
+          TELEGRAM_TOKEN: ${{ secrets.DEPLOY_TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.DEPLOY_TELEGRAM_CHAT_ID }}
+          BE_RESULT: ${{ needs.deploy-backend.result }}
+          FE_RESULT: ${{ needs.deploy-frontend.result }}
+          SMOKE_RESULT: ${{ needs.smoke-verify.result }}
+          SMOKE_SUMMARY: ${{ needs.smoke-verify.outputs.summary }}
+          BACKEND_MATRIX: ${{ needs.detect-changes.outputs.backend_matrix }}
+          DEPLOY_FE: ${{ needs.detect-changes.outputs.deploy_frontend }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+          RUN_ID: ${{ github.run_id }}
+          EVENT_NAME: ${{ github.event_name }}
+          SITE_URL: ${{ env.PUBLIC_SITE_URL }}
+        run: |
+          import json, os, urllib.request
+
+          discord_url = (os.environ.get("DISCORD_WEBHOOK") or "").strip()
+          tg_token = (os.environ.get("TELEGRAM_TOKEN") or "").strip()
+          tg_chat = (os.environ.get("TELEGRAM_CHAT_ID") or "").strip()
+
+          if not discord_url and not (tg_token and tg_chat):
+              print("No DEPLOY_DISCORD_WEBHOOK_URL or DEPLOY_TELEGRAM_BOT_TOKEN/CHAT_ID configured; skipping notification.")
+              raise SystemExit(0)
+
+          be_res = os.environ.get("BE_RESULT", "skipped")
+          fe_res = os.environ.get("FE_RESULT", "skipped")
+          smoke_res = os.environ.get("SMOKE_RESULT", "skipped")
+          failed = any(r == "failure" for r in (be_res, fe_res, smoke_res))
+          cancelled = any(r == "cancelled" for r in (be_res, fe_res, smoke_res))
+          status_label = "❌ DEPLOY THẤT BẠI" if failed else ("⚠️ DEPLOY BỊ HỦY" if cancelled else "✅ DEPLOY THÀNH CÔNG")
+          color = 0xEF4444 if failed else (0xF59E0B if cancelled else 0x22C55E)
+
+          targets = []
+          if os.environ.get("DEPLOY_FE") == "true":
+              targets.append("frontend (Cloudflare Pages)")
+          try:
+              matrix = json.loads(os.environ.get("BACKEND_MATRIX") or "[]")
+              targets.extend([f"{m['name']} (ACA)" for m in matrix if "name" in m])
+          except Exception:
+              pass
+
+          short_sha = (os.environ.get("SHA") or "")[:7]
+          run_url = f"https://github.com/{os.environ['REPO']}/actions/runs/{os.environ['RUN_ID']}"
+          smoke_txt = os.environ.get("SMOKE_SUMMARY") or smoke_res
+
+          if discord_url:
+              payload = {
+                  "embeds": [
+                      {
+                          "title": f"{status_label} — SmartTravel VN 2.0 (Plan B1)",
+                          "url": run_url,
+                          "color": color,
+                          "fields": [
+                              {"name": "Branch / Commit", "value": f"`{os.environ['BRANCH']}` · `{short_sha}` ({os.environ['EVENT_NAME']})", "inline": True},
+                              {"name": "Người thực hiện", "value": os.environ["ACTOR"], "inline": True},
+                              {"name": "Targets", "value": ", ".join(targets) or "none", "inline": False},
+                              {"name": "Kết quả Jobs", "value": f"Backend: `{be_res}` · Frontend: `{fe_res}` · Smoke: `{smoke_res}`", "inline": False},
+                              {"name": "Smoke Check", "value": f"{smoke_txt}\n{os.environ['SITE_URL']}", "inline": False},
+                          ],
+                      }
+                  ]
+              }
+              req = urllib.request.Request(
+                  discord_url,
+                  data=json.dumps(payload).encode("utf-8"),
+                  headers={"Content-Type": "application/json", "User-Agent": "SmartTravel-CD/1.0"},
+                  method="POST",
+              )
+              with urllib.request.urlopen(req, timeout=15) as resp:
+                  print(f"Discord notification sent (HTTP {resp.status}).")
+
+          if tg_token and tg_chat:
+              text = (
+                  f"{status_label} — SmartTravel VN 2.0 (Plan B1)\n"
+                  f"• Branch/SHA: {os.environ['BRANCH']} ({short_sha})\n"
+                  f"• Actor: {os.environ['ACTOR']} ({os.environ['EVENT_NAME']})\n"
+                  f"• Targets: {', '.join(targets) or 'none'}\n"
+                  f"• Jobs: BE={be_res} | FE={fe_res} | Smoke={smoke_res}\n"
+                  f"• Smoke: {smoke_txt}\n"
+                  f"• Run: {run_url}\n"
+                  f"• Site: {os.environ['SITE_URL']}"
+              )
+              tg_url = f"https://api.telegram.org/bot{tg_token}/sendMessage"
+              req = urllib.request.Request(
+                  tg_url,
+                  data=json.dumps({"chat_id": tg_chat, "text": text, "disable_web_page_preview": True}).encode("utf-8"),
+                  headers={"Content-Type": "application/json"},
+                  method="POST",
+              )
+              with urllib.request.urlopen(req, timeout=15) as resp:
+                  print(f"Telegram notification sent (HTTP {resp.status}).")
